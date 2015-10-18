@@ -54,7 +54,7 @@ target_link_libraries(dpvMFoptRot optRot
     boost_system boost_thread boost_program_options
     pcl_common pcl_io pcl_visualization pcl_filters pcl_search
     pcl_features
-#    vtkCommon vtkFiltering vtkRendering vtkGraphics
+    vtkCommon vtkFiltering vtkRendering vtkGraphics
     ${OpenCV_LIBS}
   )
 
