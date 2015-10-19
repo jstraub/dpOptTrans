@@ -169,9 +169,9 @@ int main(int argc, char** argv) {
   float scale = 0.1;
   if(vm.count("scale")) scale = vm["scale"].as<float>();
 
+  // Load point clouds.
   pcl::PointCloud<pcl::PointXYZRGBNormal> pcA, pcB;
   pcl::PLYReader reader;
-//  pcl::PCLPointCloud2;
   if (reader.read(pathA, pcA)) 
     std::cout << "error reading " << pathA << std::endl;
   else
@@ -182,26 +182,25 @@ int main(int argc, char** argv) {
   else
     std::cout << "loaded pc from " << pathB << ": " << pcB.width << "x"
       << pcB.height << std::endl;
+  // Display the loaded point clouds.
   if (vm.count("display")) {
     boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer (new
         pcl::visualization::PCLVisualizer ("3D Viewer"));
     viewer->initCameraParameters ();
     viewer->setBackgroundColor (0, 0, 0);
     viewer->addCoordinateSystem (1.0);
-//    pcl::visualization::PointCloudColorHandlerGenericField<pcl::PointXYZI> rgbA(pcA,"intensity"); 
-//    pcl::visualization::PointCloudColorHandlerGenericField<pcl::PointXYZI> rgbB(pcB,"intensity"); 
     pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr pcA_ptr = pcA.makeShared();
-    pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGBNormal> rgbA(pcA_ptr);
+    pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGBNormal>
+      rgbA(pcA_ptr);
     pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr pcB_ptr = pcB.makeShared();
-    pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGBNormal> rgbB(pcB_ptr);
+    pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGBNormal>
+      rgbB(pcB_ptr);
     viewer->addPointCloud<pcl::PointXYZRGBNormal> (pcA_ptr, rgbA, "cloudA");
     viewer->addPointCloud<pcl::PointXYZRGBNormal> (pcB_ptr, rgbB, "cloudB");
-
     while (!viewer->wasStopped ()) {
       viewer->spinOnce (100);
       boost::this_thread::sleep (boost::posix_time::microseconds (100000));
     }
-    
   }
 
   findCudaDevice(argc,(const char**)argv);
@@ -210,13 +209,34 @@ int main(int argc, char** argv) {
     <<"nFramesSurvive="<<cfg.nFramesSurvive_<<std::endl;
   std::cout<<"output path: "<<cfg.pathOut<<std::endl;
 
-//  std::vector<OptRot::vMF<3>> vmfs_A;
-//  shared_ptr<dplv::DDPMeansCUDA<float>> pRtDDPvMF_A;
-//
-//  shared_ptr<jsc::ClDataGpuf> cld(new jsc::ClDataGpuf(tmp,0));
-//  pddpvmf_ =  new dplv::DDPMeansCUDA<float,dplv::Spherical<float> >
-//    (cld_, cfg_.lambda, cfg_.Q, cfg_.beta);
-//
+  // take 3 values (x,y,z of normal) with an offset of 4 values (x,y,z
+  // and one float which is undefined) and the step is 12 (4 for xyz, 4
+  // for normal xyz and 4 for curvature and rgb).
+  auto nA_map = pcA.getMatrixXfMap(3, 12, 4); // this works for PointXYZRGBNormal
+  boost::shared_ptr<Eigen::MatrixXf> nA(new Eigen::MatrixXf(nA_map));
+  std::cout << "normals: " << std::endl << nA->rows() << "x" << nA->cols() << std::endl;
+
+  std::vector<OptRot::vMF<3>> vmfs_A;
+
+  shared_ptr<jsc::ClDataGpuf> cld(new jsc::ClDataGpuf(nA,0));
+  dplv::DDPMeansCUDA<float,dplv::Spherical<float> > pddpvmf(cld,
+      cfg.lambda, cfg.Q, cfg.beta);
+
+  pddpvmf.nextTimeStep(nA);
+  for(uint32_t i=0; i<10; ++i)
+  {
+    cout<<"@"<<i<<" :"<<endl;
+    pddpvmf.updateLabels();
+    pddpvmf.updateCenters();
+    if(pddpvmf.convergedCounts(nA->cols()/100)) break;
+  }
+  pddpvmf.getZfromGpu(); // cache z_ back from gpu
+
+  MatrixXf centroids = pddpvmf.centroids();
+  VectorXf counts = pddpvmf.counts().cast<float>();
+  std::cout << counts << std::endl;
+  std::cout << centroids << std::endl;
+  
 //  pRtDDPvMF_A = shared_ptr<dplv::DDPMeansCUDA<float>>(new RtDDPvMF(cfg,cfgNormals));
 //  ComputevMFMMfromPc(pRtDDPvMF_A, cfg, pathA, vm.count("display"), &dIa, &gIa, &vmfs_A);
 //  OptRot::vMFMM<3> vmf_mm_A(vmfs_A);
