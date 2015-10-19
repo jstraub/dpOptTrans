@@ -48,6 +48,16 @@ link_directories(
   ${PCL_LIBRARY_DIRS}
 )
 
+cuda_add_executable(dpvMFoptRotPly ./src/dp_vmf_opt_rot_ply.cpp)
+target_link_libraries(dpvMFoptRotPly optRot
+    jsCore dpMMlowVar cudaPcl
+    boost_system boost_thread boost_program_options
+    pcl_common pcl_io pcl_visualization pcl_filters pcl_search
+    pcl_features
+    vtkCommon vtkFiltering vtkRendering vtkGraphics
+    ${OpenCV_LIBS}
+  )
+
 cuda_add_executable(dpvMFoptRot ./src/dp_vmf_opt_rot.cpp)
 target_link_libraries(dpvMFoptRot optRot
     jsCore dpMMlowVar cudaPcl
@@ -58,7 +68,7 @@ target_link_libraries(dpvMFoptRot optRot
     ${OpenCV_LIBS}
   )
 
-pods_install_executables(dpvMFoptRot)
+pods_install_executables(dpvMFoptRot dpvMFoptRotPly)
 #pods_install_libraries(optRot)
 pods_install_headers(
   ./include/dpvMFoptRot/dp_vmf_opt_rot.h
