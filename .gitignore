@@ -18,3 +18,5 @@ jsCore
 dpMMlowVar
 optimalRotationEstimation
 .directory
+data
+pod-build

@@ -14,6 +14,7 @@
 #include "optRot/upper_bound_convexity_log.h"
 #include "optRot/branch_and_bound.h"
 #include "optRot/vmf_mm.h"
+#include "optRot/node.h"
 #include "dpvMFoptRot/dp_vmf_opt_rot.h"
 
 #include <boost/program_options.hpp>
@@ -54,8 +55,8 @@ bool ComputevMFMMfromDepth(
 
 //  uint32_t T = 10;
 //  for(uint32_t i=0; i<T; ++i)
-    pRtDDPvMF->compute(reinterpret_cast<uint16_t*>(depth.data),
-        depth.cols,depth.rows);
+  pRtDDPvMF->compute(reinterpret_cast<uint16_t*>(depth.data),
+      depth.cols,depth.rows);
   Iout = pRtDDPvMF->overlaySeg(rgb,false,true);
   *dI = pRtDDPvMF->smoothDepthImg();
   //      cv::Mat Iout = pRtDDPvMF->overlaySeg(gray);
@@ -209,15 +210,15 @@ int main(int argc, char** argv) {
       << " tau " << vmf_mm_B.Get(i).GetTau()
       << " pi " << vmf_mm_B.Get(i).GetPi() << std::endl;
 
-  std::vector<OptRot::Node> nodes_v = OptRot::GenerateNotesThatTessellateS3();
+  std::list<OptRot::NodeS3> nodes = OptRot::GenerateNotesThatTessellateS3();
   OptRot::LowerBoundLog lower_bound(vmf_mm_A, vmf_mm_B);
   OptRot::UpperBoundLog upper_bound(vmf_mm_A, vmf_mm_B);
   OptRot::UpperBoundConvexityLog upper_bound_convexity(vmf_mm_A, vmf_mm_B);
-
-  std::list<OptRot::Node> nodes(nodes_v.begin(), nodes_v.end());
   
-  OptRot::BranchAndBound bb(lower_bound, upper_bound_convexity);
-  OptRot::Node node_star = bb.Compute(nodes);
+  OptRot::BranchAndBound<OptRot::NodeS3> bb(lower_bound, upper_bound_convexity);
+  double eps = 1e-4 / 180. * M_PI;
+  uint32_t max_it = 300;
+  OptRot::NodeS3 node_star = bb.Compute(nodes, eps, max_it);
 
   std::cout << "optimum quaternion: " 
     << node_star.GetTetrahedron().GetCenter().transpose()
