@@ -205,7 +205,7 @@ int main(int argc, char** argv) {
   ComputevMFMMfromPC(pcB, cfg, vmfsB);
   for(uint32_t k=0; k<vmfsB.size(); ++k) vmfsB[k].Print(); 
 
-  cfg.lambda = 1.0;
+  cfg.lambda = 0.5;
   std::vector<OptRot::Normal<3>> gmmA;
   ComputeGMMfromPC(pcA, cfg, gmmA);
   for(uint32_t k=0; k<gmmA.size(); ++k) gmmA[k].Print(); 
@@ -222,7 +222,7 @@ int main(int argc, char** argv) {
   OptRot::UpperBoundConvexityLog upper_bound_convexity(vmfmmA, vmfmmB);
   
   double eps = 1e-5 * M_PI / 180.;
-  uint32_t max_it = 300;
+  uint32_t max_it = 600;
   OptRot::BranchAndBound<OptRot::NodeS3> bb(lower_bound, upper_bound_convexity);
   OptRot::NodeS3 node_star = bb.Compute(nodes, eps, max_it);
 
@@ -255,13 +255,13 @@ int main(int argc, char** argv) {
     << " max t: " << max.transpose() << std::endl;
 
   std::list<OptRot::NodeR3> nodesR3 =
-    OptRot::GenerateNotesThatTessellateR3(min, max, 0.5);
+    OptRot::GenerateNotesThatTessellateR3(min, max, 1.0);
   OptRot::LowerBoundR3 lower_bound_R3(gmmA, gmmB, q_star);
   OptRot::UpperBoundIndepR3 upper_bound_R3(gmmA, gmmB, q_star);
 
   std::cout << "# initial nodes: " << nodesR3.size() << std::endl;
   eps = 1e-3;
-  max_it = 2000;
+  max_it = 1000;
   OptRot::BranchAndBound<OptRot::NodeR3> bbR3(lower_bound_R3, upper_bound_R3);
   OptRot::NodeR3 nodeR3_star = bbR3.Compute(nodesR3, eps, max_it);
   Eigen::Vector3d t_star = nodeR3_star.GetBox().GetCenter();
