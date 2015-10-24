@@ -13,6 +13,7 @@
 //#include "rtDDPvMF/realtimeDDPvMF_openni.hpp"
 #include "optRot/lower_bound_R3.h"
 #include "optRot/upper_bound_indep_R3.h"
+#include "optRot/upper_bound_convex_R3.h"
 #include "optRot/lower_bound_log.h"
 #include "optRot/upper_bound_log.h"
 #include "optRot/upper_bound_convexity_log.h"
@@ -76,8 +77,9 @@ bool ComputevMFMMfromPC(const pcl::PointCloud<pcl::PointXYZRGBNormal>&
   return true;
 }
 
-bool ComputeGMMfromPC(const pcl::PointCloud<pcl::PointXYZRGBNormal>&
-    pc, const CfgRtDDPvMF& cfg, std::vector<OptRot::Normal<3>>& gmm) {
+bool ComputeGMMfromPC(pcl::PointCloud<pcl::PointXYZRGBNormal>&
+    pc, const CfgRtDDPvMF& cfg, std::vector<OptRot::Normal<3>>& gmm,
+    bool colorLables) {
   // take 3 values (x,y,z of normal) with an offset of 4 values (x,y,z
   // and one float which is undefined) and the step is 12 (4 for xyz, 4
   // for normal xyz and 4 for curvature and rgb).
@@ -88,22 +90,22 @@ bool ComputeGMMfromPC(const pcl::PointCloud<pcl::PointXYZRGBNormal>&
 
   // Setup the DPvMF clusterer.
   shared_ptr<jsc::ClDataGpuf> cld(new jsc::ClDataGpuf(xyz,0));
-  dplv::DDPMeansCUDA<float,dplv::Euclidean<float> > pddpvmf(cld,
+  dplv::DDPMeansCUDA<float,dplv::Euclidean<float> > dpmeans(cld,
       cfg.lambda, cfg.Q, cfg.beta);
   // Run the clustering algorithm.
-  pddpvmf.nextTimeStep(xyz);
+  dpmeans.nextTimeStep(xyz);
   for(uint32_t i=0; i<10; ++i)
   {
     cout<<"@"<<i<<" :"<<endl;
-    pddpvmf.updateLabels();
-    pddpvmf.updateCenters();
-    if(pddpvmf.convergedCounts(xyz->cols()/100)) break;
+    dpmeans.updateLabels();
+    dpmeans.updateCenters();
+    if(dpmeans.convergedCounts(xyz->cols()/100)) break;
   }
-  pddpvmf.getZfromGpu(); // cache z_ back from gpu
-  const VectorXu& z = pddpvmf.z();
+  dpmeans.getZfromGpu(); // cache z_ back from gpu
+  const VectorXu& z = dpmeans.z();
   // Output results.
-  MatrixXf centroids = pddpvmf.centroids();
-  VectorXf counts = pddpvmf.counts().cast<float>();
+  MatrixXf centroids = dpmeans.centroids();
+  VectorXf counts = dpmeans.counts().cast<float>();
   std::cout << counts.transpose() << std::endl;
   std::cout << centroids << std::endl;
   uint32_t K = counts.rows();
@@ -115,12 +117,23 @@ bool ComputeGMMfromPC(const pcl::PointCloud<pcl::PointXYZRGBNormal>&
       Ss[z(i)] += (xyz->col(i) - centroids.col(z(i))).cast<double>()
         * (xyz->col(i) - centroids.col(z(i))).cast<double>().transpose();
     }
+
+  if (colorLables) {
+    for (uint32_t i=0; i<xyz->cols(); ++i) 
+      if(z(i) < K) {
+        uint8_t r = floor(float(z(i))/float(K-1)*255.);
+        uint8_t g = floor(float(K-1-z(i))/float(K-1)*255.);
+        uint8_t b = floor(float(z(i)<=(K-1)/2? z(i)+(K-1)/2 :
+              z(i)-(K-1)/2-1)/float(K-1)*255.);
+        pc.at(i).rgb = ((int)r) << 16 | ((int)g) << 8 | ((int)b);
+      }
+  }
   // Fractions belonging to each cluster.
   Eigen::VectorXd pis = (counts.array() / counts.sum()).matrix().cast<double>();
   
   for(uint32_t k=0; k<K; ++k)
     gmm.push_back(OptRot::Normal<3>(centroids.col(k).cast<double>(),
-          Ss[k]/float(counts(k)), pis(k)));
+          Ss[k]/float(counts(k))+0.01*Eigen::Matrix3d::Identity(), pis(k)));
   return true;
 }
 
@@ -207,22 +220,25 @@ int main(int argc, char** argv) {
 
   cfg.lambda = 0.5;
   std::vector<OptRot::Normal<3>> gmmA;
-  ComputeGMMfromPC(pcA, cfg, gmmA);
+  ComputeGMMfromPC(pcA, cfg, gmmA, true);
   for(uint32_t k=0; k<gmmA.size(); ++k) gmmA[k].Print(); 
 
   std::vector<OptRot::Normal<3>> gmmB;
-  ComputeGMMfromPC(pcB, cfg, gmmB);
+  ComputeGMMfromPC(pcB, cfg, gmmB, true);
   for(uint32_t k=0; k<gmmB.size(); ++k) gmmB[k].Print(); 
 
   OptRot::vMFMM<3> vmfmmA(vmfsA);
   OptRot::vMFMM<3> vmfmmB(vmfsB);
+  std::cout << " Tessellate S3" << std::endl;
   std::list<OptRot::NodeS3> nodes = OptRot::GenerateNotesThatTessellateS3();
+  std::cout << "# initial nodes: " << nodes.size() << std::endl;
   OptRot::LowerBoundLog lower_bound(vmfmmA, vmfmmB);
   OptRot::UpperBoundLog upper_bound(vmfmmA, vmfmmB);
   OptRot::UpperBoundConvexityLog upper_bound_convexity(vmfmmA, vmfmmB);
   
   double eps = 1e-5 * M_PI / 180.;
   uint32_t max_it = 600;
+  std::cout << " BB on S3 eps=" << eps << " max_it=" << max_it << std::endl;
   OptRot::BranchAndBound<OptRot::NodeS3> bb(lower_bound, upper_bound_convexity);
   OptRot::NodeS3 node_star = bb.Compute(nodes, eps, max_it);
 
@@ -231,6 +247,7 @@ int main(int argc, char** argv) {
     << std::endl;
 
   Eigen::Quaterniond q_star = node_star.GetTetrahedron().GetCenterQuaternion();
+  q_star = q_star.inverse(); // A little ugly but this is because of the way we setup the problem...
 
   // Obtain the range for the translation.
   // TODO: this could be made more tight by getting min and max for the
@@ -258,18 +275,22 @@ int main(int argc, char** argv) {
     OptRot::GenerateNotesThatTessellateR3(min, max, 1.0);
   OptRot::LowerBoundR3 lower_bound_R3(gmmA, gmmB, q_star);
   OptRot::UpperBoundIndepR3 upper_bound_R3(gmmA, gmmB, q_star);
+  OptRot::UpperBoundConvexR3 upper_bound_convex_R3(gmmA, gmmB, q_star);
 
   std::cout << "# initial nodes: " << nodesR3.size() << std::endl;
-  eps = 1e-3;
-  max_it = 1000;
-  OptRot::BranchAndBound<OptRot::NodeR3> bbR3(lower_bound_R3, upper_bound_R3);
+  eps = 1e-8;
+  max_it = 10000;
+  OptRot::BranchAndBound<OptRot::NodeR3> bbR3(lower_bound_R3, upper_bound_convex_R3);
+  std::cout << " BB on R3 eps=" << eps << " max_it=" << max_it << std::endl;
   OptRot::NodeR3 nodeR3_star = bbR3.Compute(nodesR3, eps, max_it);
   Eigen::Vector3d t_star = nodeR3_star.GetBox().GetCenter();
 
   std::cout << "optimum translation: " << t_star << std::endl;
   Eigen::Affine3f T = Eigen::Affine3f::Identity();
-  T.translation() = t_star.cast<float>();
-  T.rotate(q_star.cast<float>());
+  T.translation() = q_star.inverse()._transformVector(t_star).cast<float>();
+  T.rotate(q_star.inverse().cast<float>());
+//  T.translation() = t_star.cast<float>();
+//  T.rotate(q_star.cast<float>());
   std::cout << "optimal transformation: \n" << T.matrix() << std::endl;
   pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr pcB_T_ptr(new
       pcl::PointCloud<pcl::PointXYZRGBNormal>());
@@ -277,6 +298,7 @@ int main(int argc, char** argv) {
 
   // Display the loaded point clouds.
   if (vm.count("display")) {
+
     boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer (new
         pcl::visualization::PCLVisualizer ("3D Viewer"));
     viewer->initCameraParameters ();
@@ -292,7 +314,29 @@ int main(int argc, char** argv) {
       rgbB_T(pcB_T_ptr);
     viewer->addPointCloud<pcl::PointXYZRGBNormal> (pcA_ptr, rgbA, "cloudA");
 //    viewer->addPointCloud<pcl::PointXYZRGBNormal> (pcB_ptr, rgbB, "cloudB");
-    viewer->addPointCloud<pcl::PointXYZRGBNormal> (pcB_T_ptr, rgbB_T, "cloudB transformed");
+    viewer->addPointCloud<pcl::PointXYZRGBNormal> (pcB_T_ptr, rgbB_T,
+        "cloudB transformed");
+
+    for(uint32_t k=0; k<gmmA.size(); ++k) {
+      pcl::PointXYZ p;
+      p.x = gmmA[k].GetMu()(0);
+      p.y = gmmA[k].GetMu()(1);
+      p.z = gmmA[k].GetMu()(2);
+      char label[10];
+      sprintf(label,"SA%d",k);
+      viewer->addSphere(p, 0.01, 1,0,0, label);
+    }
+    for(uint32_t k=0; k<gmmB.size(); ++k) {
+      Eigen::Vector3d mu =
+        q_star.inverse()._transformVector(gmmB[k].GetMu() -t_star);
+      pcl::PointXYZ p;
+      p.x = mu(0);
+      p.y = mu(1);
+      p.z = mu(2);
+      char label[10];
+      sprintf(label,"SB%d",k);
+      viewer->addSphere(p, 0.01,0,1,0, label);
+    }
     while (!viewer->wasStopped ()) {
       viewer->spinOnce (100);
       boost::this_thread::sleep (boost::posix_time::microseconds (100000));
