@@ -117,7 +117,6 @@ bool ComputeGMMfromPC(pcl::PointCloud<pcl::PointXYZRGBNormal>&
       Ss[z(i)] += (xyz->col(i) - centroids.col(z(i))).cast<double>()
         * (xyz->col(i) - centroids.col(z(i))).cast<double>().transpose();
     }
-
   if (colorLables) {
     for (uint32_t i=0; i<xyz->cols(); ++i) 
       if(z(i) < K) {
@@ -153,7 +152,8 @@ int main(int argc, char** argv) {
   po::options_description desc("Allowed options");
   desc.add_options()
     ("help,h", "produce help message")
-    ("lambdaDeg,l", po::value<double>(), "lambda in degree for dp and ddp")
+    ("lambdaDeg,l", po::value<double>(), "lambda in degree for DPvMF-means")
+    ("lambdaT,t", po::value<double>(), "lambda in meters for DPMeans")
     ("in_a,a", po::value<string>(), "path to first input file")
     ("in_b,b", po::value<string>(), "path to second input file")
     ("out,o", po::value<string>(), "path to output file")
@@ -177,6 +177,8 @@ int main(int argc, char** argv) {
   cfg.pathOut = std::string("../results/");
   double lambdaDeg = 93.;
   if(vm.count("lambdaDeg")) lambdaDeg = vm["lambdaDeg"].as<double>();
+  double lambdaT = 1.0;
+  if(vm.count("lambdaT")) lambdaT = vm["lambdaT"].as<double>();
 
   cfg.lambdaFromDeg(lambdaDeg);
   cfg.QfromFrames2Survive(cfg.nFramesSurvive_);
@@ -218,13 +220,13 @@ int main(int argc, char** argv) {
   ComputevMFMMfromPC(pcB, cfg, vmfsB);
   for(uint32_t k=0; k<vmfsB.size(); ++k) vmfsB[k].Print(); 
 
-  cfg.lambda = 0.5;
+  cfg.lambda = lambdaT;
   std::vector<OptRot::Normal<3>> gmmA;
-  ComputeGMMfromPC(pcA, cfg, gmmA, true);
+  ComputeGMMfromPC(pcA, cfg, gmmA, false);
   for(uint32_t k=0; k<gmmA.size(); ++k) gmmA[k].Print(); 
 
   std::vector<OptRot::Normal<3>> gmmB;
-  ComputeGMMfromPC(pcB, cfg, gmmB, true);
+  ComputeGMMfromPC(pcB, cfg, gmmB, false);
   for(uint32_t k=0; k<gmmB.size(); ++k) gmmB[k].Print(); 
 
   OptRot::vMFMM<3> vmfmmA(vmfsA);
@@ -236,8 +238,8 @@ int main(int argc, char** argv) {
   OptRot::UpperBoundLog upper_bound(vmfmmA, vmfmmB);
   OptRot::UpperBoundConvexityLog upper_bound_convexity(vmfmmA, vmfmmB);
   
-  double eps = 1e-5 * M_PI / 180.;
-  uint32_t max_it = 600;
+  double eps = 1e-5;
+  uint32_t max_it = 1000;
   std::cout << " BB on S3 eps=" << eps << " max_it=" << max_it << std::endl;
   OptRot::BranchAndBound<OptRot::NodeS3> bb(lower_bound, upper_bound_convexity);
   OptRot::NodeS3 node_star = bb.Compute(nodes, eps, max_it);
@@ -247,6 +249,7 @@ int main(int argc, char** argv) {
     << std::endl;
 
   Eigen::Quaterniond q_star = node_star.GetTetrahedron().GetCenterQuaternion();
+  // This q_star is the inverse of the rotation that brings B to A.
   q_star = q_star.inverse(); // A little ugly but this is because of the way we setup the problem...
 
   // Obtain the range for the translation.
@@ -256,15 +259,16 @@ int main(int argc, char** argv) {
   ComputePcBoundaries(pcA, minA, maxA);
   ComputePcBoundaries(pcB, minB, maxB);
   for (uint32_t d=0; d<3; ++d) {
-    Eigen::Matrix<double,8,1> dt;
-    dt(0) = minA(d) - minB(d);
-    dt(1) = minA(d) - maxB(d);
-    dt(2) = maxA(d) - minB(d);
-    dt(3) = maxA(d) - maxB(d);
-    dt(4) = -minA(d) + minB(d);
-    dt(5) = -minA(d) + maxB(d);
-    dt(6) = -maxA(d) + minB(d);
-    dt(7) = -maxA(d) + maxB(d);
+//    Eigen::Matrix<double,8,1> dt;
+    Eigen::Matrix<double,4,1> dt;
+//    dt(0) = minA(d) - minB(d);
+//    dt(1) = minA(d) - maxB(d);
+//    dt(2) = maxA(d) - minB(d);
+//    dt(3) = maxA(d) - maxB(d);
+    dt(0) = -minA(d) + minB(d);
+    dt(1) = -minA(d) + maxB(d);
+    dt(2) = -maxA(d) + minB(d);
+    dt(3) = -maxA(d) + maxB(d);
     min(d) = dt.minCoeff();
     max(d) = dt.maxCoeff();
   }
@@ -272,14 +276,14 @@ int main(int argc, char** argv) {
     << " max t: " << max.transpose() << std::endl;
 
   std::list<OptRot::NodeR3> nodesR3 =
-    OptRot::GenerateNotesThatTessellateR3(min, max, 1.0);
+    OptRot::GenerateNotesThatTessellateR3(min, max, 10.);
   OptRot::LowerBoundR3 lower_bound_R3(gmmA, gmmB, q_star);
   OptRot::UpperBoundIndepR3 upper_bound_R3(gmmA, gmmB, q_star);
   OptRot::UpperBoundConvexR3 upper_bound_convex_R3(gmmA, gmmB, q_star);
 
   std::cout << "# initial nodes: " << nodesR3.size() << std::endl;
-  eps = 1e-8;
-  max_it = 10000;
+  eps = 1e-5;
+  max_it = 1000;
   OptRot::BranchAndBound<OptRot::NodeR3> bbR3(lower_bound_R3, upper_bound_convex_R3);
   std::cout << " BB on R3 eps=" << eps << " max_it=" << max_it << std::endl;
   OptRot::NodeR3 nodeR3_star = bbR3.Compute(nodesR3, eps, max_it);
@@ -294,7 +298,13 @@ int main(int argc, char** argv) {
   std::cout << "optimal transformation: \n" << T.matrix() << std::endl;
   pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr pcB_T_ptr(new
       pcl::PointCloud<pcl::PointXYZRGBNormal>());
-  pcl::transformPointCloud(pcB, *pcB_T_ptr, T);
+
+  for (uint32_t i=0; i<pcB.size(); ++i) {
+    Eigen::Map<Eigen::Vector3f> p(&(pcB.at(i).x));
+    p = q_star.cast<float>().inverse()._transformVector( p - t_star.cast<float>());
+    Eigen::Map<Eigen::Vector3f> n(pcB.at(i).normal);
+    n = q_star.cast<float>().inverse()._transformVector(n);
+  }
 
   // Display the loaded point clouds.
   if (vm.count("display")) {
@@ -303,28 +313,47 @@ int main(int argc, char** argv) {
         pcl::visualization::PCLVisualizer ("3D Viewer"));
     viewer->initCameraParameters ();
     viewer->setBackgroundColor (0, 0, 0);
-    viewer->addCoordinateSystem (1.0);
+    viewer->addCoordinateSystem (0.3);
     pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr pcA_ptr = pcA.makeShared();
     pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGBNormal>
       rgbA(pcA_ptr);
     pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr pcB_ptr = pcB.makeShared();
+
+    pcA_ptr->sensor_origin_.fill(0.);
+    pcA_ptr->sensor_origin_(3) = 1.;
+    pcA_ptr->sensor_orientation_.setIdentity();
+
+    pcB_ptr->sensor_origin_.topRows<3>() = t_star.cast<float>();
+    pcB_ptr->sensor_origin_(3) = 1.;
+    pcB_ptr->sensor_orientation_ = q_star.inverse().cast<float>();
+
+    pcB_ptr->sensor_origin_.fill(0.);
+    pcB_ptr->sensor_origin_(3) = 1.;
+    pcB_ptr->sensor_orientation_.setIdentity();
+
     pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGBNormal>
       rgbB(pcB_ptr);
     pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGBNormal>
       rgbB_T(pcB_T_ptr);
     viewer->addPointCloud<pcl::PointXYZRGBNormal> (pcA_ptr, rgbA, "cloudA");
-//    viewer->addPointCloud<pcl::PointXYZRGBNormal> (pcB_ptr, rgbB, "cloudB");
-    viewer->addPointCloud<pcl::PointXYZRGBNormal> (pcB_T_ptr, rgbB_T,
-        "cloudB transformed");
+    viewer->addPointCloud<pcl::PointXYZRGBNormal> (pcB_ptr, rgbB, "cloudB");
+//    viewer->addPointCloud<pcl::PointXYZRGBNormal> (pcB_T_ptr, rgbB_T,
+//        "cloudB transformed");
 
+    std::cout << "cloud origins for display:" <<   std::endl 
+      << pcA_ptr->sensor_origin_.transpose()  << " q: " 
+      << pcA_ptr->sensor_orientation_.coeffs().transpose() <<  std::endl
+      << pcB_ptr->sensor_origin_.transpose()  << " q: " 
+      << pcB_ptr->sensor_orientation_.coeffs().transpose() <<  std::endl;
+
+    char label[10];
     for(uint32_t k=0; k<gmmA.size(); ++k) {
       pcl::PointXYZ p;
       p.x = gmmA[k].GetMu()(0);
       p.y = gmmA[k].GetMu()(1);
       p.z = gmmA[k].GetMu()(2);
-      char label[10];
       sprintf(label,"SA%d",k);
-      viewer->addSphere(p, 0.01, 1,0,0, label);
+      viewer->addSphere(p, 0.03, 1,0,0, label);
     }
     for(uint32_t k=0; k<gmmB.size(); ++k) {
       Eigen::Vector3d mu =
@@ -333,9 +362,8 @@ int main(int argc, char** argv) {
       p.x = mu(0);
       p.y = mu(1);
       p.z = mu(2);
-      char label[10];
       sprintf(label,"SB%d",k);
-      viewer->addSphere(p, 0.01,0,1,0, label);
+      viewer->addSphere(p, 0.03,0,1,0, label);
     }
     while (!viewer->wasStopped ()) {
       viewer->spinOnce (100);
