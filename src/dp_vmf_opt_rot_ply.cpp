@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <string>
+#include <pcl/search/kdtree.h>
 #include <pcl/io/ply_io.h>
 #include <pcl/visualization/cloud_viewer.h>
 #include <pcl/visualization/point_cloud_color_handlers.h>
@@ -14,9 +15,9 @@
 #include "optRot/lower_bound_R3.h"
 #include "optRot/upper_bound_indep_R3.h"
 #include "optRot/upper_bound_convex_R3.h"
-#include "optRot/lower_bound_log.h"
-#include "optRot/upper_bound_log.h"
-#include "optRot/upper_bound_convexity_log.h"
+#include "optRot/lower_bound_S3.h"
+#include "optRot/upper_bound_indep_S3.h"
+#include "optRot/upper_bound_convex_S3.h"
 #include "optRot/branch_and_bound.h"
 #include "optRot/vmf_mm.h"
 #include "optRot/normal.h"
@@ -24,6 +25,46 @@
 
 #include <boost/program_options.hpp>
 namespace po = boost::program_options;
+
+void UniformlySamplePc(const pcl::PointCloud<pcl::PointXYZRGBNormal>& pcIn, 
+  pcl::PointCloud<pcl::PointXYZRGBNormal>& pcOut) {
+  
+}
+
+void ComputeAreaWeightsPc(pcl::PointCloud<pcl::PointXYZRGBNormal>& pcIn,
+    float scale) {
+  pcl::PointCloud<pcl::PointXYZ>::Ptr pcXYZ(new
+      pcl::PointCloud<pcl::PointXYZ>(pcIn.size(),1));
+  pcXYZ->getMatrixXfMap(3,4,0) = pcIn.getMatrixXfMap(3, 12, 0);
+
+  pcl::search::KdTree<pcl::PointXYZ> kd; 
+  kd.setInputCloud(pcXYZ);
+
+  std::vector<int> k_ids;
+  std::vector<float> k_sqr_dists;
+//  double W = 0.; // Sum over all weights.
+  for (uint32_t i=0; i<pcIn.size(); ++i) {
+    int k_found = kd.nearestKSearch(pcXYZ->at(i), 9, k_ids, k_sqr_dists);
+    std::sort(k_sqr_dists.begin(), k_sqr_dists.begin()+k_found);
+    float median_sqr_dist = k_sqr_dists[k_found/2];
+    if (k_found%2 == 0)
+      median_sqr_dist = (k_sqr_dists[k_found/2-1]+k_sqr_dists[k_found/2])*0.5;
+//    float scale_3d = median_sqr_dist*sqrt(median_sqr_dist)*4./3.*M_PI;
+    float scale_2d = median_sqr_dist*M_PI*1e2*scale*scale; // in dm^2
+    // Abuse curvature entry for the scale.
+    pcIn.at(i).curvature = scale_2d;
+//    W += scale;
+//    if (i%10 == 0)
+//      std::cout << k_found << ": "<< sqrt(median_sqr_dist) << " -> " << scale << std::endl;
+  }
+//  std::cout << "W: " << W << std::endl;
+  // Normalize so that the sum over all weights will be 1.
+//  for (uint32_t i=0; i<pcIn.size(); ++i) {
+//    pcIn.at(i).curvature /= W;
+////      if (i%100 == 0)
+////        std::cout << pcIn.at(i).curvature << " " << pcIn.at(i).curvature/W << std::endl;
+//  }
+}
 
 bool ComputevMFMMfromPC(const pcl::PointCloud<pcl::PointXYZRGBNormal>&
     pc, const CfgRtDDPvMF& cfg, std::vector<OptRot::vMF<3>>& vmfs) {
@@ -34,9 +75,9 @@ bool ComputevMFMMfromPC(const pcl::PointCloud<pcl::PointXYZRGBNormal>&
   boost::shared_ptr<Eigen::MatrixXf> n(new Eigen::MatrixXf(n_map));
   std::cout << "normals: " << std::endl << n->rows() 
     << "x" << n->cols() << std::endl;
-  auto d = pc.getMatrixXfMap(1, 12, 2); // this works for PointXYZRGBNormal
-  std::cout << "depth: " << std::endl << d.rows() 
-    << "x" << d.cols() << std::endl;
+//  auto d = pc.getMatrixXfMap(1, 12, 2); // this works for PointXYZRGBNormal
+//  std::cout << "depth: " << std::endl << d.rows() 
+//    << "x" << d.cols() << std::endl;
 
   // Setup the DPvMF clusterer.
   shared_ptr<jsc::ClDataGpuf> cld(new jsc::ClDataGpuf(n,0));
@@ -63,17 +104,25 @@ bool ComputevMFMMfromPC(const pcl::PointCloud<pcl::PointXYZRGBNormal>&
   // Compute vMF statistics: area-weighted sum over surface normals
   // associated with respective cluster. 
   MatrixXd xSum = MatrixXd::Zero(3,K);
+  counts.fill(0.);
   for (uint32_t i=0; i<n->cols(); ++i) 
     if(z(i) < K) {
-      double scale = d(0,i)/cfg.f_d;
-      xSum.col(z(i)) += n->col(i).cast<double>()*scale;
+      float w = pc.at(i).curvature; // curvature is used to store the weights.
+//      if (i%100 == 0)
+//        std::cout << w << std::endl;
+//      double scale = d(0,i)/cfg.f_d;
+      xSum.col(z(i)) += n->col(i).cast<double>()*w;
+      counts(z(i)) += w;
     }
   // Fractions belonging to each cluster.
   Eigen::VectorXd pis = (counts.array() / counts.sum()).matrix().cast<double>();
   
   for(uint32_t k=0; k<K; ++k)
-    vmfs.push_back(OptRot::vMF<3>(centroids.col(k).cast<double>(),
-          xSum.col(k).norm(), pis(k)));
+    if (pis(k) > 0.) {
+//      vmfs.push_back(OptRot::vMF<3>(centroids.col(k).cast<double>(),
+      vmfs.push_back(OptRot::vMF<3>(xSum.col(k).cast<double>()/xSum.col(k).norm(),
+            xSum.col(k).norm(), pis(k)));
+    }
   return true;
 }
 
@@ -112,9 +161,21 @@ bool ComputeGMMfromPC(pcl::PointCloud<pcl::PointXYZRGBNormal>&
   std::cout << "K: " << K << std::endl;
   // Compute Gaussian statistics: 
   std::vector<MatrixXd> Ss(K,Matrix3d::Zero());
+  Eigen::MatrixXd xSum = Eigen::MatrixXd::Zero(3,K);
+  counts.fill(0.);
   for (uint32_t i=0; i<xyz->cols(); ++i) 
     if(z(i) < K) {
-      Ss[z(i)] += (xyz->col(i) - centroids.col(z(i))).cast<double>()
+      float w = pc.at(i).curvature; // curvature is used to store the weights.
+      counts(z(i)) += w;
+      xSum.col(z(i)) += xyz->col(i).cast<double>()*w;
+    }
+  for(uint32_t k=0; k<K; ++k)
+    centroids.col(k) = xSum.col(k).cast<float>()/counts(k);
+
+  for (uint32_t i=0; i<xyz->cols(); ++i) 
+    if(z(i) < K) {
+      float w = pc.at(i).curvature; // curvature is used to store the weights.
+      Ss[z(i)] += w*(xyz->col(i) - centroids.col(z(i))).cast<double>()
         * (xyz->col(i) - centroids.col(z(i))).cast<double>().transpose();
     }
   if (colorLables) {
@@ -131,8 +192,10 @@ bool ComputeGMMfromPC(pcl::PointCloud<pcl::PointXYZRGBNormal>&
   Eigen::VectorXd pis = (counts.array() / counts.sum()).matrix().cast<double>();
   
   for(uint32_t k=0; k<K; ++k)
-    gmm.push_back(OptRot::Normal<3>(centroids.col(k).cast<double>(),
-          Ss[k]/float(counts(k))+0.01*Eigen::Matrix3d::Identity(), pis(k)));
+    if (pis(k) > 0.) {
+      gmm.push_back(OptRot::Normal<3>(centroids.col(k).cast<double>(),
+            Ss[k]/float(counts(k))+0.01*Eigen::Matrix3d::Identity(), pis(k)));
+    }
   return true;
 }
 
@@ -157,7 +220,7 @@ int main(int argc, char** argv) {
     ("in_a,a", po::value<string>(), "path to first input file")
     ("in_b,b", po::value<string>(), "path to second input file")
     ("out,o", po::value<string>(), "path to output file")
-    ("scale,s", po::value<float>(),"scale for normal extraction search radius")
+    ("scale,s", po::value<float>(),"scale for point-cloud")
     ("display,d", "display results")
     ;
 
@@ -189,7 +252,7 @@ int main(int argc, char** argv) {
   //  if(vm.count("mode")) mode = vm["mode"].as<string>();
   if(vm.count("in_a")) pathA = vm["in_a"].as<string>();
   if(vm.count("in_b")) pathB = vm["in_b"].as<string>();
-  float scale = 0.1;
+  float scale = 1.;
   if(vm.count("scale")) scale = vm["scale"].as<float>();
 
   // Load point clouds.
@@ -205,6 +268,9 @@ int main(int argc, char** argv) {
   else
     std::cout << "loaded pc from " << pathB << ": " << pcB.width << "x"
       << pcB.height << std::endl;
+
+  ComputeAreaWeightsPc(pcA, scale);
+  ComputeAreaWeightsPc(pcB, scale);
 
   findCudaDevice(argc,(const char**)argv);
 
@@ -234,19 +300,22 @@ int main(int argc, char** argv) {
   std::cout << " Tessellate S3" << std::endl;
   std::list<OptRot::NodeS3> nodes = OptRot::GenerateNotesThatTessellateS3();
   std::cout << "# initial nodes: " << nodes.size() << std::endl;
-  OptRot::LowerBoundLog lower_bound(vmfmmA, vmfmmB);
-  OptRot::UpperBoundLog upper_bound(vmfmmA, vmfmmB);
-  OptRot::UpperBoundConvexityLog upper_bound_convexity(vmfmmA, vmfmmB);
+  OptRot::LowerBoundS3 lower_bound(vmfmmA, vmfmmB);
+  OptRot::UpperBoundIndepS3 upper_bound(vmfmmA, vmfmmB);
+  OptRot::UpperBoundConvexS3 upper_bound_convex(vmfmmA, vmfmmB);
   
-  double eps = 1e-5;
-  uint32_t max_it = 1000;
+  double eps = 1e-8;
+  uint32_t max_it = 3000;
   std::cout << " BB on S3 eps=" << eps << " max_it=" << max_it << std::endl;
-  OptRot::BranchAndBound<OptRot::NodeS3> bb(lower_bound, upper_bound_convexity);
+  OptRot::BranchAndBound<OptRot::NodeS3> bb(lower_bound, upper_bound);
+//  OptRot::BranchAndBound<OptRot::NodeS3> bb(lower_bound, upper_bound_convex);
   OptRot::NodeS3 node_star = bb.Compute(nodes, eps, max_it);
+  OptRot::CountBranchesInTree<OptRot::NodeS3>(nodes);
 
   std::cout << "optimum quaternion: " 
     << node_star.GetTetrahedron().GetCenter().transpose()
     << std::endl;
+
 
   Eigen::Quaterniond q_star = node_star.GetTetrahedron().GetCenterQuaternion();
   // This q_star is the inverse of the rotation that brings B to A.
@@ -282,13 +351,14 @@ int main(int argc, char** argv) {
   OptRot::UpperBoundConvexR3 upper_bound_convex_R3(gmmA, gmmB, q_star);
 
   std::cout << "# initial nodes: " << nodesR3.size() << std::endl;
-  eps = 1e-5;
-  max_it = 1000;
+  eps = 1e-8;
+  max_it = 3000;
   OptRot::BranchAndBound<OptRot::NodeR3> bbR3(lower_bound_R3, upper_bound_convex_R3);
   std::cout << " BB on R3 eps=" << eps << " max_it=" << max_it << std::endl;
   OptRot::NodeR3 nodeR3_star = bbR3.Compute(nodesR3, eps, max_it);
-  Eigen::Vector3d t_star = nodeR3_star.GetBox().GetCenter();
+  OptRot::CountBranchesInTree<OptRot::NodeR3>(nodesR3);
 
+  Eigen::Vector3d t_star = nodeR3_star.GetBox().GetCenter();
   std::cout << "optimum translation: " << t_star << std::endl;
   Eigen::Affine3f T = Eigen::Affine3f::Identity();
   T.translation() = q_star.inverse()._transformVector(t_star).cast<float>();
@@ -312,11 +382,10 @@ int main(int argc, char** argv) {
     boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer (new
         pcl::visualization::PCLVisualizer ("3D Viewer"));
     viewer->initCameraParameters ();
-    viewer->setBackgroundColor (0, 0, 0);
+    viewer->setBackgroundColor (1., 1., 1.);
     viewer->addCoordinateSystem (0.3);
+
     pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr pcA_ptr = pcA.makeShared();
-    pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGBNormal>
-      rgbA(pcA_ptr);
     pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr pcB_ptr = pcB.makeShared();
 
     pcA_ptr->sensor_origin_.fill(0.);
@@ -331,6 +400,8 @@ int main(int argc, char** argv) {
     pcB_ptr->sensor_origin_(3) = 1.;
     pcB_ptr->sensor_orientation_.setIdentity();
 
+    pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGBNormal>
+      rgbA(pcA_ptr);
     pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGBNormal>
       rgbB(pcB_ptr);
     pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGBNormal>
@@ -353,7 +424,7 @@ int main(int argc, char** argv) {
       p.y = gmmA[k].GetMu()(1);
       p.z = gmmA[k].GetMu()(2);
       sprintf(label,"SA%d",k);
-      viewer->addSphere(p, 0.03, 1,0,0, label);
+      viewer->addSphere(p, cfg.lambda/10., 1,0,0, label);
     }
     for(uint32_t k=0; k<gmmB.size(); ++k) {
       Eigen::Vector3d mu =
@@ -363,7 +434,7 @@ int main(int argc, char** argv) {
       p.y = mu(1);
       p.z = mu(2);
       sprintf(label,"SB%d",k);
-      viewer->addSphere(p, 0.03,0,1,0, label);
+      viewer->addSphere(p, cfg.lambda/10.,0,1,0, label);
     }
     while (!viewer->wasStopped ()) {
       viewer->spinOnce (100);

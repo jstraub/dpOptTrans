@@ -9,9 +9,9 @@
 
 #include "rtDDPvMF/rtDDPvMF.hpp"
 //#include "rtDDPvMF/realtimeDDPvMF_openni.hpp"
-#include "optRot/lower_bound_log.h"
-#include "optRot/upper_bound_log.h"
-#include "optRot/upper_bound_convexity_log.h"
+#include "optRot/lower_bound_S3.h"
+#include "optRot/upper_bound_indep_S3.h"
+#include "optRot/upper_bound_convex_S3.h"
 #include "optRot/branch_and_bound.h"
 #include "optRot/vmf_mm.h"
 #include "optRot/node.h"
@@ -211,9 +211,9 @@ int main(int argc, char** argv) {
       << " pi " << vmf_mm_B.Get(i).GetPi() << std::endl;
 
   std::list<OptRot::NodeS3> nodes = OptRot::GenerateNotesThatTessellateS3();
-  OptRot::LowerBoundLog lower_bound(vmf_mm_A, vmf_mm_B);
-  OptRot::UpperBoundLog upper_bound(vmf_mm_A, vmf_mm_B);
-  OptRot::UpperBoundConvexityLog upper_bound_convexity(vmf_mm_A, vmf_mm_B);
+  OptRot::LowerBoundS3 lower_bound(vmf_mm_A, vmf_mm_B);
+  OptRot::UpperBoundIndepS3 upper_bound(vmf_mm_A, vmf_mm_B);
+  OptRot::UpperBoundConvexS3 upper_bound_convexity(vmf_mm_A, vmf_mm_B);
   
   OptRot::BranchAndBound<OptRot::NodeS3> bb(lower_bound, upper_bound_convexity);
   double eps = 1e-4 / 180. * M_PI;
