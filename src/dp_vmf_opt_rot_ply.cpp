@@ -83,7 +83,7 @@ void DisplayPcs(const pcl::PointCloud<pcl::PointXYZRGBNormal>& pcA,
         pcl::visualization::PCLVisualizer ("3D Viewer"));
     viewerPc->initCameraParameters ();
     viewerPc->setBackgroundColor (1., 1., 1.);
-    viewerPc->addCoordinateSystem (scale);
+//    viewerPc->addCoordinateSystem (scale);
 
     pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGBNormal>
       rgbA(pcA_ptr);
@@ -157,8 +157,8 @@ bool ComputevMFMMfromPC(const pcl::PointCloud<pcl::PointXYZRGBNormal>&
   // for normal xyz and 4 for curvature and rgb).
   auto n_map = pc.getMatrixXfMap(3, 12, 4); // this works for PointXYZRGBNormal
   boost::shared_ptr<Eigen::MatrixXf> n(new Eigen::MatrixXf(n_map));
-  std::cout << "normals: " << std::endl << n->rows() 
-    << "x" << n->cols() << std::endl;
+//  std::cout << "normals: " << std::endl << n->rows() 
+//    << "x" << n->cols() << std::endl;
   // Setup the DPvMF clusterer.
   shared_ptr<jsc::ClDataGpuf> cld(new jsc::ClDataGpuf(n,0));
   dplv::DDPMeansCUDA<float,dplv::Spherical<float> > pddpvmf(cld,
@@ -167,7 +167,7 @@ bool ComputevMFMMfromPC(const pcl::PointCloud<pcl::PointXYZRGBNormal>&
   pddpvmf.nextTimeStep(n);
   for(uint32_t i=0; i<10; ++i)
   {
-    cout<<"@"<<i<<" :"<<endl;
+//    cout<<"@"<<i<<" :"<<endl;
     pddpvmf.updateLabels();
     pddpvmf.updateCenters();
     if(pddpvmf.convergedCounts(n->cols()/100)) break;
@@ -177,10 +177,10 @@ bool ComputevMFMMfromPC(const pcl::PointCloud<pcl::PointXYZRGBNormal>&
   // Output results.
   MatrixXf centroids = pddpvmf.centroids();
   VectorXf counts = pddpvmf.counts().cast<float>();
-  std::cout << counts.transpose() << std::endl;
+//  std::cout << counts.transpose() << std::endl;
 //  std::cout << centroids << std::endl;
   uint32_t K = counts.rows();
-  std::cout << "K: " << K << std::endl;
+//  std::cout << "K: " << K << std::endl;
   // Compute vMF statistics: area-weighted sum over surface normals
   // associated with respective cluster. 
   MatrixXd xSum = MatrixXd::Zero(3,K);
@@ -216,8 +216,8 @@ bool ComputeGMMfromPC(pcl::PointCloud<pcl::PointXYZRGBNormal>&
   // for normal xyz and 4 for curvature and rgb).
   auto xyz_map = pc.getMatrixXfMap(3, 12, 0); // this works for PointXYZRGBNormal
   boost::shared_ptr<Eigen::MatrixXf> xyz(new Eigen::MatrixXf(xyz_map));
-  std::cout << "xyz: " << std::endl << xyz->rows() 
-    << "x" << xyz->cols() << std::endl;
+//  std::cout << "xyz: " << std::endl << xyz->rows() 
+//    << "x" << xyz->cols() << std::endl;
 
   // Setup the DPvMF clusterer.
   shared_ptr<jsc::ClDataGpuf> cld(new jsc::ClDataGpuf(xyz,0));
@@ -227,7 +227,7 @@ bool ComputeGMMfromPC(pcl::PointCloud<pcl::PointXYZRGBNormal>&
   dpmeans.nextTimeStep(xyz);
   for(uint32_t i=0; i<10; ++i)
   {
-    cout<<"@"<<i<<" :"<<endl;
+//    cout<<"@"<<i<<" :"<<endl;
     dpmeans.updateLabels();
     dpmeans.updateCenters();
     if(dpmeans.convergedCounts(xyz->cols()/100)) break;
@@ -237,10 +237,10 @@ bool ComputeGMMfromPC(pcl::PointCloud<pcl::PointXYZRGBNormal>&
   // Output results.
   MatrixXf centroids = dpmeans.centroids();
   VectorXf counts = dpmeans.counts().cast<float>();
-  std::cout << counts.transpose() << std::endl;
-  std::cout << centroids << std::endl;
+//  std::cout << counts.transpose() << std::endl;
+//  std::cout << centroids << std::endl;
   uint32_t K = counts.rows();
-  std::cout << "K: " << K << std::endl;
+//  std::cout << "K: " << K << std::endl;
   // Compute Gaussian statistics: 
   std::vector<MatrixXd> Ss(K,Matrix3d::Zero());
   Eigen::MatrixXd xSum = Eigen::MatrixXd::Zero(3,K);
@@ -365,17 +365,6 @@ int main(int argc, char** argv) {
   Eigen::Vector3d minA, minB, maxA, maxB, min, max;
   ComputePcBoundaries(pcA, minA, maxA);
   ComputePcBoundaries(pcB, minB, maxB);
-  for (uint32_t d=0; d<3; ++d) {
-    Eigen::Matrix<double,4,1> dt;
-    dt(0) = -minA(d) + minB(d);
-    dt(1) = -minA(d) + maxB(d);
-    dt(2) = -maxA(d) + minB(d);
-    dt(3) = -maxA(d) + maxB(d);
-    min(d) = dt.minCoeff();
-    max(d) = dt.maxCoeff();
-  }
-  std::cout << "min t: " << min.transpose() 
-    << " max t: " << max.transpose() << std::endl;
 
   findCudaDevice(argc,(const char**)argv);
 
@@ -385,20 +374,20 @@ int main(int argc, char** argv) {
 
   std::vector<OptRot::vMF<3>> vmfsA;
   ComputevMFMMfromPC(pcA, cfg, vmfsA);
-  for(uint32_t k=0; k<vmfsA.size(); ++k) vmfsA[k].Print(); 
+//  for(uint32_t k=0; k<vmfsA.size(); ++k) vmfsA[k].Print(); 
 
   std::vector<OptRot::vMF<3>> vmfsB;
   ComputevMFMMfromPC(pcB, cfg, vmfsB);
-  for(uint32_t k=0; k<vmfsB.size(); ++k) vmfsB[k].Print(); 
+//  for(uint32_t k=0; k<vmfsB.size(); ++k) vmfsB[k].Print(); 
 
   cfg.lambda = lambdaT;
   std::vector<OptRot::Normal<3>> gmmA;
   ComputeGMMfromPC(pcA, cfg, gmmA, false);
-  for(uint32_t k=0; k<gmmA.size(); ++k) gmmA[k].Print(); 
+//  for(uint32_t k=0; k<gmmA.size(); ++k) gmmA[k].Print(); 
 
   std::vector<OptRot::Normal<3>> gmmB;
   ComputeGMMfromPC(pcB, cfg, gmmB, false);
-  for(uint32_t k=0; k<gmmB.size(); ++k) gmmB[k].Print(); 
+//  for(uint32_t k=0; k<gmmB.size(); ++k) gmmB[k].Print(); 
 
   OptRot::vMFMM<3> vmfmmA(vmfsA);
   OptRot::vMFMM<3> vmfmmB(vmfsB);
@@ -409,16 +398,17 @@ int main(int argc, char** argv) {
   OptRot::UpperBoundIndepS3 upper_bound(vmfmmA, vmfmmB);
   OptRot::UpperBoundConvexS3 upper_bound_convex(vmfmmA, vmfmmB);
   
-  double eps = 1e-8;
-  uint32_t max_it = 3000;
+  double eps = 1e-9;
+  uint32_t max_it = 10000;
   std::cout << " BB on S3 eps=" << eps << " max_it=" << max_it << std::endl;
 //  OptRot::BranchAndBound<OptRot::NodeS3> bb(lower_bound, upper_bound);
   OptRot::BranchAndBound<OptRot::NodeS3> bb(lower_bound, upper_bound_convex);
   OptRot::NodeS3 node_star = bb.Compute(nodes, eps, max_it);
-  OptRot::CountBranchesInTree<OptRot::NodeS3>(nodes);
+//  OptRot::CountBranchesInTree<OptRot::NodeS3>(nodes);
   Eigen::Quaterniond q_star = node_star.GetLbArgument();
   std::cout << "optimum BB quaternion: "  << q_star.coeffs().transpose()
-      << " angle: " << 2.*acos(q_star.w()) * 180. / M_PI
+      << " angle: " << 2.*acos(q_star.w()) * 180. / M_PI << std::endl
+      << q_star.toRotationMatrix()
       << std::endl;
   std::cout << node_star.GetTetrahedron().GetCenterQuaternion().coeffs().transpose() << std::endl;
   Eigen::Quaterniond q = q_star;
@@ -459,6 +449,31 @@ int main(int argc, char** argv) {
     // This q is the inverse of the rotation that brings B to A.
     q = q.inverse(); // A little ugly but this is because of the way we setup the problem...
 
+    // To get all corners of the bounding box.j
+    OptRot::Box box(minA, maxA);
+    // Update the boundaries of the the rotated point cloud A to get
+    // the full translation space later on.
+    for (uint32_t i=0; i<8; ++i) {
+      Eigen::Vector3d c;
+      box.GetCorner(i,c);
+      c = q._transformVector(c);
+      for (uint32_t d=0; d<3; ++d) {
+        minA(d) = std::min(minA(d), c(d));
+        maxA(d) = std::max(maxA(d), c(d));
+      }
+    }
+    for (uint32_t d=0; d<3; ++d) {
+      Eigen::Matrix<double,4,1> dt;
+      dt(0) = -minA(d) + minB(d);
+      dt(1) = -minA(d) + maxB(d);
+      dt(2) = -maxA(d) + minB(d);
+      dt(3) = -maxA(d) + maxB(d);
+      min(d) = dt.minCoeff();
+      max(d) = dt.maxCoeff();
+    }
+    std::cout << "min t: " << min.transpose() 
+      << " max t: " << max.transpose() << std::endl;
+
     std::list<OptRot::NodeR3> nodesR3 =
       OptRot::GenerateNotesThatTessellateR3(min, max, 10.);
     OptRot::LowerBoundR3 lower_bound_R3(gmmA, gmmB, q);
@@ -466,7 +481,7 @@ int main(int argc, char** argv) {
     OptRot::UpperBoundConvexR3 upper_bound_convex_R3(gmmA, gmmB, q);
 
     std::cout << "# initial nodes: " << nodesR3.size() << std::endl;
-    eps = 1e-8;
+    eps = 1e-10;
     max_it = 3000;
     OptRot::BranchAndBound<OptRot::NodeR3> bbR3(lower_bound_R3, upper_bound_convex_R3);
     std::cout << " BB on R3 eps=" << eps << " max_it=" << max_it << std::endl;

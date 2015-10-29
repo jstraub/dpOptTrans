@@ -125,7 +125,7 @@ void DisplayPcs(const pcl::PointCloud<pcl::PointXYZRGBNormal>& pcA,
         pcl::visualization::PCLVisualizer ("3D Viewer"));
     viewerPc->initCameraParameters ();
     viewerPc->setBackgroundColor (1., 1., 1.);
-    viewerPc->addCoordinateSystem (scale);
+//    viewerPc->addCoordinateSystem (scale);
 
     pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGBNormal>
       rgbA(pcA_ptr);
