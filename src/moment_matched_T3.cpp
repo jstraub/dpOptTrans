@@ -91,14 +91,64 @@ int main(int argc, char** argv) {
   Eigen::Matrix3d U = eigA.eigenvectors().real();
   Eigen::Matrix3d V = eigB.eigenvectors().real();
 
-  Eigen::Matrix3d R = V*U.inverse();
+  Eigen::Matrix3d R = V*U.transpose();
   Eigen::Quaterniond q(R);
   Eigen::Vector3d t = muB - R*muA;
+  std::cout << "R:\n"<< R << std::endl;
+  std::cout << "t: " << t.transpose() << std::endl;
+  std::cout << "norm of difference in covariance matrixes after matching: " 
+    << (R*SA*R.transpose() -SB).norm() << std::endl;
 
-  std::cout << R << std::endl;
-  std::cout << t.transpose() << std::endl;
-  std::cout << R*SA*R.transpose() -SB << std::endl;
+  if (vm.count("display")) {
+    std::cout << "Cov A" << std::endl << SA << std::endl;
+    std::cout << "EV A" << std::endl << U << std::endl;
+    std::cout << "E A" << std::endl << eigA.eigenvalues() << std::endl;
+    std::cout << "mu A " << std::endl << muA << std::endl;
+    std::cout << "Cov B" << std::endl << SB << std::endl;
+    std::cout << "EV B" << std::endl << V << std::endl;
+    std::cout << "E B" << std::endl << eigB.eigenvalues() << std::endl;
+    std::cout << "mu B " << std::endl << muB << std::endl;
+    std::cout << "Cov B Transformed" << std::endl
+      << R.transpose()*SB*R << std::endl;
+    std::cout << "mu B Transformed" << std::endl 
+      << R.transpose()*(muB - t) << std::endl;
+  }
 
+  if (false) {
+    Eigen::Matrix<double,3,6> M;
+    M << 1,-1,0,0,0,0,
+      0,0,1,-1,0,0,
+      0,0,0,0,1,-1;
+    uint32_t k =0;
+    double min_cost = 9999.;
+    Eigen::Matrix3d R_star;
+    Eigen::Vector3d t_star;
+    for(uint32_t i=0; i<6; ++i)
+      for(uint32_t j=0; j<6; ++j) {
+        Eigen::Matrix3d Rperm;
+        Rperm.col(0) = M.col(i);
+        Rperm.col(1) = M.col(j);
+        Rperm.col(2) = M.col(i).cross(M.col(j));
+        if (fabs(Rperm.determinant() -1.) < 1e-6) {
+          //        std::cout << Rperm << std::endl;
+          Eigen::Matrix3d R_ = Rperm*R;
+          Eigen::Quaterniond q_(R_);
+          Eigen::Vector3d t_ = muB - R_*muA;
+          double c = ComputeClosestPointEucledianCost(pcA, pcB, &R_, &t_); 
+          std::cout << "permutation k=" << k << "\t cost=" << c << std::endl;
+          std::cout << q_.coeffs().transpose() 
+            << "\tt: " << t_.transpose() << std::endl;
+          ++k; 
+          if(min_cost > c) {
+            min_cost = c;
+            R_star = R_;
+            t_star = t_;
+          }
+        }
+      }
+    q = Eigen::Quaterniond(R_star);
+    t = t_star;
+  }
   if(pathOut.size() > 1) {
     std::ofstream out(pathOut + std::string(".csv"));
     out << "q_w q_x q_y q_z t_x t_y t_z" << std::endl; 

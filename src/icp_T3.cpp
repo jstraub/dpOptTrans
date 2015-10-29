@@ -26,6 +26,7 @@ int main(int argc, char** argv) {
     ("transformation,t", po::value<std::string>(), "path to a transformation file with qw qx qy qz tx ty tz in the second line.")
 //    ("transformation,t", po::value<std::string>(), "transformation guess")
 //    ("rotation,q", po::value<std::string>(), "rotation guess in the form of a quaternion")
+    ("normals,n", "use surface normals in ICP")
     ("display,d", "display results")
     ;
 
@@ -87,18 +88,27 @@ int main(int argc, char** argv) {
   pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr pcA_ptr = pcA.makeShared();
   pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr pcB_ptr = pcB.makeShared();
 
-  pcl::IterativeClosestPointWithNormals<pcl::PointXYZRGBNormal, pcl::PointXYZRGBNormal> icp;
-  icp.setInputSource(pcA_ptr);
-  icp.setInputTarget(pcB_ptr);
+  pcl::IterativeClosestPoint<pcl::PointXYZRGBNormal, pcl::PointXYZRGBNormal>* icp;
+  if (vm.count("normals")) {
+    icp = new pcl::IterativeClosestPointWithNormals<pcl::PointXYZRGBNormal, 
+        pcl::PointXYZRGBNormal>();
+    std::cout << "Using points and surface normals in ICP" << std::endl;
+  } else {
+    icp = new pcl::IterativeClosestPoint<pcl::PointXYZRGBNormal, 
+        pcl::PointXYZRGBNormal>();
+    std::cout << "Using only points in ICP" << std::endl;
+  }
+  icp->setInputSource(pcA_ptr);
+  icp->setInputTarget(pcB_ptr);
   if (have_guess)
-    icp.align(pcB_T, T_guess); 
+    icp->align(pcB_T, T_guess); 
   else
-    icp.align(pcB_T); 
+    icp->align(pcB_T); 
 
-  std::cout << "has converged:" << icp.hasConverged() << " score: " <<
-    icp.getFitnessScore() << std::endl;
-  std::cout << icp.getFinalTransformation() << std::endl;
-  Eigen::Matrix4d T = icp.getFinalTransformation().cast<double>();
+  std::cout << "has converged:" << icp->hasConverged() << " score: " <<
+    icp->getFitnessScore() << std::endl;
+  std::cout << icp->getFinalTransformation() << std::endl;
+  Eigen::Matrix4d T = icp->getFinalTransformation().cast<double>();
   Eigen::Matrix3d R = T.topLeftCorner<3,3>();
   Eigen::Quaterniond q(R);
   Eigen::Vector3d t = T.topRightCorner<3,1>();
@@ -114,6 +124,7 @@ int main(int argc, char** argv) {
   if (vm.count("display")) {
     DisplayPcs(pcA, pcB, q, t, 1.0);
   }
+  delete icp;
 }
 
 

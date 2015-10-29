@@ -41,7 +41,9 @@ void ShufflePc(pcl::PointCloud<pcl::PointXYZRGBNormal>& pc) {
 
 double ComputeClosestPointEucledianCost(
     pcl::PointCloud<pcl::PointXYZRGBNormal>& pcA,
-    pcl::PointCloud<pcl::PointXYZRGBNormal>& pcB) {
+    pcl::PointCloud<pcl::PointXYZRGBNormal>& pcB,
+    const Eigen::Matrix3d* R, const Eigen::Vector3d* t
+    ) {
   pcl::PointCloud<pcl::PointXYZ>::Ptr pcAxyz(new
       pcl::PointCloud<pcl::PointXYZ>(pcA.size(),1));
   pcAxyz->getMatrixXfMap(3,4,0) = pcA.getMatrixXfMap(3, 12, 0);
@@ -53,17 +55,20 @@ double ComputeClosestPointEucledianCost(
   std::vector<float> k_sqr_dists(1);
   double sum_sq_dists = 0.;
   double W = 0.;
-  for (uint32_t i=0; i<pcB.size(); ++i) {
-    pcl::PointXYZ p;
-    p.x = pcB.at(i).x;
-    p.y = pcB.at(i).y;
-    p.z = pcB.at(i).z;
-    int k_found = kd.nearestKSearch(p, 1, k_ids, k_sqr_dists);
+  for (uint32_t i=0; i<pcB.size(); i+=100) {
+    pcl::PointXYZ pS;
+    Eigen::Map<Eigen::Vector3f> p(&(pS.x));
+    Eigen::Map<Eigen::Vector3f> pB(&(pcB.at(i).x));
+    p = pB;
+    if (R && t) {
+      p = R->cast<float>().transpose() * (p-t->cast<float>());
+    }
+    int k_found = kd.nearestKSearch(pS, 1, k_ids, k_sqr_dists);
     double w = pcB.at(i).curvature;
     sum_sq_dists += w*k_sqr_dists[0];
     W += w;
   }
-  return sum_sq_dists / W;
+  return sqrt(sum_sq_dists / W);
 }
 
 void DisplayPcs(const pcl::PointCloud<pcl::PointXYZRGBNormal>& pcA, 
@@ -107,6 +112,8 @@ void DisplayPcs(const pcl::PointCloud<pcl::PointXYZRGBNormal>& pcA,
       n(2) += 1.1;
     }
 
+    // Otherwise the default is a identity rotation with scaling of
+    // 0.5.
     pcA_ptr->sensor_orientation_.setIdentity();
     pcB_ptr->sensor_orientation_.setIdentity();
     pcB_T_ptr->sensor_orientation_.setIdentity();

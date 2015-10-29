@@ -409,54 +409,61 @@ int main(int argc, char** argv) {
   OptRot::UpperBoundIndepS3 upper_bound(vmfmmA, vmfmmB);
   OptRot::UpperBoundConvexS3 upper_bound_convex(vmfmmA, vmfmmB);
   
-  double eps = 1e-4;
+  double eps = 1e-8;
   uint32_t max_it = 3000;
   std::cout << " BB on S3 eps=" << eps << " max_it=" << max_it << std::endl;
-  OptRot::BranchAndBound<OptRot::NodeS3> bb(lower_bound, upper_bound);
-//  OptRot::BranchAndBound<OptRot::NodeS3> bb(lower_bound, upper_bound_convex);
+//  OptRot::BranchAndBound<OptRot::NodeS3> bb(lower_bound, upper_bound);
+  OptRot::BranchAndBound<OptRot::NodeS3> bb(lower_bound, upper_bound_convex);
   OptRot::NodeS3 node_star = bb.Compute(nodes, eps, max_it);
   OptRot::CountBranchesInTree<OptRot::NodeS3>(nodes);
-
-  shared_ptr<Eigen::MatrixXd> qs(new MatrixXd(4, nodes.size()));
-  auto it=nodes.begin();
-  for (uint32_t i=0; i < nodes.size(); ++i, it++) {
-    qs->col(i) = it->GetTetrahedron().GetCenter();
-  }
-  double lambda_q = cos(2.*10.*M_PI/180.) - 1.; // TODO
-  dplv::DPMeans<double, dplv::Spherical<double>> dpvMF(qs, 0, lambda_q);
-  for (uint32_t t=0; t<20; ++t) {
-    dpvMF.updateLabels(); 
-    dpvMF.updateCenters(); 
-  }
-  std::cout << dpvMF.centroids() << std::endl; 
-
-  Eigen::Vector3d t_star; 
-  Eigen::Quaterniond q_star;
-  for (uint32_t k=0; k<dpvMF.K(); ++k) {
-    Eigen::Vector4d q = dpvMF.centroids().col(k);
-    q_star = Eigen::Quaterniond(q(0), q(1), q(2), q(3));
-//    auto it = nodes.begin();
-//    auto z = dpvMF.z();
-//    double lb_max = 9999.;
-//    for (uint32_t i=0; i<nodes.size(); ++i, it++) 
-//      if (z(i) == k && lb_max > it->GetBoundGap()) {
-//        lb_max = it->GetBoundGap();
-//        q_star = it->GetTetrahedron().GetCenterQuaternion();
-//      }
-    //  Eigen::Quaterniond q_star = node_star.GetTetrahedron().GetCenterQuaternion();
-    std::cout << "in cluster " << k << ": center = "  
-      << dpvMF.centroids().col(k).transpose() << std::endl;
-    std::cout << "optimum quaternion: "  << q_star.coeffs().transpose()
+  Eigen::Quaterniond q_star = node_star.GetLbArgument();
+  std::cout << "optimum BB quaternion: "  << q_star.coeffs().transpose()
       << " angle: " << 2.*acos(q_star.w()) * 180. / M_PI
       << std::endl;
-    // This q_star is the inverse of the rotation that brings B to A.
-    q_star = q_star.inverse(); // A little ugly but this is because of the way we setup the problem...
+  std::cout << node_star.GetTetrahedron().GetCenterQuaternion().coeffs().transpose() << std::endl;
+  Eigen::Quaterniond q = q_star;
+  Eigen::Vector3d t_star; 
+
+//  shared_ptr<Eigen::MatrixXd> qs(new MatrixXd(4, nodes.size()));
+//  auto it=nodes.begin();
+//  for (uint32_t i=0; i < nodes.size(); ++i, it++) {
+//    qs->col(i) = it->GetTetrahedron().GetCenter();
+//  }
+//  double lambda_q = cos(2.*10.*M_PI/180.) - 1.; // TODO
+//  dplv::DPMeans<double, dplv::Spherical<double>> dpvMF(qs, 0, lambda_q);
+//  for (uint32_t t=0; t<20; ++t) {
+//    dpvMF.updateLabels(); 
+//    dpvMF.updateCenters(); 
+//  }
+//  std::cout << dpvMF.centroids() << std::endl; 
+//
+//  double lb_R3 = -1e40;
+//  Eigen::Vector3d t_star; 
+//  for (uint32_t k=0; k<dpvMF.K(); ++k) {
+//    Eigen::Vector4d q_vec = dpvMF.centroids().col(k);
+//    Eigen::Quaterniond q(q_vec(0), q_vec(1), q_vec(2), q_vec(3));
+////    auto it = nodes.begin();
+////    auto z = dpvMF.z();
+////    double lb_max = 9999.;
+////    for (uint32_t i=0; i<nodes.size(); ++i, it++) 
+////      if (z(i) == k && lb_max > it->GetBoundGap()) {
+////        lb_max = it->GetBoundGap();
+////        q = it->GetTetrahedron().GetCenterQuaternion();
+////      }
+//    //  Eigen::Quaterniond q = node_star.GetTetrahedron().GetCenterQuaternion();
+//    std::cout << "in cluster " << k << ": center = "  
+//      << dpvMF.centroids().col(k).transpose() << std::endl;
+//    std::cout << "optimum quaternion: "  << q.coeffs().transpose()
+//      << " angle: " << 2.*acos(q.w()) * 180. / M_PI
+//      << std::endl;
+    // This q is the inverse of the rotation that brings B to A.
+    q = q.inverse(); // A little ugly but this is because of the way we setup the problem...
 
     std::list<OptRot::NodeR3> nodesR3 =
       OptRot::GenerateNotesThatTessellateR3(min, max, 10.);
-    OptRot::LowerBoundR3 lower_bound_R3(gmmA, gmmB, q_star);
-    OptRot::UpperBoundIndepR3 upper_bound_R3(gmmA, gmmB, q_star);
-    OptRot::UpperBoundConvexR3 upper_bound_convex_R3(gmmA, gmmB, q_star);
+    OptRot::LowerBoundR3 lower_bound_R3(gmmA, gmmB, q);
+    OptRot::UpperBoundIndepR3 upper_bound_R3(gmmA, gmmB, q);
+    OptRot::UpperBoundConvexR3 upper_bound_convex_R3(gmmA, gmmB, q);
 
     std::cout << "# initial nodes: " << nodesR3.size() << std::endl;
     eps = 1e-8;
@@ -464,10 +471,18 @@ int main(int argc, char** argv) {
     OptRot::BranchAndBound<OptRot::NodeR3> bbR3(lower_bound_R3, upper_bound_convex_R3);
     std::cout << " BB on R3 eps=" << eps << " max_it=" << max_it << std::endl;
     OptRot::NodeR3 nodeR3_star = bbR3.Compute(nodesR3, eps, max_it);
-    OptRot::CountBranchesInTree<OptRot::NodeR3>(nodesR3);
-    t_star = nodeR3_star.GetBox().GetCenter();
-    std::cout << "optimum translation: " << t_star << std::endl;
-
+    Eigen::Vector3d t =  nodeR3_star.GetLbArgument();
+//    OptRot::CountBranchesInTree<OptRot::NodeR3>(nodesR3);
+    std::cout << "with LB " << nodeR3_star.GetLB() << " optimum translation: " 
+      << t.transpose() << std::endl;
+//    if (lb_R3 < nodeR3_star.GetLB()) {
+      std::cout << "Updating overall optimum transformation to: " << std::endl;
+      t_star = t;
+      q_star = q;
+//      lb_R3 = nodeR3_star.GetLB();
+      std::cout << "q: " << q_star.coeffs().transpose() 
+        << " t: " << t_star.transpose() <<  std::endl;
+//    }
     if(pathOut.size() > 1) {
       std::ofstream out(pathOut + std::string(".csv"));
       out << "q_w q_x q_y q_z t_x t_y t_z" << std::endl; 
@@ -481,8 +496,6 @@ int main(int argc, char** argv) {
     if (vm.count("display")) {
       DisplayPcs(pcA, pcB, gmmA, gmmB, vmfsA, vmfsB, q_star, t_star, cfg.lambda/10.);
     }
-
-  }
 
   std::cout<<cudaDeviceReset()<<std::endl;
   return (0);
