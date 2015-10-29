@@ -48,7 +48,8 @@ link_directories(
   ${PCL_LIBRARY_DIRS}
 )
 
-cuda_add_executable(dpvMFoptRotPly ./src/dp_vmf_opt_rot_ply.cpp)
+cuda_add_executable(dpvMFoptRotPly ./src/dp_vmf_opt_rot_ply.cpp
+  ./src/pc_helper.cpp)
 target_link_libraries(dpvMFoptRotPly optRot
     jsCore dpMMlowVar cudaPcl
     boost_system boost_thread boost_program_options
@@ -58,7 +59,8 @@ target_link_libraries(dpvMFoptRotPly optRot
     ${OpenCV_LIBS}
   )
 
-cuda_add_executable(dpvMFoptRot ./src/dp_vmf_opt_rot.cpp)
+cuda_add_executable(dpvMFoptRot ./src/dp_vmf_opt_rot.cpp
+  ./src/pc_helper.cpp)
 target_link_libraries(dpvMFoptRot optRot
     jsCore dpMMlowVar cudaPcl
     boost_system boost_thread boost_program_options
@@ -68,8 +70,32 @@ target_link_libraries(dpvMFoptRot optRot
     ${OpenCV_LIBS}
   )
 
-pods_install_executables(dpvMFoptRot dpvMFoptRotPly)
+cuda_add_executable(moment_matched_T3 ./src/moment_matched_T3.cpp
+  ./src/pc_helper.cpp)
+target_link_libraries(moment_matched_T3 optRot
+    jsCore dpMMlowVar cudaPcl
+    boost_system boost_thread boost_program_options
+    pcl_common pcl_io pcl_visualization pcl_filters pcl_search
+    pcl_features
+    vtkCommon vtkFiltering vtkRendering vtkGraphics
+    ${OpenCV_LIBS}
+  )
+
+cuda_add_executable(icp_T3 ./src/icp_T3.cpp
+  ./src/pc_helper.cpp)
+target_link_libraries(icp_T3 optRot
+    jsCore dpMMlowVar cudaPcl
+    boost_system boost_thread boost_program_options
+    pcl_common pcl_io pcl_visualization pcl_filters pcl_search
+    pcl_features
+    vtkCommon vtkFiltering vtkRendering vtkGraphics
+    ${OpenCV_LIBS}
+  )
+
+pods_install_executables(dpvMFoptRot dpvMFoptRotPly moment_matched_T3
+  icp_T3)
 #pods_install_libraries(optRot)
 pods_install_headers(
   ./include/dpvMFoptRot/dp_vmf_opt_rot.h
+  ./include/dpvMFoptRot/pc_helper.h
   DESTINATION dpvMFoptRot)

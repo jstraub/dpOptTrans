@@ -16,6 +16,7 @@
 #include "optRot/vmf_mm.h"
 #include "optRot/node.h"
 #include "dpvMFoptRot/dp_vmf_opt_rot.h"
+#include "dpvMFoptRot/pc_helper.h"
 
 #include <boost/program_options.hpp>
 namespace po = boost::program_options;
