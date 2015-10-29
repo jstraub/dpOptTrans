@@ -5,6 +5,7 @@ import subprocess as subp
 angle = 90.
 translation = 0.3
 name = "happySideRight_[0-9]+.ply"
+name = "bun[0-9]+.ply"
 
 for root, dirs, files in os.walk("."):
   for file in files:

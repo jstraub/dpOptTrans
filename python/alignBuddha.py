@@ -7,42 +7,32 @@ import subprocess as subp
 from js.geometry.rotations import Quaternion
 from js.utils.plot.colors import colorScheme
 
-cfgBuddha = {"lambdaS3": 60, "lambdaR3": 0.001}
-
-scans = ['../data/happy_side/happySideRight_0.ply',
-  '../data/happy_side/happySideRight_24.ply',
-  '../data/happy_side/happySideRight_48.ply',
-  '../data/happy_side/happySideRight_72.ply',
-  '../data/happy_side/happySideRight_96.ply',
-  '../data/happy_side/happySideRight_120.ply',
-  '../data/happy_side/happySideRight_144.ply',
-  '../data/happy_side/happySideRight_168.ply',
-  '../data/happy_side/happySideRight_192.ply']
-#  '../data/happy_side/happySideRight_216.ply']
-#  '../data/happy_side/happySideRight_240.ply',
-#  '../data/happy_side/happySideRight_264.ply',
-#  '../data/happy_side/happySideRight_288.ply',
-#  '../data/happy_side/happySideRight_312.ply',
-#  '../data/happy_side/happySideRight_336.ply']
-
-scans = ['../data/happy_side/happySideRight_48.ply',
-  '../data/happy_side/happySideRight_72.ply']
-scans = ['../data/happy_side/happySideRight_24.ply',
-  '../data/happy_side/happySideRight_48.ply']
+cfgBuddha = {"name":"buddha", "lambdaS3": 60, "lambdaR3": 0.001}
+cfgBunny = {"name":"bunny", "lambdaS3": 60, "lambdaR3": 0.001}
 
 cfg = cfgBuddha
-loadCached = True
-stopToShow = True
+cfg = cfgBunny
+loadCached = False
+stopToShow = False
 
-pattern = "happySideRight_[0-9]+_angle_90_translation_0.3.ply$"
-scans = []
-for root, dirs, files in os.walk("../data/happy_side_rnd/"):
-  for f in files:
-    if re.search(pattern, f):
-      scans.append(os.path.join(root, f))
-
-scans = sorted(scans, key=lambda f: 
-  int(re.sub("_angle_90_translation_0.3.ply","",re.sub("happySideRight_","",os.path.split(f)[1]))))
+if cfg["name"] == "buddha":
+  pattern = "happySideRight_[0-9]+_angle_90_translation_0.3.ply$"
+  scans = []
+  for root, dirs, files in os.walk("../data/happy_side_rnd/"):
+    for f in files:
+      if re.search(pattern, f):
+        scans.append(os.path.join(root, f))
+  scans = sorted(scans, key=lambda f: 
+    int(re.sub("_angle_90_translation_0.3.ply","",re.sub("happySideRight_","",os.path.split(f)[1]))))
+if cfg["name"] == "bunny":
+  pattern = "bun[0-9]+_angle_90_translation_0.3.ply$"
+  scans = []
+  for root, dirs, files in os.walk("../data/bunny_rnd/"):
+    for f in files:
+      if re.search(pattern, f):
+        scans.append(os.path.join(root, f))
+  scans = sorted(scans, key=lambda f: 
+    int(re.sub("_angle_90_translation_0.3.ply","",re.sub("bun","",os.path.split(f)[1]))))
 
 print scans
 colors = colorScheme("label")
@@ -54,6 +44,7 @@ for i in range(1,len(scans)):
   nameA = os.path.splitext(os.path.split(scanApath)[1])[0]
   nameB = os.path.splitext(os.path.split(scanBpath)[1])[0]
   transformationPath = '{}_{}.csv'.format(nameA, nameB)
+  transformationPathICP = '{}_{}_ICP.csv'.format(nameA, nameB)
 
   if i == 1:
     plyA = PlyParse();
@@ -76,7 +67,20 @@ for i in range(1,len(scans)):
     print " ".join(args)
     err = subp.call(" ".join(args), shell=True)
 
-  with open(transformationPath) as f:
+  if loadCached and os.path.isfile(transformationPathICP):
+    print "found transformation file and using it "+transformationPathICP
+  else:
+    args = ['../pod-build/bin/icp_T3', 
+        '-a {}'.format(scanApath), 
+        '-b {}'.format(scanBpath), 
+        '-t {}'.format(transformationPath),
+        '-n',
+        '-o {}'.format(re.sub(".csv","",transformationPathICP))
+        ]
+    print " ".join(args)
+    err = subp.call(" ".join(args), shell=True)
+
+  with open(transformationPathICP) as f:
     f.readline()
     qt = np.loadtxt(f)
     q = qt[:4];

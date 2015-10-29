@@ -3,6 +3,7 @@
  */
 
 #include <iostream>
+#include <fstream>
 #include <string>
 #include <pcl/io/ply_io.h>
 #include <pcl/visualization/cloud_viewer.h>
@@ -26,6 +27,7 @@
 
 #include <boost/program_options.hpp>
 namespace po = boost::program_options;
+
 
 void DisplayPcs(const pcl::PointCloud<pcl::PointXYZRGBNormal>& pcA, 
   const pcl::PointCloud<pcl::PointXYZRGBNormal>& pcB, 
@@ -397,6 +399,11 @@ int main(int argc, char** argv) {
   OptRot::LowerBoundS3 lower_bound(vmfmmA, vmfmmB);
   OptRot::UpperBoundIndepS3 upper_bound(vmfmmA, vmfmmB);
   OptRot::UpperBoundConvexS3 upper_bound_convex(vmfmmA, vmfmmB);
+
+  if (true) {
+    WriteBounds<OptRot::NodeS3>(lower_bound, upper_bound, upper_bound_convex,
+        nodes);
+  }
   
   double eps = 1e-9;
   uint32_t max_it = 10000;
@@ -475,10 +482,15 @@ int main(int argc, char** argv) {
       << " max t: " << max.transpose() << std::endl;
 
     std::list<OptRot::NodeR3> nodesR3 =
-      OptRot::GenerateNotesThatTessellateR3(min, max, 10.);
+      OptRot::GenerateNotesThatTessellateR3(min, max, (max-min).norm()/10.);
     OptRot::LowerBoundR3 lower_bound_R3(gmmA, gmmB, q);
     OptRot::UpperBoundIndepR3 upper_bound_R3(gmmA, gmmB, q);
     OptRot::UpperBoundConvexR3 upper_bound_convex_R3(gmmA, gmmB, q);
+
+    if (true) {
+      WriteBounds<OptRot::NodeR3>(lower_bound_R3, upper_bound_R3,
+          upper_bound_convex_R3, nodesR3);
+    }
 
     std::cout << "# initial nodes: " << nodesR3.size() << std::endl;
     eps = 1e-10;
