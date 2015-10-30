@@ -330,6 +330,7 @@ int main(int argc, char** argv) {
   cfg.lambdaFromDeg(lambdaDeg);
   cfg.QfromFrames2Survive(cfg.nFramesSurvive_);
 
+  bool output_init_bounds = true;
   string pathA = "";
   string pathB = "";
   std::string pathOut = "";
@@ -400,7 +401,7 @@ int main(int argc, char** argv) {
   OptRot::UpperBoundIndepS3 upper_bound(vmfmmA, vmfmmB);
   OptRot::UpperBoundConvexS3 upper_bound_convex(vmfmmA, vmfmmB);
 
-  if (true) {
+  if (output_init_bounds) {
     WriteBounds<OptRot::NodeS3>(lower_bound, upper_bound, upper_bound_convex,
         nodes);
   }
@@ -487,7 +488,7 @@ int main(int argc, char** argv) {
     OptRot::UpperBoundIndepR3 upper_bound_R3(gmmA, gmmB, q);
     OptRot::UpperBoundConvexR3 upper_bound_convex_R3(gmmA, gmmB, q);
 
-    if (true) {
+    if (output_init_bounds) {
       WriteBounds<OptRot::NodeR3>(lower_bound_R3, upper_bound_R3,
           upper_bound_convex_R3, nodesR3);
     }
