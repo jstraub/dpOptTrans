@@ -33,6 +33,111 @@ void ComputeMoments(const pcl::PointCloud<pcl::PointXYZRGBNormal>& pc,
   S /= W;
 }
 
+void DisplayPcs(const pcl::PointCloud<pcl::PointXYZRGBNormal>& pcA, 
+  const pcl::PointCloud<pcl::PointXYZRGBNormal>& pcB, 
+  const Eigen::Quaterniond& q_star, const Eigen::Vector3d& t_star,
+  const Eigen::Vector3d& muA,
+  const Eigen::Vector3d& muB,
+  float scale) {
+
+    pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr pcA_ptr = pcA.makeShared();
+    pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr pcB_ptr = pcB.makeShared();
+    // Construct transformed point cloud.
+    pcl::PointCloud<pcl::PointXYZRGBNormal>::Ptr pcB_T_ptr(new
+        pcl::PointCloud<pcl::PointXYZRGBNormal>(pcB));
+    for (uint32_t i=0; i<pcB_T_ptr->size(); ++i) {
+      Eigen::Map<Eigen::Vector3f> p(&(pcB_T_ptr->at(i).x));
+      p = q_star.cast<float>().inverse()._transformVector( p - t_star.cast<float>());
+      Eigen::Map<Eigen::Vector3f> n(pcB_T_ptr->at(i).normal);
+      n = q_star.cast<float>().inverse()._transformVector(n);
+      pcB_T_ptr->at(i).rgb = ((int)128) << 16 | ((int)255) << 8 | ((int)128);
+    }
+    for (uint32_t i=0; i<pcA_ptr->size(); ++i) {
+      pcA_ptr->at(i).rgb = ((int)255) << 16 | ((int)128) << 8 | ((int)128);
+    }
+    // Construct surface normal point clouds.
+    pcl::PointCloud<pcl::PointXYZ>::Ptr nA_ptr =
+      pcl::PointCloud<pcl::PointXYZ>::Ptr(new
+          pcl::PointCloud<pcl::PointXYZ>(pcA.size(),1));
+    nA_ptr->getMatrixXfMap(3,4,0) = pcA.getMatrixXfMap(3,12,4);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr nB_ptr =
+      pcl::PointCloud<pcl::PointXYZ>::Ptr(new
+          pcl::PointCloud<pcl::PointXYZ>(pcB.size(),1));
+    nB_ptr->getMatrixXfMap(3,4,0) = pcB.getMatrixXfMap(3,12,4);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr nB_T_ptr =
+      pcl::PointCloud<pcl::PointXYZ>::Ptr(new
+          pcl::PointCloud<pcl::PointXYZ>(*nB_ptr));
+    for (uint32_t i=0; i<nA_ptr->size(); ++i) {
+      nA_ptr->at(i).z -=1.1;
+    }
+    for (uint32_t i=0; i<nB_T_ptr->size(); ++i) {
+      Eigen::Map<Eigen::Vector3f> n(&(nB_T_ptr->at(i).x));
+      n = q_star.cast<float>().inverse()._transformVector(n);
+      n(2) += 1.1;
+    }
+
+    // Otherwise the default is a identity rotation with scaling of
+    // 0.5.
+    pcA_ptr->sensor_orientation_.setIdentity();
+    pcB_ptr->sensor_orientation_.setIdentity();
+    pcB_T_ptr->sensor_orientation_.setIdentity();
+    nA_ptr->sensor_orientation_.setIdentity();
+    nB_ptr->sensor_orientation_.setIdentity();
+    nB_T_ptr->sensor_orientation_.setIdentity();
+
+    boost::shared_ptr<pcl::visualization::PCLVisualizer> viewerPc (new
+        pcl::visualization::PCLVisualizer ("3D Viewer"));
+    viewerPc->initCameraParameters ();
+    viewerPc->setBackgroundColor (1., 1., 1.);
+//    viewerPc->addCoordinateSystem (scale);
+
+    pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGBNormal>
+      rgbA(pcA_ptr);
+    pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGBNormal>
+      rgbB(pcB_ptr);
+    pcl::visualization::PointCloudColorHandlerRGBField<pcl::PointXYZRGBNormal>
+      rgbB_T(pcB_T_ptr);
+    viewerPc->addPointCloud<pcl::PointXYZRGBNormal> (pcA_ptr, rgbA, "cloudA");
+//    viewerPc->addPointCloud<pcl::PointXYZRGBNormal> (pcB_ptr, rgbB, "cloudB",v1);
+    viewerPc->addPointCloud<pcl::PointXYZRGBNormal> (pcB_T_ptr, rgbB_T,
+        "cloudB transformed");
+
+    char label[10];
+    pcl::PointXYZ p;
+    p.x = muA(0); p.y = muA(1); p.z = muA(2);
+    sprintf(label,"SA%d",0);
+    viewerPc->addSphere(p, scale, 1,0,0, label);
+    p.x = muB(0); p.y = muB(1); p.z = muB(2);
+    sprintf(label,"SB%d",0);
+    viewerPc->addSphere(p, scale, 0.5,1,0.5, label);
+    Eigen::Vector3d mu =
+      q_star.inverse()._transformVector(muB -t_star);
+    p.x = mu(0); p.y = mu(1); p.z = mu(2);
+    sprintf(label,"S%d",0);
+    viewerPc->addSphere(p, scale, 0,1,0, label);
+
+    boost::shared_ptr<pcl::visualization::PCLVisualizer> viewerNc (new
+        pcl::visualization::PCLVisualizer ("3D Viewer"));
+    viewerNc->initCameraParameters ();
+    viewerNc->setBackgroundColor (0., 0., 0.);
+    viewerNc->addCoordinateSystem (1.0);
+    pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> 
+      nA_color(nA_ptr, 255, 128, 128);
+    pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> 
+      nB_color(nB_ptr, 128, 255, 128);
+    viewerNc->addPointCloud<pcl::PointXYZ> (nA_ptr, nA_color,  
+        "normalsA");
+//    viewerNc->addPointCloud<pcl::PointXYZRGBNormal> (pcB_ptr, rgbB, "cloudB",v1);
+    viewerNc->addPointCloud<pcl::PointXYZ> (nB_T_ptr, nB_color, 
+        "normals B transformed");
+
+    while (!viewerPc->wasStopped () && !viewerNc->wasStopped()) {
+      viewerPc->spinOnce (50);
+      viewerNc->spinOnce (50);
+      boost::this_thread::sleep (boost::posix_time::microseconds (100000));
+    }
+}
+
 int main(int argc, char** argv) {
   // Declare the supported options.
   po::options_description desc("Allowed options");
@@ -88,16 +193,23 @@ int main(int argc, char** argv) {
   // Assume xB = R*xA + t
   Eigen::EigenSolver<Eigen::Matrix3d> eigA(SA);
   Eigen::EigenSolver<Eigen::Matrix3d> eigB(SB);
-  Eigen::Matrix3d U = eigA.eigenvectors().real();
-  Eigen::Matrix3d V = eigB.eigenvectors().real();
+  Eigen::Matrix3cd U = eigA.eigenvectors();
+  Eigen::Matrix3cd V = eigB.eigenvectors();
 
-  Eigen::Matrix3d R = V*U.transpose();
+  Eigen::Matrix3d R = (V*U.inverse()).real();
+  // Because R apears in a quadratic form we are free to negate it.
+  // Since R \in R^3 this negates the determinant and makes it +1. -- a
+  // rotation instead of a reflection.
+  if (R.determinant() < 0.) R*=-1.; 
   Eigen::Quaterniond q(R);
   Eigen::Vector3d t = muB - R*muA;
   std::cout << "R:\n"<< R << std::endl;
+  std::cout << "det(R) = " << R.determinant() << std::endl;
   std::cout << "t: " << t.transpose() << std::endl;
   std::cout << "norm of difference in covariance matrixes after matching: " 
     << (R*SA*R.transpose() -SB).norm() << std::endl;
+  std::cout << "norm of the difference in the mean vectors after matching: " 
+    << (muA - R.transpose()*(muB - t)).norm() << std::endl;
 
   if (vm.count("display")) {
     std::cout << "Cov A" << std::endl << SA << std::endl;
@@ -158,7 +270,8 @@ int main(int argc, char** argv) {
   }
 
   if (vm.count("display")) {
-    DisplayPcs(pcA, pcB, q, t, 1.0);
+    double scale = sqrt(eigA.eigenvalues().real().maxCoeff())/5.;
+    DisplayPcs(pcA, pcB, q, t, muA, muB, scale);
   }
 }
 

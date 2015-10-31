@@ -6,6 +6,11 @@ angle = 90.
 translation = 0.3
 name = "happySideRight_[0-9]+.ply"
 name = "bun[0-9]+.ply"
+name = "happyStandRight_[0-9]+.ply"
+
+angle = 50.
+translation = 10.
+name = "[0-9]+_[0-9]_inv_depth_map_gray.ply"
 
 for root, dirs, files in os.walk("."):
   for file in files:

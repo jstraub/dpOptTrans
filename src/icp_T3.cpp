@@ -98,6 +98,7 @@ int main(int argc, char** argv) {
         pcl::PointXYZRGBNormal>();
     std::cout << "Using only points in ICP" << std::endl;
   }
+  icp->setMaximumIterations(100);
   icp->setInputSource(pcA_ptr);
   icp->setInputTarget(pcB_ptr);
   if (have_guess)

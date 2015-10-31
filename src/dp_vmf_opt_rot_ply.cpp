@@ -278,7 +278,8 @@ bool ComputeGMMfromPC(pcl::PointCloud<pcl::PointXYZRGBNormal>&
   for(uint32_t k=0; k<K; ++k)
     if (pis(k) > 0.) {
       gmm.push_back(OptRot::Normal<3>(centroids.col(k).cast<double>(),
-            Ss[k]/float(counts(k))+0.01*Eigen::Matrix3d::Identity(), pis(k)));
+//            Ss[k]/float(counts(k))+0.01*Eigen::Matrix3d::Identity(), pis(k)));
+            Ss[k]/float(counts(k)), pis(k)));
     }
   return true;
 }
@@ -494,8 +495,8 @@ int main(int argc, char** argv) {
     }
 
     std::cout << "# initial nodes: " << nodesR3.size() << std::endl;
-    eps = 1e-10;
-    max_it = 3000;
+    eps = 1e-1;
+    max_it = 10000;
     OptRot::BranchAndBound<OptRot::NodeR3> bbR3(lower_bound_R3, upper_bound_convex_R3);
     std::cout << " BB on R3 eps=" << eps << " max_it=" << max_it << std::endl;
     OptRot::NodeR3 nodeR3_star = bbR3.Compute(nodesR3, eps, max_it);
@@ -513,10 +514,11 @@ int main(int argc, char** argv) {
 //    }
     if(pathOut.size() > 1) {
       std::ofstream out(pathOut + std::string(".csv"));
-      out << "q_w q_x q_y q_z t_x t_y t_z" << std::endl; 
+      out << "q_w q_x q_y q_z t_x t_y t_z lb_S3 lb_R3" << std::endl; 
       out << q_star.w() << " " << q_star.x() << " " 
         << q_star.y() << " " << q_star.z() << " " << t_star(0)
-        << " " << t_star(1) << " " << t_star(2) << " " << std::endl;
+        << " " << t_star(1) << " " << t_star(2) 
+        << " " << node_star.GetLB() << " " << nodeR3_star.GetLB() << std::endl;
       out.close();
     }
 
