@@ -6,30 +6,7 @@ import os.path, re
 import subprocess as subp
 from js.geometry.rotations import Quaternion
 from js.utils.plot.colors import colorScheme
-
-def LoadTransformation(transformationPath):
-  with open(transformationPath) as f:
-    f.readline()
-    qt = np.loadtxt(f)
-    q = qt[:4];
-    print 'q', q
-    t = qt[4:7];
-    print 't', t
-    q = Quaternion(w=q[0], x=q[1], y=q[2], z=q[3])
-  return q,t
-
-def LoadTransformationAndBounds(transformationPath):
-  with open(transformationPath) as f:
-    f.readline()
-    qt = np.loadtxt(f)
-    q = qt[:4];
-    print 'q', q
-    t = qt[4:7];
-    print 't', t
-    q = Quaternion(w=q[0], x=q[1], y=q[2], z=q[3])
-    lbS3 = qt[7]
-    lbR3 = qt[8]
-  return q,t, lbS3, lbR3
+from helpers import *
 
 cfgBuddhaRnd = {"name":"buddhaRnd", "lambdaS3": [60, 70, 80],
   "lambdaR3": 0.002}
