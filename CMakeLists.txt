@@ -12,8 +12,8 @@ endif(COMMAND cmake_policy)
 
 set(CMAKE_COLOR_MAKEFILE ON)
 IF(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE Release) # Release; debug; ...
   set(CMAKE_BUILD_TYPE Debug) # Release; debug; ...
+  set(CMAKE_BUILD_TYPE Release) # Release; debug; ...
 ENDIF()
 
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)

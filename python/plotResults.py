@@ -33,9 +33,10 @@ version = "1.2" # aborted because of some uncought issues
 version = "1.21" # working on tons of FFT here; changed lambdaT to 1.0 from 0.3
 version = "1.31" # working on BBEGI
 version = "1.32" # working on returning Ks for the MMs used by BB
-errors = {"err_a":{}, "err_t":{}, "Ks":{}, "overlap":[], "dangle":[],
+version = "1.33" # working on returning Ks for the MMs used by BB
+errors = {"err_a":{}, "err_t":{}, "dt":{}, "Ks":{}, "overlap":[], "dangle":[],
   "dtranslation":[]}
-errTypes = ["err_a", "err_t", "Ks"]
+errTypes = ["err_a", "err_t", "dt", "Ks"]
 counter = 0
 for result in results:
   r = json.load(open(result))
@@ -105,67 +106,67 @@ def PlotErrBoxPlot(x, y, delta, ax, showXTicks):
     flier.set(color=c3, marker=".", alpha=0.5)
 
 errDesc = {"err_a":"$\Delta \\theta$ [deg]", 
-    "err_t": "$\|\|t\|\|_2$ [m]", 
+    "err_t": "$\|\|t\|\|_2$ [m]", "dt":"dt [s]",
     "Ks1":"Ks", "Ks2":"Ks", "Ks3":"Ks", "Ks4":"Ks"}
-errTypeMax = {"err_a": 360., "err_t": 10., 
+errTypeMax = {"err_a": 360., "err_t": 10., "dt": 120.,
     "Ks1":30, "Ks2":30, "Ks3":30, "Ks4":30}
 yMetricLabel={"overlap":"overlap [%]", "dangle":" $\Delta \\theta_{GT}$[deg]",
   "dtranslation":"$\|\|t_{GT}\|\|_2$ [m]"}
 yMetricResolution={"overlap":10, "dangle":20, "dtranslation":0.6}
 
-errTypes = ["Ks1","Ks2","Ks3","Ks4",
-"err_a", "err_t"]
-algTypes = ["BB", "BBEGI"]
-
-# eval of number of clusters
-for yMetric in ["overlap", "dangle", "dtranslation"]:
-  fig = plt.figure(figsize = figSize, dpi = 80, facecolor="w",
-      edgecolor="k")
-  axs = []
-  for i,algType in enumerate(algTypes):
-    for j,errType in enumerate(errTypes):
-      if j == 0:
-        axs.append(plt.subplot(len(errTypes),len(algTypes),
-          i+len(algTypes)*j+1))
-      else:
-        axs.append(plt.subplot(len(errTypes),len(algTypes),
-            i+len(algTypes)*j+1, sharex=axs[-1] ))
-      plt.ylim([0, errTypeMax[errType]])
-      axs[-1].yaxis.grid(True, linestyle='-', which='major',
-          color='lightgrey', alpha=0.5, linewidth=2)
-      axs[-1].set_axisbelow(True) # hide grey lines behind plot
-      if errType in ["Ks1", "Ks2", "Ks3", "Ks4"]:
-        kId = int(errType[2])-1
-        errs = [Ks[kId] for Ks in errors["Ks"][algType]]
-#        print algType, " num errors ", len(errs), "num nans ", np.isnan(np.array(errs)).sum()
-#        errs = np.array(errs)
-#        errs = errs[np.logical_not(np.isnan(errs))]
-#        ids = np.where(errs < errTypeMax[errType])
-#        plt.plot(np.array(errors[yMetric])[ids], errs[ids],'.')
-      else:
-        errs = errors[errType][algType]
-      print algType, " num errors ", len(errs), "num nans ", np.isnan(np.array(errs)).sum()
-      errs = np.array(errs)
-      errs = errs[np.logical_not(np.isnan(errs))]
-      ids = np.where(errs < errTypeMax[errType])
-      PlotErrBoxPlot(np.array(errors[yMetric])[ids], errs[ids],
-          yMetricResolution[yMetric], axs[-1], j==len(errTypes)-1)
-      if j == 0:
-        plt.title(algType)
-      if j == len(errTypes)-1:
-        plt.xlabel(yMetricLabel[yMetric])
-      if i == 0:
-        plt.ylabel(errDesc[errType])
-      if i>0:
-        plt.setp(axs[-1].get_yticklabels(), visible=False)
-      if i==0 and j==1:
-        axs[-1].set_yticks(axs[-1].get_yticks()[:-1])
-#    plt.ylim([0, errTypeMax[errType]])
-  plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=0.1)
-  plt.show()
+evalKs = False
+if evalKs:
+  errTypes = ["Ks1","Ks2","Ks3","Ks4", "err_a", "err_t"]
+  algTypes = ["BB", "BBEGI"]
+  # eval of number of clusters
+  for yMetric in ["overlap", "dangle", "dtranslation"]:
+    fig = plt.figure(figsize = figSize, dpi = 80, facecolor="w",
+        edgecolor="k")
+    axs = []
+    for i,algType in enumerate(algTypes):
+      for j,errType in enumerate(errTypes):
+        if j == 0:
+          axs.append(plt.subplot(len(errTypes),len(algTypes),
+            i+len(algTypes)*j+1))
+        else:
+          axs.append(plt.subplot(len(errTypes),len(algTypes),
+              i+len(algTypes)*j+1, sharex=axs[-1] ))
+        plt.ylim([0, errTypeMax[errType]])
+        axs[-1].yaxis.grid(True, linestyle='-', which='major',
+            color='lightgrey', alpha=0.5, linewidth=2)
+        axs[-1].set_axisbelow(True) # hide grey lines behind plot
+        if errType in ["Ks1", "Ks2", "Ks3", "Ks4"]:
+          kId = int(errType[2])-1
+          errs = [Ks[kId] for Ks in errors["Ks"][algType]]
+  #        print algType, " num errors ", len(errs), "num nans ", np.isnan(np.array(errs)).sum()
+  #        errs = np.array(errs)
+  #        errs = errs[np.logical_not(np.isnan(errs))]
+  #        ids = np.where(errs < errTypeMax[errType])
+  #        plt.plot(np.array(errors[yMetric])[ids], errs[ids],'.')
+        else:
+          errs = errors[errType][algType]
+        print algType, " num errors ", len(errs), "num nans ", np.isnan(np.array(errs)).sum()
+        errs = np.array(errs)
+        errs = errs[np.logical_not(np.isnan(errs))]
+        ids = np.where(errs < errTypeMax[errType])
+        PlotErrBoxPlot(np.array(errors[yMetric])[ids], errs[ids],
+            yMetricResolution[yMetric], axs[-1], j==len(errTypes)-1)
+        if j == 0:
+          plt.title(algType)
+        if j == len(errTypes)-1:
+          plt.xlabel(yMetricLabel[yMetric])
+        if i == 0:
+          plt.ylabel(errDesc[errType])
+        if i>0:
+          plt.setp(axs[-1].get_yticklabels(), visible=False)
+        if i==0 and j==1:
+          axs[-1].set_yticks(axs[-1].get_yticks()[:-1])
+  #    plt.ylim([0, errTypeMax[errType]])
+    plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=0.1)
+    plt.show()
 
 # eval
-errTypes = ["err_a", "err_t"]
+errTypes = ["err_a", "err_t", "dt"]
 algTypes = ["BB", "BB+ICP", "BBEGI", "BBEGI+ICP", "FFT", "FFT+ICP", "ICP", "MM", "MM+ICP"]
 for yMetric in ["overlap", "dangle", "dtranslation"]:
   fig = plt.figure(figsize = figSize, dpi = 80, facecolor="w",

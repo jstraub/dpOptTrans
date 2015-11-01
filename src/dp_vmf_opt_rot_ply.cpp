@@ -370,7 +370,7 @@ int main(int argc, char** argv) {
   cfg.lambdaFromDeg(lambdaDeg);
   cfg.QfromFrames2Survive(cfg.nFramesSurvive_);
 
-  bool output_init_bounds = true;
+  bool output_init_bounds = false;
   bool egi_mode = false;
   string pathA = "";
   string pathB = "";

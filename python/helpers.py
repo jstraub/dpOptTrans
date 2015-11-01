@@ -1,6 +1,6 @@
 import numpy as np
 from js.geometry.rotations import Quaternion
-import re, os.path
+import re, os.path, time
 import subprocess as subp
 
 def RunFFT(scanApath, scanBpath, transformationPathFFT, q_gt=None,
@@ -13,10 +13,13 @@ def RunFFT(scanApath, scanBpath, transformationPathFFT, q_gt=None,
       '\'' + scanBpathAbs + '\'',
       '\'' + transformationPathFFTAbs+'\'']
   print " ".join(args)
+  t0 = time.time()
   err = subp.call(" ".join(args), shell=True)
+  dt = time.time() - t0
+  print "dt: ", dt, "[s]"
   if err > 0:
     print "ERROR in run FFT"
-    return Quaternion(), np.zeros(3), False
+    return Quaternion(), np.zeros(3), dt, False
   qs,ts = LoadTransformation(transformationPathFFT)
   id_best = 0
   if not (q_gt is None and t_gt is None):
@@ -26,16 +29,16 @@ def RunFFT(scanApath, scanBpath, transformationPathFFT, q_gt=None,
     print dist
     id_best = np.argmin(dist)
   if returnBoth:
-    return qs[id_best], ts[id_best], qs[0], ts[0], True
+    return qs[id_best], ts[id_best], qs[0], ts[0], dt, True
   else:
-    return qs[id_best], ts[id_best], True
-
+    return qs[id_best], ts[id_best], dt, True
 def RunBB(cfg, scanApath, scanBpath, transformationPathBB,\
     EGImode=False):
   lbsS3 = np.zeros(len(cfg["lambdaS3"]))
   lbsR3 = np.zeros(len(cfg["lambdaS3"]))
   Ks = np.zeros((len(cfg["lambdaS3"]), 4))
   qs, ts = [],[]
+  dt = 0.
   for j,lambdaS3 in enumerate(cfg["lambdaS3"]):
     args = ['../pod-build/bin/dpvMFoptRotPly', 
         '-a {}'.format(scanApath), 
@@ -47,10 +50,12 @@ def RunBB(cfg, scanApath, scanBpath, transformationPathBB,\
     if EGImode:
       args.append('-e')
     print " ".join(args)
+    t0 = time.time()
     err = subp.call(" ".join(args), shell=True)
+    dt += time.time() - t0
     if err > 0:
       print "ERROR in RunBB"
-      return Quaternion(), np.zeros(3), np.zeros(4), False
+      return Quaternion(), np.zeros(3), np.zeros(4), dt, False
     q,t,lbsS3[j],lbsR3[j], KvmfA, KvmfB, KgmmA, KgmmB =\
       LoadTransformationAndBounds(transformationPathBB)
     qs.append(q)
@@ -58,9 +63,10 @@ def RunBB(cfg, scanApath, scanBpath, transformationPathBB,\
     Ks[j,0], Ks[j,1], Ks[j,2], Ks[j,3] = KvmfA, KvmfB, KgmmA, KgmmB
   print 'lbsS3', lbsS3
   print 'lbsR3', lbsR3
+  print "dt: ", dt, "[s]"
   if np.logical_or(np.isinf(lbsR3), np.isnan(lbsR3)).all():
     idMax = np.argmax(lbsS3)
-    return qs[idMax], np.array([np.nan, np.nan, np.nan]), Ks[idMax,:], False
+    return qs[idMax], np.array([np.nan, np.nan, np.nan]), Ks[idMax,:],dt,False
   idMax = np.argmax(lbsS3*lbsR3)
   print "choosing scale {} of run {}".format(cfg["lambdaS3"][idMax],idMax)
   q,t = qs[idMax], ts[idMax]
@@ -71,7 +77,7 @@ def RunBB(cfg, scanApath, scanBpath, transformationPathBB,\
     f.write("{} {} {} {} {} {} {} {} {} {} {} {} {}\n".format(
       q.q[0],q.q[1],q.q[2],q.q[3],t[0],t[1],t[2],lbS3,lbR3,KvmfA,\
       KvmfB, KgmmA, KgmmB))
-    return q,t, Ks[idMax,:], True
+    return q,t, Ks[idMax,:], dt,True
 def RunMM(scanApath, scanBpath, transformationPathMM):
   args = ['../pod-build/bin/moment_matched_T3', 
       '-a {}'.format(scanApath), 
@@ -79,12 +85,15 @@ def RunMM(scanApath, scanBpath, transformationPathMM):
       '-o {}'.format(re.sub(".csv","",transformationPathMM))
       ]
   print " ".join(args)
+  t0 = time.time()
   err = subp.call(" ".join(args), shell=True)
+  dt = time.time() - t0
+  print "dt: ", dt, "[s]"
   if err > 0:
     print "ERROR in run MM"
-    return Quaternion(), np.zeros(3), False
+    return Quaternion(), np.zeros(3), dt, False
   q,t = LoadTransformation(transformationPathMM)
-  return q,t, True
+  return q,t, dt,True
 def RunICP(scanApath, scanBpath, transformationPathICP,
     useNormals=True, transformationPathGlobal=None):
   args = ['../pod-build/bin/icp_T3', 
@@ -97,12 +106,15 @@ def RunICP(scanApath, scanBpath, transformationPathICP,
   if useNormals:
     args.append("-n")
   print " ".join(args)
+  t0 = time.time()
   err = subp.call(" ".join(args), shell=True)
+  dt = time.time() - t0
+  print "dt: ", dt, "[s]"
   if err > 0:
     print "ERROR in run ICP"
-    return Quaternion(), np.zeros(3), False
+    return Quaternion(), np.zeros(3), dt,False
   q,t = LoadTransformation(transformationPathICP)
-  return q,t,True
+  return q,t,dt,True
 
 def LoadTransformation(transformationPath):
   with open(transformationPath) as f:

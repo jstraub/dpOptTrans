@@ -104,10 +104,10 @@ if subp.call(" ".join(args), shell=True) == 0:
     "dtranslation": np.sqrt((t_BA**2).sum()),
     "dangle": q_A.angleTo(q_B)*180./np.pi
     },
-    "version":"1.32"}
+    "version":"1.33"}
 
   if runFFT:
-    q,t,success = RunFFT(scanApath, scanBpath, transformationPathFFT)
+    q,t,dt,success = RunFFT(scanApath, scanBpath, transformationPathFFT)
     if not success:
       err_a, err_t = np.nan, np.nan
       runFFTICP = False
@@ -115,7 +115,7 @@ if subp.call(" ".join(args), shell=True) == 0:
       err_a, err_t = EvalError(q_gt, t_gt, q, t)
     print "FFT: {} deg {} m".format(err_a, err_t)
     results["FFT"] = {"err_a":err_a, "err_t":err_t, "q":q.q.tolist(),
-        "t":t.tolist()}
+        "t":t.tolist(), "dt":dt}
     # write chosen transformation back to file for ICP
     if runFFTICP:
       with open(transformationPathFFT,'w') as f: 
@@ -124,7 +124,7 @@ if subp.call(" ".join(args), shell=True) == 0:
           q.q[0],q.q[1],q.q[2],q.q[3],t[0],t[1],t[2]))
 
   if runFFTICP:
-    q,t,success = RunICP(scanApath, scanBpath, transformationPathFFTICP,
+    q,t,dt2,success = RunICP(scanApath, scanBpath, transformationPathFFTICP,
         useSurfaceNormalsInICP, transformationPathFFT)
     if not success:
       err_a, err_t = np.nan, np.nan
@@ -132,10 +132,10 @@ if subp.call(" ".join(args), shell=True) == 0:
       err_a, err_t = EvalError(q_gt, t_gt, q, t)
     print "FFT+ICP: {} deg {} m".format(err_a, err_t)
     results["FFT+ICP"] = {"err_a":err_a, "err_t":err_t,
-        "q":q.q.tolist(), "t":t.tolist()}
+        "q":q.q.tolist(), "t":t.tolist(), "dt":dt+dt2}
 
   if runBB:
-    q,t,Ks, success = RunBB(cfg, scanApath, scanBpath, transformationPathBB)
+    q,t,Ks, dt,success = RunBB(cfg, scanApath, scanBpath, transformationPathBB)
     if not success:
       err_a, err_t = np.nan, np.nan
       if np.isnan(t).all(): # only translation is messed up -> err_a
@@ -145,10 +145,10 @@ if subp.call(" ".join(args), shell=True) == 0:
       err_a, err_t = EvalError(q_gt, t_gt, q, t)
     print "BB: {} deg {} m".format(err_a, err_t)
     results["BB"] = {"err_a":err_a, "err_t":err_t, "q":q.q.tolist(),
-        "t":t.tolist(), "Ks":Ks.tolist()}
+        "t":t.tolist(), "Ks":Ks.tolist(), "dt":dt}
 
   if runBBICP:
-    q,t,success = RunICP(scanApath, scanBpath, transformationPathBBICP,
+    q,t,dt2,success = RunICP(scanApath, scanBpath, transformationPathBBICP,
         useSurfaceNormalsInICP, transformationPathBB)
     if not success:
       err_a, err_t = np.nan, np.nan
@@ -156,10 +156,10 @@ if subp.call(" ".join(args), shell=True) == 0:
       err_a, err_t = EvalError(q_gt, t_gt, q, t)
     print "BB+ICP: {} deg {} m".format(err_a, err_t)
     results["BB+ICP"] = {"err_a":err_a, "err_t":err_t,
-        "q":q.q.tolist(), "t":t.tolist()}
+        "q":q.q.tolist(), "t":t.tolist(), "dt":dt+dt2}
 
   if runBBEGI:
-    q,t,Ks,success = RunBB(cfg, scanApath, scanBpath,transformationPathBBEGI,True)
+    q,t,Ks,dt,success = RunBB(cfg, scanApath, scanBpath,transformationPathBBEGI,True)
     if not success:
       err_a, err_t = np.nan, np.nan
       if np.isnan(t).all(): # only translation is messed up -> err_a
@@ -169,10 +169,10 @@ if subp.call(" ".join(args), shell=True) == 0:
       err_a, err_t = EvalError(q_gt, t_gt, q, t)
     print "BBEGI: {} deg {} m".format(err_a, err_t)
     results["BBEGI"] = {"err_a":err_a, "err_t":err_t, "q":q.q.tolist(),
-        "t":t.tolist(), "Ks":Ks.tolist()}
+        "t":t.tolist(), "Ks":Ks.tolist(), "dt":dt}
 
   if runBBEGIICP:
-    q,t,success = RunICP(scanApath, scanBpath, transformationPathBBEGIICP,
+    q,t,dt2,success = RunICP(scanApath, scanBpath, transformationPathBBEGIICP,
         useSurfaceNormalsInICP, transformationPathBBEGI)
     if not success:
       err_a, err_t = np.nan, np.nan
@@ -180,37 +180,40 @@ if subp.call(" ".join(args), shell=True) == 0:
       err_a, err_t = EvalError(q_gt, t_gt, q, t)
     print "BBEGI+ICP: {} deg {} m".format(err_a, err_t)
     results["BBEGI+ICP"] = {"err_a":err_a, "err_t":err_t,
-        "q":q.q.tolist(), "t":t.tolist()}
+        "q":q.q.tolist(), "t":t.tolist(), "dt":dt+dt2}
 
   if runMM:
-    q,t,success = RunMM(scanApath, scanBpath, transformationPathMM)
+    q,t,dt,success = RunMM(scanApath, scanBpath, transformationPathMM)
     if not success:
       err_a, err_t = np.nan, np.nan
       runMMICP = False
     else:
       err_a, err_t = EvalError(q_gt, t_gt, q, t)
     print "MM: {} deg {} m".format(err_a, err_t)
-    results["MM"] = {"err_a":err_a, "err_t":err_t, "q":q.q.tolist(), "t":t.tolist()}
+    results["MM"] = {"err_a":err_a, "err_t":err_t, "q":q.q.tolist(),
+        "t":t.tolist(), "dt":dt}
 
   if runMMICP:
-    q,t,success = RunICP(scanApath, scanBpath, transformationPathMMICP,
+    q,t,dt2,success = RunICP(scanApath, scanBpath, transformationPathMMICP,
         useSurfaceNormalsInICP, transformationPathMM)
     if not success:
       err_a, err_t = np.nan, np.nan
     else:
       err_a, err_t = EvalError(q_gt, t_gt, q, t)
     print "MM+ICP: {} deg {} m".format(err_a, err_t)
-    results["MM+ICP"] = {"err_a":err_a, "err_t":err_t, "q":q.q.tolist(), "t":t.tolist()}
+    results["MM+ICP"] = {"err_a":err_a, "err_t":err_t,
+        "q":q.q.tolist(), "t":t.tolist(), "dt":dt+dt2}
 
   if runICP:
-    q,t,success = RunICP(scanApath, scanBpath, transformationPathICP,
+    q,t,dt,success = RunICP(scanApath, scanBpath, transformationPathICP,
         useSurfaceNormalsInICP)
     if not success:
       err_a, err_t = np.nan, np.nan
     else:
       err_a, err_t = EvalError(q_gt, t_gt, q, t)
     print "ICP: {} deg {} m".format(err_a, err_t)
-    results["ICP"] = {"err_a":err_a, "err_t":err_t, "q":q.q.tolist(), "t":t.tolist()}
+    results["ICP"] = {"err_a":err_a, "err_t":err_t, "q":q.q.tolist(),
+        "t":t.tolist(), "dt":dt}
 
   import json, time
 #  print results
