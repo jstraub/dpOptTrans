@@ -4,13 +4,14 @@
 
 #include <iostream>
 #include <fstream>
+#include <Eigen/Dense>
 #include <string>
 #include <pcl/io/ply_io.h>
 #include <pcl/visualization/cloud_viewer.h>
 #include <pcl/visualization/point_cloud_color_handlers.h>
 #include <pcl/common/transforms.h>
 
-#include "rtDDPvMF/rtDDPvMF.hpp"
+//#include "rtDDPvMF/rtDDPvMF.hpp"
 //#include "rtDDPvMF/realtimeDDPvMF_openni.hpp"
 #include "optRot/lower_bound_R3.h"
 #include "optRot/upper_bound_indep_R3.h"
@@ -24,10 +25,47 @@
 #include "optRot/normal.h"
 #include "dpvMFoptRot/dp_vmf_opt_rot.h"
 #include "dpvMFoptRot/pc_helper.h"
+#include "dpMMlowVar/ddpmeansCUDA.hpp"
 
 #include <boost/program_options.hpp>
 namespace po = boost::program_options;
 
+struct CfgRtDDPvMF
+{
+
+  CfgRtDDPvMF() : f_d(540.0), lambda(-1.), beta(1e5), Q(-2.),
+      nSkipFramesSave(30), nFramesSurvive_(0),lambdaDeg_(90.)
+  {};
+  CfgRtDDPvMF(const CfgRtDDPvMF& cfg)
+    : f_d(cfg.f_d), lambda(cfg.lambda), beta(cfg.beta), Q(cfg.Q),
+      nSkipFramesSave(cfg.nSkipFramesSave), nFramesSurvive_(cfg.nFramesSurvive_),
+      lambdaDeg_(cfg.lambdaDeg_)
+  {
+    pathOut = cfg.pathOut;
+  };
+
+  double f_d;
+  double lambda;
+  double beta;
+  double Q;
+
+  int32_t nSkipFramesSave;
+  std::string pathOut;
+
+  int32_t nFramesSurvive_;
+  double lambdaDeg_;
+
+  void lambdaFromDeg(double lambdaDeg)
+  {
+    lambdaDeg_ = lambdaDeg;
+    lambda = cos(lambdaDeg*M_PI/180.0)-1.;
+  };
+  void QfromFrames2Survive(int32_t nFramesSurvive)
+  {
+    nFramesSurvive_ = nFramesSurvive;
+    Q = nFramesSurvive == 0? -2. : lambda/double(nFramesSurvive);
+  };
+};
 
 void DisplayPcs(const pcl::PointCloud<pcl::PointXYZRGBNormal>& pcA, 
   const pcl::PointCloud<pcl::PointXYZRGBNormal>& pcB, 
