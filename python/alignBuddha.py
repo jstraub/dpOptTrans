@@ -12,9 +12,9 @@ cfgBuddhaRnd = {"name":"buddhaRnd", "lambdaS3": [60, 70, 80],
   "lambdaR3": 0.002}
 cfgBuddha = {"name":"buddha", "lambdaS3": [80], "lambdaR3": 0.0008}
 cfgBunny = {"name":"bunny", "lambdaS3": [60, 70, 80], "lambdaR3": 0.003}
-cfgBunnyAB = {"name":"bunnyAB", "lambdaS3": [60, 70, 80], "lambdaR3": 0.003}
 cfgBunnyZipper = {"name":"bun_zipper", "lambdaS3": [60], "lambdaR3": 0.001}
 cfgEnschede = {"name":"enschede", "lambdaS3": [60, 70, 80], "lambdaR3":0.3}
+cfgBunnyAB = {"name":"bunnyAB", "lambdaS3": [60, 70, 80], "lambdaR3": 0.003}
 
 cfg = cfgBunny
 cfg = cfgBunnyZipper
@@ -26,9 +26,10 @@ loadCached = False
 stopToShow = False
 showUntransformed = False
 applyBB = False
-applyFFT = True
+applyBBEGI = True
+applyFFT = False
 applyMM = False
-applyICP = True
+applyICP = False
 loadGlobalsolutionforICP = True
 useSurfaceNormalsInICP = True
 
@@ -107,6 +108,7 @@ for i in range(1,len(scans)):
   nameB = os.path.splitext(os.path.split(scanBpath)[1])[0]
   transformationPath = '{}_{}.csv'.format(nameA, nameB)
   transformationPathBB = '{}_{}_BB.csv'.format(nameA, nameB)
+  transformationPathBBEGI = '{}_{}_BBEGI.csv'.format(nameA, nameB)
   transformationPathICP = '{}_{}_ICP.csv'.format(nameA, nameB)
   transformationPathFFT = '{}_{}_FFT.csv'.format(nameA, nameB)
   transformationPathMM = '{}_{}_MM.csv'.format(nameA, nameB)
@@ -125,6 +127,13 @@ for i in range(1,len(scans)):
     else:
       q,t,_ = RunBB(cfg, scanApath, scanBpath, transformationPathBB)
     transformationPath = transformationPathBB
+
+  if applyBBEGI:
+    if loadCached and os.path.isfile(transformationPathBBEGI):
+      print "found transformation file and using it "+transformationPathBBEGI
+    else:
+      q,t,_ = RunBB(cfg, scanApath, scanBpath, transformationPathBBEGI, True)
+    transformationPath = transformationPathBBEGI
 
   if applyFFT:
     if loadCached and os.path.isfile(transformationPathFFT):

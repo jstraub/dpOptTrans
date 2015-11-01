@@ -53,6 +53,8 @@ nameA = cmdArgs.prefix+"_A"
 nameB = cmdArgs.prefix+"_B"
 transformationPathBB = '{}_{}_BB.csv'.format(nameA, nameB)
 transformationPathBBICP = '{}_{}_BB_ICP.csv'.format(nameA, nameB)
+transformationPathBBEGI = '{}_{}_BBEGI.csv'.format(nameA, nameB)
+transformationPathBBEGIICP = '{}_{}_BBEGI_ICP.csv'.format(nameA, nameB)
 transformationPathICP = '{}_{}_ICP.csv'.format(nameA, nameB)
 transformationPathEGI = '{}_{}_EGI.csv'.format(nameA, nameB)
 transformationPathMM = '{}_{}_MM.csv'.format(nameA, nameB)
@@ -67,6 +69,8 @@ runBBICP = True
 runMM = True
 runMMICP = True
 runICP = True
+runBBEGI = True
+runBBEGIICP = True
 
 args = ['../build/bin/renderPcFromPc',
     '-i ' + cmdArgs.input,
@@ -100,7 +104,7 @@ if subp.call(" ".join(args), shell=True) == 0:
     "dtranslation": np.sqrt((t_BA**2).sum()),
     "dangle": q_A.angleTo(q_B)*180./np.pi
     },
-    "version":"1.21"}
+    "version":"1.32"}
 
   if runFFT:
     q,t,success = RunFFT(scanApath, scanBpath, transformationPathFFT)
@@ -131,7 +135,7 @@ if subp.call(" ".join(args), shell=True) == 0:
         "q":q.q.tolist(), "t":t.tolist()}
 
   if runBB:
-    q,t,success = RunBB(cfg, scanApath, scanBpath, transformationPathBB)
+    q,t,Ks, success = RunBB(cfg, scanApath, scanBpath, transformationPathBB)
     if not success:
       err_a, err_t = np.nan, np.nan
       if np.isnan(t).all(): # only translation is messed up -> err_a
@@ -141,7 +145,7 @@ if subp.call(" ".join(args), shell=True) == 0:
       err_a, err_t = EvalError(q_gt, t_gt, q, t)
     print "BB: {} deg {} m".format(err_a, err_t)
     results["BB"] = {"err_a":err_a, "err_t":err_t, "q":q.q.tolist(),
-        "t":t.tolist()}
+        "t":t.tolist(), "Ks":Ks.tolist()}
 
   if runBBICP:
     q,t,success = RunICP(scanApath, scanBpath, transformationPathBBICP,
@@ -152,6 +156,30 @@ if subp.call(" ".join(args), shell=True) == 0:
       err_a, err_t = EvalError(q_gt, t_gt, q, t)
     print "BB+ICP: {} deg {} m".format(err_a, err_t)
     results["BB+ICP"] = {"err_a":err_a, "err_t":err_t,
+        "q":q.q.tolist(), "t":t.tolist()}
+
+  if runBBEGI:
+    q,t,Ks,success = RunBB(cfg, scanApath, scanBpath,transformationPathBBEGI,True)
+    if not success:
+      err_a, err_t = np.nan, np.nan
+      if np.isnan(t).all(): # only translation is messed up -> err_a
+        err_a, _ = EvalError(q_gt, t_gt, q, t)
+      runBBEGIICP = False
+    else:
+      err_a, err_t = EvalError(q_gt, t_gt, q, t)
+    print "BBEGI: {} deg {} m".format(err_a, err_t)
+    results["BBEGI"] = {"err_a":err_a, "err_t":err_t, "q":q.q.tolist(),
+        "t":t.tolist(), "Ks":Ks.tolist()}
+
+  if runBBEGIICP:
+    q,t,success = RunICP(scanApath, scanBpath, transformationPathBBEGIICP,
+        useSurfaceNormalsInICP, transformationPathBBEGI)
+    if not success:
+      err_a, err_t = np.nan, np.nan
+    else:
+      err_a, err_t = EvalError(q_gt, t_gt, q, t)
+    print "BBEGI+ICP: {} deg {} m".format(err_a, err_t)
+    results["BBEGI+ICP"] = {"err_a":err_a, "err_t":err_t,
         "q":q.q.tolist(), "t":t.tolist()}
 
   if runMM:

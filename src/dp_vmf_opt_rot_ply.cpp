@@ -344,6 +344,7 @@ int main(int argc, char** argv) {
     ("in_b,b", po::value<string>(), "path to second input file")
     ("out,o", po::value<string>(), "path to output file")
     ("scale,s", po::value<float>(),"scale for point-cloud")
+    ("egi,e", "make the vMF MM pis uniform - like a EGI")
     ("display,d", "display results")
     ;
 
@@ -370,6 +371,7 @@ int main(int argc, char** argv) {
   cfg.QfromFrames2Survive(cfg.nFramesSurvive_);
 
   bool output_init_bounds = true;
+  bool egi_mode = false;
   string pathA = "";
   string pathB = "";
   std::string pathOut = "";
@@ -380,6 +382,9 @@ int main(int argc, char** argv) {
   if(vm.count("in_b")) pathB = vm["in_b"].as<string>();
   float scale = 1.;
   if(vm.count("scale")) scale = vm["scale"].as<float>();
+  if(vm.count("egi")) egi_mode = true;
+  if (egi_mode)
+    std::cout << "Using EGI mode - making pis of vMF MM uniform." << std::endl;
 
   // Load point clouds.
   pcl::PointCloud<pcl::PointXYZRGBNormal> pcA, pcB;
@@ -422,6 +427,13 @@ int main(int argc, char** argv) {
   ComputevMFMMfromPC(pcB, cfg, vmfsB);
 //  for(uint32_t k=0; k<vmfsB.size(); ++k) vmfsB[k].Print(); 
 
+  if (egi_mode) {
+    for(uint32_t k=0; k<vmfsA.size(); ++k) 
+      vmfsA[k].SetPi(1./float(vmfsA.size()));
+    for(uint32_t k=0; k<vmfsB.size(); ++k) 
+      vmfsB[k].SetPi(1./float(vmfsB.size()));
+  }
+
   cfg.lambda = lambdaT;
   std::vector<OptRot::Normal<3>> gmmA;
   ComputeGMMfromPC(pcA, cfg, gmmA, false);
@@ -430,6 +442,7 @@ int main(int argc, char** argv) {
   std::vector<OptRot::Normal<3>> gmmB;
   ComputeGMMfromPC(pcB, cfg, gmmB, false);
 //  for(uint32_t k=0; k<gmmB.size(); ++k) gmmB[k].Print(); 
+
 
   OptRot::vMFMM<3> vmfmmA(vmfsA);
   OptRot::vMFMM<3> vmfmmB(vmfsB);
@@ -552,11 +565,14 @@ int main(int argc, char** argv) {
 //    }
     if(pathOut.size() > 1) {
       std::ofstream out(pathOut + std::string(".csv"));
-      out << "q_w q_x q_y q_z t_x t_y t_z lb_S3 lb_R3" << std::endl; 
+      out << "q_w q_x q_y q_z t_x t_y t_z lb_S3 lb_R3 KvmfA KvmfB KgmmA KgmmB" << std::endl; 
       out << q_star.w() << " " << q_star.x() << " " 
         << q_star.y() << " " << q_star.z() << " " << t_star(0)
         << " " << t_star(1) << " " << t_star(2) 
-        << " " << node_star.GetLB() << " " << nodeR3_star.GetLB() << std::endl;
+        << " " << node_star.GetLB() << " " << nodeR3_star.GetLB()
+        << " " << vmfsA.size() << " " << vmfsB.size() 
+        << " " << gmmA.size() << " " << gmmB.size() 
+        << std::endl;
       out.close();
     }
 

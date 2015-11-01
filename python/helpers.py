@@ -30,9 +30,11 @@ def RunFFT(scanApath, scanBpath, transformationPathFFT, q_gt=None,
   else:
     return qs[id_best], ts[id_best], True
 
-def RunBB(cfg, scanApath, scanBpath, transformationPathBB):
+def RunBB(cfg, scanApath, scanBpath, transformationPathBB,\
+    EGImode=False):
   lbsS3 = np.zeros(len(cfg["lambdaS3"]))
   lbsR3 = np.zeros(len(cfg["lambdaS3"]))
+  Ks = np.zeros((len(cfg["lambdaS3"]), 4))
   qs, ts = [],[]
   for j,lambdaS3 in enumerate(cfg["lambdaS3"]):
     args = ['../pod-build/bin/dpvMFoptRotPly', 
@@ -42,28 +44,34 @@ def RunBB(cfg, scanApath, scanBpath, transformationPathBB):
         '-t {}'.format(cfg["lambdaR3"]),
         '-o ' + re.sub(".csv","",transformationPathBB)
         ]
+    if EGImode:
+      args.append('-e')
     print " ".join(args)
     err = subp.call(" ".join(args), shell=True)
     if err > 0:
       print "ERROR in RunBB"
-      return Quaternion(), np.zeros(3), False
-    q,t,lbsS3[j],lbsR3[j] =\
+      return Quaternion(), np.zeros(3), np.zeros(4), False
+    q,t,lbsS3[j],lbsR3[j], KvmfA, KvmfB, KgmmA, KgmmB =\
       LoadTransformationAndBounds(transformationPathBB)
     qs.append(q)
     ts.append(t)
+    Ks[j,0], Ks[j,1], Ks[j,2], Ks[j,3] = KvmfA, KvmfB, KgmmA, KgmmB
   print 'lbsS3', lbsS3
   print 'lbsR3', lbsR3
   if np.logical_or(np.isinf(lbsR3), np.isnan(lbsR3)).all():
-    return q, np.array([np.nan, np.nan, np.nan]), False
+    idMax = np.argmax(lbsS3)
+    return qs[idMax], np.array([np.nan, np.nan, np.nan]), Ks[idMax,:], False
   idMax = np.argmax(lbsS3*lbsR3)
   print "choosing scale {} of run {}".format(cfg["lambdaS3"][idMax],idMax)
   q,t = qs[idMax], ts[idMax]
   lbS3, lbR3 = lbsS3[idMax], lbsR3[idMax]
+  KvmfA, KvmfB, KgmmA, KgmmB = Ks[idMax,0], Ks[idMax,1], Ks[idMax,2], Ks[idMax,3]
   with open(transformationPathBB,'w') as f: # write best one back to file
-    f.write("qw qx qy qz tx ty tz lbS3 lbR3\n")
-    f.write("{} {} {} {} {} {} {} {} {}\n".format(
-      q.q[0],q.q[1],q.q[2],q.q[3],t[0],t[1],t[2],lbS3,lbR3))
-  return q,t, True
+    f.write("qw qx qy qz tx ty tz lbS3 lbR3 KvmfA KvmfB KgmmA KgmmB\n")
+    f.write("{} {} {} {} {} {} {} {} {} {} {} {} {}\n".format(
+      q.q[0],q.q[1],q.q[2],q.q[3],t[0],t[1],t[2],lbS3,lbR3,KvmfA,\
+      KvmfB, KgmmA, KgmmB))
+    return q,t, Ks[idMax,:], True
 def RunMM(scanApath, scanBpath, transformationPathMM):
   args = ['../pod-build/bin/moment_matched_T3', 
       '-a {}'.format(scanApath), 
@@ -122,15 +130,17 @@ def LoadTransformationAndBounds(transformationPath):
       t = qt[4:7]
       lbS3 = qt[7]
       lbR3 = qt[8]
+      KvmfA, KvmfB, KgmmA, KgmmB = qt[9],qt[10],qt[11],qt[12]
     else:
       q = qt[0,:4]
       t = qt[0,4:7]
       lbS3 = qt[0,7]
       lbR3 = qt[0,8]
+      KvmfA, KvmfB, KgmmA, KgmmB = qt[0,9],qt[0,10],qt[0,11],qt[0,12]
     print 'q', q
     print 't', t
     q = Quaternion(w=q[0], x=q[1], y=q[2], z=q[3])
-  return q,t, lbS3, lbR3
+  return q,t, lbS3, lbR3, KvmfA, KvmfB, KgmmA, KgmmB
 
 def LoadTransformationAndData(transformationPath):
   with open(transformationPath) as f:
