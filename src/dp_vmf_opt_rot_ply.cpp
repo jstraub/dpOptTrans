@@ -546,7 +546,7 @@ int main(int argc, char** argv) {
     }
 
     std::cout << "# initial nodes: " << nodesR3.size() << std::endl;
-    eps = 1e-1;
+    eps = 1e-9;
     max_it = 10000;
     OptRot::BranchAndBound<OptRot::NodeR3> bbR3(lower_bound_R3, upper_bound_convex_R3);
     std::cout << " BB on R3 eps=" << eps << " max_it=" << max_it << std::endl;
