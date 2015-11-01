@@ -33,7 +33,8 @@ version = "1.2" # aborted because of some uncought issues
 version = "1.21" # working on tons of FFT here; changed lambdaT to 1.0 from 0.3
 version = "1.31" # working on BBEGI
 version = "1.32" # working on returning Ks for the MMs used by BB
-version = "1.33" # working on returning Ks for the MMs used by BB
+version = "1.33" # working on returning dt
+version = "1.4" # Large scale eval.
 errors = {"err_a":{}, "err_t":{}, "dt":{}, "Ks":{}, "overlap":[], "dangle":[],
   "dtranslation":[]}
 errTypes = ["err_a", "err_t", "dt", "Ks"]
