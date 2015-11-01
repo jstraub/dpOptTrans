@@ -2,6 +2,7 @@ import numpy as np
 import os.path
 import json, re, argparse
 import matplotlib as mpl
+import matplotlib.pyplot as plt
 from js.utils.plot.colors import colorScheme
 
 mpl.rc('font',size=25) 
@@ -27,7 +28,10 @@ for root, dirs, files in os.walk(cmdArgs.input):
       print f
       results.append(os.path.join(root,f))
 
-version = "1.1"
+version = "1.1" # tons of results without FFT
+version = "1.11" # some with FFT
+version = "1.2" # aborted because of some uncought issues
+version = "1.21" # working on tons of FFT here; changed lambdaT to 1.0 from 0.3
 errors = {"err_a":{}, "err_t":{}, "overlap":[], "dangle":[],
   "dtranslation":[]}
 errTypes = ["err_a", "err_t"]
@@ -35,9 +39,11 @@ for result in results:
   r = json.load(open(result))
   if r['version'] == version:
     errors["overlap"].append(r['GT']['overlap'])
-    dang = 2.*np.arccos(r['GT']['q'][0]) *180/np.pi
-    errors["dangle"].append(dang)
-    errors["dtranslation"].append(np.sqrt((np.array(r['GT']['t'])**2).sum()))
+#    dang = 2.*np.arccos(r['GT']['q'][0]) *180/np.pi
+#    errors["dangle"].append(dang)
+#    errors["dtranslation"].append(np.sqrt((np.array(r['GT']['t'])**2).sum()))
+    errors["dangle"].append(r['GT']['dangle'])
+    errors["dtranslation"].append(r['GT']['dtranslation'])
     for algKey, val in r.iteritems():
       if not algKey in ["GT", "version"]:
         for typ in errTypes:
@@ -46,7 +52,6 @@ for result in results:
           else:
             errors[typ][algKey] = [val[typ]]
 
-import matplotlib.pyplot as plt
 
 def PlotErrHist(x, y, delta):
   if x.size < 1:
@@ -93,7 +98,7 @@ def PlotErrBoxPlot(x, y, delta, ax, showXTicks):
 errDesc = {"err_a":"$\Delta \\theta$ [deg]", 
   "err_t": "$\|\|t\|\|_2$ [m]"}
 errTypeMax = {"err_a": 360., "err_t": 10.}
-algTypes = ["BB", "BB+ICP", "ICP", "MM", "MM+ICP"]
+algTypes = ["BB", "BB+ICP", "FFT", "FFT+ICP", "ICP", "MM", "MM+ICP"]
 yMetricLabel={"overlap":"overlap [%]", "dangle":" $\Delta \\theta_{GT}$[deg]",
   "dtranslation":"$\|\|t_{GT}\|\|_2$ [m]"}
 yMetricResolution={"overlap":10, "dangle":20, "dtranslation":0.6}
@@ -110,13 +115,16 @@ for yMetric in ["overlap", "dangle", "dtranslation"]:
       else:
         axs.append(plt.subplot(len(errTypes),len(algTypes),
             i+len(algTypes)*j+1, sharex=axs[-1] ))
+      plt.ylim([0, errTypeMax[errType]])
       axs[-1].yaxis.grid(True, linestyle='-', which='major',
           color='lightgrey', alpha=0.5, linewidth=2)
       axs[-1].set_axisbelow(True) # hide grey lines behind plot
       errs = errors[errType][algType]
-      print "num errors ", len(errs)
-      ids = np.where(np.array(errs) < errTypeMax[errType])
-      PlotErrBoxPlot(np.array(errors[yMetric])[ids], np.array(errs)[ids],
+      print algType, " num errors ", len(errs), "num nans ", np.isnan(np.array(errs)).sum()
+      errs = np.array(errs)
+      errs = errs[np.logical_not(np.isnan(errs))]
+      ids = np.where(errs < errTypeMax[errType])
+      PlotErrBoxPlot(np.array(errors[yMetric])[ids], errs[ids],
           yMetricResolution[yMetric], axs[-1], j==len(errTypes)-1)
       if j == 0:
         plt.title(algType)
