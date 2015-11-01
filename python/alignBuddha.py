@@ -19,16 +19,16 @@ cfgEnschede = {"name":"enschede", "lambdaS3": [60, 70, 80], "lambdaR3":0.3}
 cfg = cfgBunny
 cfg = cfgBunnyZipper
 cfg = cfgBuddha
-cfg = cfgBuddhaRnd
 cfg = cfgEnschede
+cfg = cfgBuddhaRnd
 cfg = cfgBunnyAB
-loadCached = True
-stopToShow = True
+loadCached = False
+stopToShow = False
 showUntransformed = False
 applyBB = False
 applyFFT = True
 applyMM = False
-applyICP = False
+applyICP = True
 loadGlobalsolutionforICP = True
 useSurfaceNormalsInICP = True
 
@@ -123,32 +123,36 @@ for i in range(1,len(scans)):
     if loadCached and os.path.isfile(transformationPathBB):
       print "found transformation file and using it "+transformationPathBB
     else:
-      RunBB(cfg, scanApath, scanBpath, transformationPathBB)
+      q,t,_ = RunBB(cfg, scanApath, scanBpath, transformationPathBB)
     transformationPath = transformationPathBB
 
   if applyFFT:
     if loadCached and os.path.isfile(transformationPathFFT):
       print "found transformation file and using it " +transformationPathFFT
     else:
-      RunFFT(scanApath, scanBpath, transformationPathFFT)
+      q,t,_ = RunFFT(scanApath, scanBpath, transformationPathFFT)
+      with open(transformationPathFFT,'w') as f: 
+        f.write("qw qx qy qz tx ty tz\n")
+        f.write("{} {} {} {} {} {} {}\n".format(
+          q.q[0],q.q[1],q.q[2],q.q[3],t[0],t[1],t[2]))
     transformationPath = transformationPathFFT
 
   if applyMM:
     if loadCached and os.path.isfile(transformationPathMM):
       print "found transformation file and using it " +transformationPathMM
     else:
-      RunMM(scanApath, scanBpath, transformationPathMM)
+      q,t,_ = RunMM(scanApath, scanBpath, transformationPathMM)
     transformationPath = transformationPathMM
 
   if applyICP:
     if loadCached and os.path.isfile(transformationPathICP):
       print "found transformation file and using it "+transformationPathICP
     else:
-      RunICP(scanApath, scanBpath, transformationPathICP,
+      q,t,_ = RunICP(scanApath, scanBpath, transformationPathICP,
           useSurfaceNormalsInICP, transformationPath)
     transformationPath = transformationPathICP
 
-  q,t = LoadTransformation(transformationPath)
+#  q,t = LoadTransformation(transformationPath)
   R = q.toRot().R
   print "R", R
   A_T_B = np.eye(4)
