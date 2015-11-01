@@ -104,7 +104,7 @@ if subp.call(" ".join(args), shell=True) == 0:
     "dtranslation": np.sqrt((t_BA**2).sum()),
     "dangle": q_A.angleTo(q_B)*180./np.pi
     },
-    "version":"1.33"}
+    "version":"1.4"}
 
   if runFFT:
     q,t,dt,success = RunFFT(scanApath, scanBpath, transformationPathFFT)
