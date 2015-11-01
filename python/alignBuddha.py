@@ -20,15 +20,15 @@ cfg = cfgBunny
 cfg = cfgBunnyZipper
 cfg = cfgBuddha
 cfg = cfgBuddhaRnd
-cfg = cfgBunnyAB
 cfg = cfgEnschede
-loadCached = True
+cfg = cfgBunnyAB
+loadCached = False
 stopToShow = True
 showUntransformed = False
-applyBB = True
-applyEGI = False
+applyBB = False
+applyFFT = True
 applyMM = False
-applyICP = True
+applyICP = False
 loadGlobalsolutionforICP = True
 useSurfaceNormalsInICP = True
 
@@ -106,8 +106,9 @@ for i in range(1,len(scans)):
   nameA = os.path.splitext(os.path.split(scanApath)[1])[0]
   nameB = os.path.splitext(os.path.split(scanBpath)[1])[0]
   transformationPath = '{}_{}.csv'.format(nameA, nameB)
+  transformationPathBB = '{}_{}_BB.csv'.format(nameA, nameB)
   transformationPathICP = '{}_{}_ICP.csv'.format(nameA, nameB)
-  transformationPathEGI = '{}_{}_EGI.csv'.format(nameA, nameB)
+  transformationPathFFT = '{}_{}_FFT.csv'.format(nameA, nameB)
   transformationPathMM = '{}_{}_MM.csv'.format(nameA, nameB)
 
   if i == 1:
@@ -119,74 +120,32 @@ for i in range(1,len(scans)):
         color=colors[0])
 
   if applyBB:
-    if loadCached and os.path.isfile(transformationPath):
-      print "found transformation file and using it "+transformationPath
+    if loadCached and os.path.isfile(transformationPathBB):
+      print "found transformation file and using it "+transformationPathBB
     else:
-      lbsS3 = np.zeros(len(cfg["lambdaS3"]))
-      lbsR3 = np.zeros(len(cfg["lambdaS3"]))
-      qs, ts = [],[]
-      for j,lambdaS3 in enumerate(cfg["lambdaS3"]):
-        args = ['../pod-build/bin/dpvMFoptRotPly', 
-            '-a {}'.format(scanApath), 
-            '-b {}'.format(scanBpath), 
-            '-l {}'.format(lambdaS3),
-            '-t {}'.format(cfg["lambdaR3"]),
-            '-o {}_{}'.format(nameA, nameB)
-            ]
-        print " ".join(args)
-        err = subp.call(" ".join(args), shell=True)
-        q,t,lbsS3[j],lbsR3[j] = LoadTransformationAndBounds(transformationPath)
-        qs.append(q)
-        ts.append(t)
-      print 'lbsS3', lbsS3
-      print 'lbsR3', lbsR3
-      idMax = np.argmax(lbsS3*lbsR3)
-      print "choosing scale {} of run {}".format(cfg["lambdaS3"][idMax],idMax)
-      q,t = qs[idMax], ts[idMax]
-      lbS3, lbR3 = lbsS3[idMax], lbsR3[idMax]
-      with open(transformationPath,'w') as f: # write best one back to file
-        f.write("qw qx qy qz tx ty tz lbS3 lbR3\n")
-        f.write("{} {} {} {} {} {} {} {} {}\n".format(
-          q.q[0],q.q[1],q.q[2],q.q[3],t[0],t[1],t[2],lbS3,lbR3))
+      RunBB(cfg, scanApath, scanBpath, transformationPathBB)
+    transformationPath = transformationPathBB
 
-  if applyEGI:
-    if loadCached and os.path.isfile(transformationPathEGI):
-      print "found transformation file and using it " +transformationPathEGI
+  if applyFFT:
+    if loadCached and os.path.isfile(transformationPathFFT):
+      print "found transformation file and using it " +transformationPathFFT
     else:
-      args = ['matlab', '-nojvm', '-nodesktop', '-r',
-      'compute_Rt_egi\(\''+scanApath+'\',\''+scanBpath+'\',\''+transformationPathEGI+'\'\)']
-      print " ".join(args)
-      err = subp.call(" ".join(args), shell=True)
-    transformationPath = transformationPathEGI
+      RunFFT(scanApath, scanBpath, transformationPathFFT)
+    transformationPath = transformationPathFFT
 
   if applyMM:
     if loadCached and os.path.isfile(transformationPathMM):
       print "found transformation file and using it " +transformationPathMM
     else:
-      args = ['../pod-build/bin/moment_matched_T3', 
-          '-a {}'.format(scanApath), 
-          '-b {}'.format(scanBpath), 
-          '-o {}'.format(re.sub(".csv","",transformationPathMM))
-          ]
-      print " ".join(args)
-      err = subp.call(" ".join(args), shell=True)
+      RunMM(scanApath, scanBpath, transformationPathMM)
     transformationPath = transformationPathMM
 
   if applyICP:
     if loadCached and os.path.isfile(transformationPathICP):
       print "found transformation file and using it "+transformationPathICP
     else:
-      args = ['../pod-build/bin/icp_T3', 
-          '-a {}'.format(scanApath), 
-          '-b {}'.format(scanBpath), 
-          '-o {}'.format(re.sub(".csv","",transformationPathICP))
-          ]
-      if loadGlobalsolutionforICP:
-        args.append('-t {}'.format(transformationPath))
-      if useSurfaceNormalsInICP:
-        args.append("-n")
-      print " ".join(args)
-      err = subp.call(" ".join(args), shell=True)
+      RunICP(scanApath, scanBpath, transformationPathICP,
+          useSurfaceNormalsInICP, transformationPath)
     transformationPath = transformationPathICP
 
   q,t = LoadTransformation(transformationPath)
