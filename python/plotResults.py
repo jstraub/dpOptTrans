@@ -44,20 +44,61 @@ def PlotErrHist(x, y, delta):
   if x.size < 1:
     return
   ids = np.floor((x)/delta).astype(np.int)
-  print ids
   means = np.zeros(ids.max()+1)
   stds = np.zeros(ids.max()+1)
+  data = []
   for i in range(ids.min(), ids.max()+1):
     if (ids==i).any():
       means[i] = np.mean(y[ids==i])
       stds[i] = np.std(y[ids==i])
-  print means.shape
-  print stds.shape
-  print ids.shape
+      data.append(y[ids==i])
   plt.errorbar(np.arange(ids.max()+1)*delta,means,yerr=stds)
 
+def PlotErrBoxPlot(x, y, delta, ax):
+  if x.size < 1:
+    return
+  ids = np.floor((x)/delta).astype(np.int)
+  data = []
+  for i in range(ids.min(), ids.max()+1):
+    if (ids==i).any():
+      data.append(y[ids==i])
+  plt.boxplot(data)
+  xtickNames = plt.setp(ax, xticklabels=np.floor(np.arange(ids.min(),
+    ids.max()+1)*delta))
+  plt.setp(xtickNames, rotation=45, fontsize=8)
 
 errTypeMax = {"err_a": 360., "err_t": 10.}
+algTypes = ["BB", "BB+ICP", "ICP", "MM", "MM+ICP"]
+yMetricLabel={"overlap":"overlap [%]", "dangle":"delta angle [deg]",
+"dtranslation":"delta translation [m]"}
+yMetricResolution={"overlap":5, "dangle":10,
+"dtranslation":0.3}
+
+
+for yMetric in ["overlap", "dangle", "dtranslation"]:
+  fig = plt.figure()
+  axs = []
+  for i,algType in enumerate(algTypes):
+    for j,errType in enumerate(errTypes):
+      if j == 0:
+        axs.append(plt.subplot(len(errTypes),len(algTypes),
+          i+len(algTypes)*j+1))
+      else:
+        axs.append(plt.subplot(len(errTypes),len(algTypes),
+            i+len(algTypes)*j+1, sharex=axs[-1] ))
+      errs = errors[errType][algType]
+      ids = np.where(np.array(errs) < errTypeMax[errType])
+      PlotErrBoxPlot(np.array(errors[yMetric])[ids], np.array(errs)[ids],
+          yMetricResolution[yMetric], axs[-1])
+      if j == 0:
+        plt.title(algType)
+      if j == len(errTypes)-1:
+        plt.xlabel(yMetricLabel[yMetric])
+      if i == 0:
+        plt.ylabel(errDesc[errType])
+#    plt.ylim([0, errTypeMax[errType]])
+  plt.tight_layout()
+  plt.show()
 
 for errType in errTypes:
   print errType
@@ -71,6 +112,7 @@ for errType in errTypes:
   plt.legend()
   plt.xlabel("overlap [%]")
   plt.ylabel(errDesc[errType])
+  plt.ylim([0, errTypeMax[errType]])
   plt.subplot(3,2,2)
   for algType, errs in errors[errType].iteritems():
     ids = np.where(np.array(errs) < errTypeMax[errType])
@@ -79,6 +121,7 @@ for errType in errTypes:
   plt.legend()
   plt.xlabel("overlap [%]")
   plt.ylabel(errDesc[errType])
+  plt.ylim([0, errTypeMax[errType]])
   # dangle
   plt.subplot(3,2,3)
   for algType, errs in errors[errType].iteritems():
@@ -87,6 +130,7 @@ for errType in errTypes:
   plt.legend()
   plt.xlabel("delta angle [deg]")
   plt.ylabel(errDesc[errType])
+  plt.ylim([0, errTypeMax[errType]])
   plt.subplot(3,2,4)
   for algType, errs in errors[errType].iteritems():
     ids = np.where(np.array(errs) < errTypeMax[errType])
@@ -94,6 +138,7 @@ for errType in errTypes:
   plt.legend()
   plt.xlabel("delta angle [deg]")
   plt.ylabel(errDesc[errType])
+  plt.ylim([0, errTypeMax[errType]])
   # dtranslation
   plt.subplot(3,2,5)
   for algType, errs in errors[errType].iteritems():
@@ -102,6 +147,7 @@ for errType in errTypes:
   plt.legend()
   plt.xlabel("delta translation [m]")
   plt.ylabel(errDesc[errType])
+  plt.ylim([0, errTypeMax[errType]])
   plt.subplot(3,2,6)
   for algType, errs in errors[errType].iteritems():
     ids = np.where(np.array(errs) < errTypeMax[errType])
@@ -110,4 +156,5 @@ for errType in errTypes:
   plt.legend()
   plt.xlabel("delta translation [m]")
   plt.ylabel(errDesc[errType])
+  plt.ylim([0, errTypeMax[errType]])
 plt.show()

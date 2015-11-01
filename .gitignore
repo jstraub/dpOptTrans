@@ -6,6 +6,9 @@ tags
 *.swp
 *.swo
 *.lbl
+*.json
+*.png
+*.ply
 python_modules/js/distributions/*.c
 python_modules/js/distributions/*.so
 python_modules/of*
