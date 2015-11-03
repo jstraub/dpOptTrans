@@ -13,7 +13,7 @@ def EvalError(q_gt, t_gt, q, t):
   err_t = np.sqrt(((t_gt-t)**2).sum())
   return err_a, err_t
 
-cfgNYU = {"name":"nyu", "lambdaS3": [60, 70, 80], "lambdaR3": 1.}
+cfgNYU = {"name":"nyu", "lambdaS3": [30., 45.,60., 75, 90.], "lambdaR3": 1.}
 
 cfg = cfgNYU
 
@@ -59,12 +59,12 @@ transformationPathMMICP = '{}_{}_MM_ICP.csv'.format(nameA, nameB)
 transformationPathFFT = '{}_{}_FFT.csv'.format(nameA, nameB)
 transformationPathFFTICP = '{}_{}_FFT_ICP.csv'.format(nameA, nameB)
 
-paramEvalLambdaS3 = [45.,90.,135.]
+paramEvalLambdaS3 = [30., 45.,60., 75., 90.,105.]
 paramEvalLambdaR3 = [0.3, 0.5, 0.75, 1.5]
 
 runFFT = False
 runFFTICP = False
-runBB = False
+runBB = True
 runBBICP = False
 runMM = False
 runMMICP = False
@@ -74,6 +74,7 @@ runBBEGIICP = False
 runBBeval = True
 version = "1.4" # large scale eval of all algos and RunBB
 version = "1.5" # eval of BB vor different parameters
+version = "1.51" # eval of more different BB parameters as well as the best of approach
 
 args = ['../build/bin/renderPcFromPc',
     '-i ' + cmdArgs.input,
