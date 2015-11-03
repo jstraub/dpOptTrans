@@ -26,7 +26,7 @@ print "using prefix " + cmdArgs.prefix
 random.shuffle(paths)
 
 for path in paths:
-  for overlap in [50, 60, 70, 80, 90]:
+  for overlap in [30, 40, 50, 60, 70, 80, 90]:
     args=["python", "./randomRenderAndCompare.py", 
         "-i " + path,
         "-o " + resultsPath,

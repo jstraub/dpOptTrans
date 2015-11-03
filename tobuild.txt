@@ -1,5 +1,4 @@
 jsCore
 cudaPcl
 dpMMlowVar
-rtDDPvMF
 optimalRotationEstimation
