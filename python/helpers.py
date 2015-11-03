@@ -1,5 +1,5 @@
 import numpy as np
-from js.geometry.rotations import Quaternion
+from js.geometry.quaternion import Quaternion
 import re, os.path, time
 import subprocess as subp
 
@@ -33,7 +33,7 @@ def RunFFT(scanApath, scanBpath, transformationPathFFT, q_gt=None,
   else:
     return qs[id_best], ts[id_best], dt, True
 def RunBBsimple(scanApath, scanBpath, transformationPathBB, lambdaS3,
-    lambdaR3, EGImode=False)
+    lambdaR3, EGImode=False):
   args = ['../pod-build/bin/dpvMFoptRotPly', 
       '-a {}'.format(scanApath), 
       '-b {}'.format(scanBpath), 

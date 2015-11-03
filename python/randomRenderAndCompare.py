@@ -1,9 +1,8 @@
 import numpy as np
 from scipy.linalg import inv
-from js.data.plyParse import PlyParse
 import os.path, re
 import subprocess as subp
-from js.geometry.rotations import Quaternion
+from js.geometry.quaternion import Quaternion
 import argparse, sys
 from helpers import *
 
