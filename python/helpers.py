@@ -78,6 +78,52 @@ def RunBB(cfg, scanApath, scanBpath, transformationPathBB,\
       q.q[0],q.q[1],q.q[2],q.q[3],t[0],t[1],t[2],lbS3,lbR3,KvmfA,\
       KvmfB, KgmmA, KgmmB))
     return q,t, Ks[idMax,:], dt,True
+def RunBB(cfg, scanApath, scanBpath, transformationPathBB,\
+    EGImode=False):
+  lbsS3 = np.zeros(len(cfg["lambdaS3"]))
+  lbsR3 = np.zeros(len(cfg["lambdaS3"]))
+  Ks = np.zeros((len(cfg["lambdaS3"]), 4))
+  qs, ts = [],[]
+  dt = 0.
+  for j,lambdaS3 in enumerate(cfg["lambdaS3"]):
+    args = ['../pod-build/bin/dpvMFoptRotPly', 
+        '-a {}'.format(scanApath), 
+        '-b {}'.format(scanBpath), 
+        '-l {}'.format(lambdaS3),
+        '-t {}'.format(cfg["lambdaR3"]),
+        '-o ' + re.sub(".csv","",transformationPathBB)
+        ]
+    if EGImode:
+      args.append('-e')
+    print " ".join(args)
+    t0 = time.time()
+    err = subp.call(" ".join(args), shell=True)
+    dt += time.time() - t0
+    if err > 0:
+      print "ERROR in RunBB"
+      return Quaternion(), np.zeros(3), np.zeros(4), dt, False
+    q,t,lbsS3[j],lbsR3[j], KvmfA, KvmfB, KgmmA, KgmmB =\
+      LoadTransformationAndBounds(transformationPathBB)
+    qs.append(q)
+    ts.append(t)
+    Ks[j,0], Ks[j,1], Ks[j,2], Ks[j,3] = KvmfA, KvmfB, KgmmA, KgmmB
+  print 'lbsS3', lbsS3
+  print 'lbsR3', lbsR3
+  print "dt: ", dt, "[s]"
+  if np.logical_or(np.isinf(lbsR3), np.isnan(lbsR3)).all():
+    idMax = np.argmax(lbsS3)
+    return qs[idMax], np.array([np.nan, np.nan, np.nan]), Ks[idMax,:],dt,False
+  idMax = np.argmax(lbsS3*lbsR3)
+  print "choosing scale {} of run {}".format(cfg["lambdaS3"][idMax],idMax)
+  q,t = qs[idMax], ts[idMax]
+  lbS3, lbR3 = lbsS3[idMax], lbsR3[idMax]
+  KvmfA, KvmfB, KgmmA, KgmmB = Ks[idMax,0], Ks[idMax,1], Ks[idMax,2], Ks[idMax,3]
+  with open(transformationPathBB,'w') as f: # write best one back to file
+    f.write("qw qx qy qz tx ty tz lbS3 lbR3 KvmfA KvmfB KgmmA KgmmB\n")
+    f.write("{} {} {} {} {} {} {} {} {} {} {} {} {}\n".format(
+      q.q[0],q.q[1],q.q[2],q.q[3],t[0],t[1],t[2],lbS3,lbR3,KvmfA,\
+      KvmfB, KgmmA, KgmmB))
+    return q,t, Ks[idMax,:], dt,True
 def RunMM(scanApath, scanBpath, transformationPathMM):
   args = ['../pod-build/bin/moment_matched_T3', 
       '-a {}'.format(scanApath), 

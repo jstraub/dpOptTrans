@@ -39,6 +39,7 @@ errors = {"err_a":{}, "err_t":{}, "dt":{}, "Ks":{}, "overlap":[], "dangle":[],
   "dtranslation":[]}
 errTypes = ["err_a", "err_t", "dt", "Ks"]
 counter = 0
+numRejected = dict()
 for result in results:
   r = json.load(open(result))
   if r['version'] == version:
@@ -49,6 +50,22 @@ for result in results:
 #    errors["dtranslation"].append(np.sqrt((np.array(r['GT']['t'])**2).sum()))
     errors["dangle"].append(r['GT']['dangle'])
     errors["dtranslation"].append(r['GT']['dtranslation'])
+    # enforce that all values of one scene be non nan
+    isnotnan = True
+    for algKey, val in r.iteritems():
+      if not algKey in ["GT", "version"]:
+        for i,typ in enumerate(errTypes):
+          if not typ in val:
+            continue
+          isnotnan = isnotnan and (not np.isnan(val[typ]).any())
+          if np.isnan(val[typ]).any():
+            if algKey in numRejected:
+              numRejected[algKey] += 1
+            else:
+              numRejected[algKey] = 1
+    if not isnotnan:
+      continue
+    # collect the values
     for algKey, val in r.iteritems():
       if not algKey in ["GT", "version"]:
         for typ in errTypes:
@@ -59,7 +76,13 @@ for result in results:
           else:
             errors[typ][algKey] = [val[typ]]
     counter += 1 
-print "Found {} result files".format(counter)
+totalRejected = 0
+for key,val in numRejected.iteritems():
+  totalRejected += val
+print "Found {} valid and {} invalid result files. Found the following breakdown of invalid files:".format(counter, totalRejected)
+for key,val in numRejected.iteritems():
+  print "  {}: {}\t{}%".format(key, val, 100.*val/float(totalRejected+counter))
+
 if counter == 0:
   print "No results found for version "+version
   sys.exit(0)
@@ -89,8 +112,10 @@ def PlotErrBoxPlot(x, y, delta, ax, showXTicks):
   bp = plt.boxplot(data)
   # set xticks
   if showXTicks:
-    xtickNames = plt.setp(ax, xticklabels=np.floor(np.arange(ids.min(),
-      ids.max()+1)*delta).astype(np.int))
+    ticks = np.floor((np.arange(ids.min(), ids.max()+1)+0.5)*delta).astype(np.int)
+    if np.unique(ticks).size < ticks.size:
+      ticks = np.floor((np.arange(ids.min(), ids.max()+1)+0.5)*delta*10.)/10.
+    xtickNames = plt.setp(ax, xticklabels=ticks)
     plt.setp(xtickNames, rotation=45)
   else:
     plt.setp(ax.get_xticklabels(), visible=False) 
@@ -113,9 +138,9 @@ errTypeMax = {"err_a": 360., "err_t": 10., "dt": 120.,
     "Ks1":30, "Ks2":30, "Ks3":30, "Ks4":30}
 yMetricLabel={"overlap":"overlap [%]", "dangle":" $\Delta \\theta_{GT}$[deg]",
   "dtranslation":"$\|\|t_{GT}\|\|_2$ [m]"}
-yMetricResolution={"overlap":10, "dangle":20, "dtranslation":0.6}
+yMetricResolution={"overlap":10, "dangle":12, "dtranslation":0.4}
 
-evalKs = False
+evalKs = True
 if evalKs:
   errTypes = ["Ks1","Ks2","Ks3","Ks4", "err_a", "err_t"]
   algTypes = ["BB", "BBEGI"]
@@ -146,7 +171,7 @@ if evalKs:
   #        plt.plot(np.array(errors[yMetric])[ids], errs[ids],'.')
         else:
           errs = errors[errType][algType]
-        print algType, " num errors ", len(errs), "num nans ", np.isnan(np.array(errs)).sum()
+#        print algType, " num errors ", len(errs), "num nans ", np.isnan(np.array(errs)).sum()
         errs = np.array(errs)
         errs = errs[np.logical_not(np.isnan(errs))]
         ids = np.where(errs < errTypeMax[errType])
@@ -169,6 +194,7 @@ if evalKs:
 # eval
 errTypes = ["err_a", "err_t", "dt"]
 algTypes = ["BB", "BB+ICP", "BBEGI", "BBEGI+ICP", "FFT", "FFT+ICP", "ICP", "MM", "MM+ICP"]
+algTypes = ["BB", "BB+ICP", "FFT", "FFT+ICP", "ICP", "MM", "MM+ICP"]
 for yMetric in ["overlap", "dangle", "dtranslation"]:
   fig = plt.figure(figsize = figSize, dpi = 80, facecolor="w",
       edgecolor="k")
@@ -186,7 +212,7 @@ for yMetric in ["overlap", "dangle", "dtranslation"]:
           color='lightgrey', alpha=0.5, linewidth=2)
       axs[-1].set_axisbelow(True) # hide grey lines behind plot
       errs = errors[errType][algType]
-      print algType, " num errors ", len(errs), "num nans ", np.isnan(np.array(errs)).sum()
+#      print algType, " num errors ", len(errs), "num nans ", np.isnan(np.array(errs)).sum()
       errs = np.array(errs)
       errs = errs[np.logical_not(np.isnan(errs))]
       ids = np.where(errs < errTypeMax[errType])

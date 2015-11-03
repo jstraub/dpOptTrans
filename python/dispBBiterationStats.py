@@ -8,13 +8,13 @@ mpl.rc('font',size=25)
 mpl.rc('lines',linewidth=3.)
 figSize = (14, 5.5)
 figSize = (14, 10)
-figSize = (14, 12)
+figSize = (9, 12)
 
 c1 = colorScheme("labelMap")["turquoise"]
 c2 = colorScheme("labelMap")["orange"]
 
 space = ["$\mathbb{S}^{3}$", "$\mathbb{R}^3$"]
-disp = [1,0.8]
+disp = [1,0.7]
 
 for i, path in enumerate(['./bb_iteration_stats_S3.csv',
   './bb_iteration_stats_R3.csv']):
@@ -24,30 +24,38 @@ for i, path in enumerate(['./bb_iteration_stats_S3.csv',
 
   fig = plt.figure(figsize = figSize, dpi = 80, facecolor="w",
       edgecolor="k")
-  ax = plt.subplot(2,1,1)
-#  ax.set_yscale("log")
+  ax1 = plt.subplot(2,1,1)
   
-  plt.plot(s[0,:Y],label="lower bound",color=c1)
-  plt.plot(s[1,:Y],label="joint upper bound",color=c2)
+  plt.plot(s[0,:Y],label="LB",color=c1)
+  plt.plot(s[1,:Y],label="joint UB",color=c2)
   plt.legend(loc="best")
-  plt.xlabel("iterations of B&B")
-  plt.ylabel("log$_{10}$(bounds)")
-  plt.ylim([s[:2,:].min(), s[:2,:].max()])
+#  plt.xlabel("iterations of B&B")
+  plt.ylabel("log$_{10}$(bound)")
+#  plt.ylim([s[:2,:].min(), s[:2,:].max()])
   plt.xlim([0, Y-1])
+  plt.tight_layout()
+  plt.setp(ax1.get_xticklabels(), visible=False)
+#  plt.savefig(re.sub(".csv","_bounds.png",path), figure=fig)
   
-  ax = plt.subplot(2,1,2)
+#  fig = plt.figure(figsize = figSize, dpi = 80, facecolor="w",
+#      edgecolor="k")
+  ax2 = plt.subplot(212, sharex=ax1)
   plt.plot(s[2,:Y],label="number of nodes", color=c1)
   plt.xlabel("iterations of B&B")
-  ax.set_ylabel("# nodes in B&B", color=c1)
-  for tl in ax.get_yticklabels():
-    tl.set_color(c1)
-  ax2 = ax.twinx()
-  plt.plot(100.*(s[3,0]-s[3,:Y])/s[3,0], color=c2)
-  ax2.set_ylabel("% of "+space[i]+" explored", color=c2)
-  ax2.set_ylim([0,101])
-  plt.xlim([0, Y-1])
+  ax2.set_ylabel("# nodes in B&B", color=c1)
   for tl in ax2.get_yticklabels():
+    tl.set_color(c1)
+  ax2.set_yticks(ax2.get_yticks()[:-1])
+  ax3 = ax2.twinx()
+  plt.plot(100.*(s[3,0]-s[3,:Y])/s[3,0], color=c2)
+  ax3.set_ylabel("% of "+space[i]+" explored", color=c2)
+  ax3.set_ylim([0,101])
+  plt.xlim([0, Y-1])
+  for tl in ax3.get_yticklabels():
     tl.set_color(c2)
-  plt.savefig(re.sub("csv","png",path), figure=fig)
+  ax3.set_yticks(ax3.get_yticks()[:-1])
+  plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=0.1)
+  plt.savefig(re.sub(".csv",".png",path), figure=fig)
+#  plt.savefig(re.sub(".csv","_nodes.png",path), figure=fig)
   plt.show()
 
