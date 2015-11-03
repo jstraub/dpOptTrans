@@ -13,7 +13,40 @@ def EvalError(q_gt, t_gt, q, t):
   err_t = np.sqrt(((t_gt-t)**2).sum())
   return err_a, err_t
 
+def DisplayPcs(scanApath, scanBpath, q,t):
+  from js.data.plyParse import PlyParse
+  from js.utils.plot.colors import colorScheme
+  import mayavi.mlab as mlab
+  colors = colorScheme("label")
+  plyA = PlyParse();
+  plyA.parse(scanApath)
+  pcA = plyA.getPc()
+  nA = plyA.getNormals()
+  plyB = PlyParse();
+  plyB.parse(scanBpath)
+  pcB = plyB.getPc()
+  nB = plyB.getNormals()
+
+  R = q.toRot().R.T
+  t = -R.dot(t)
+  pcB = (1.001*R.dot(pcB.T)).T + t
+  nB = (1.001*R.dot(nB.T)).T
+
+  figm = mlab.figure(bgcolor=(1,1,1))
+  mlab.points3d(pcA[:,0], pcA[:,1], pcA[:,2], mode="point",
+      color=colors[0])
+  mlab.points3d(pcB[:,0], pcB[:,1], pcB[:,2], mode="point",
+        color=colors[1])
+
+  figm = mlab.figure(bgcolor=(1,1,1))
+  mlab.points3d(nA[:,0], nA[:,1], nA[:,2], mode="point",
+      color=colors[0])
+  mlab.points3d(nB[:,0], nB[:,1], nB[:,2], mode="point",
+        color=colors[1])
+  mlab.show(stop=True)
+
 cfgNYU = {"name":"nyu", "lambdaS3": [30., 45.,60., 75, 90.], "lambdaR3": 1.}
+cfgNYU = {"name":"nyu", "lambdaS3": [30.], "lambdaR3": 1.}
 
 cfg = cfgNYU
 
@@ -42,6 +75,8 @@ parser.add_argument('-p','--prefix',
 parser.add_argument('-a','--angle', default=30., help='magnitude of random angle')
 parser.add_argument('-t','--translation', default=1., help='magnitude of random translation')
 parser.add_argument('-m','--minOverlap', default=70., help='min overlap between sampled point clouds')
+parser.add_argument('-d','--display', action="store_true",
+    help='display aligned point clouds')
 cmdArgs = parser.parse_args()
 
 resultsPath = cmdArgs.output + "/" + os.path.splitext(os.path.split(cmdArgs.input)[1])[0]
@@ -64,14 +99,14 @@ paramEvalLambdaR3 = [0.3, 0.5, 0.75, 1.5]
 
 runFFT = False
 runFFTICP = False
-runBB = True
-runBBICP = False
 runMM = False
 runMMICP = False
 runICP = False
+runBB = True
+runBBICP = False
 runBBEGI = False
 runBBEGIICP = False
-runBBeval = True
+runBBeval = False
 version = "1.4" # large scale eval of all algos and RunBB
 version = "1.5" # eval of BB vor different parameters
 version = "1.51" # eval of more different BB parameters as well as the best of approach
@@ -109,6 +144,9 @@ if subp.call(" ".join(args), shell=True) == 0:
     "dangle": q_A.angleTo(q_B)*180./np.pi
     },
     "version":version}
+
+  if showUntransformed:
+    DisplayPcs(scanApath, scanBpath, q_gt,t_gt)
 
   if runFFT:
     q,t,dt,success = RunFFT(scanApath, scanBpath, transformationPathFFT)
@@ -169,6 +207,8 @@ if subp.call(" ".join(args), shell=True) == 0:
     print "BB: {} deg {} m".format(err_a, err_t)
     results["BB"] = {"err_a":err_a, "err_t":err_t, "q":q.q.tolist(),
         "t":t.tolist(), "Ks":Ks.tolist(), "dt":dt}
+    if cmdArgs.display:
+      DisplayPcs(scanApath, scanBpath, q,t)
 
   if runBBICP:
     q,t,dt2,success = RunICP(scanApath, scanBpath, transformationPathBBICP,

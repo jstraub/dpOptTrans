@@ -235,13 +235,13 @@ bool ComputevMFMMfromPC(const pcl::PointCloud<pcl::PointXYZRGBNormal>&
   Eigen::VectorXd pis = (ws.array() / ws.sum()).matrix().cast<double>();
   Eigen::VectorXf taus(K);
   for(uint32_t k=0; k<K; ++k)
-    if (counts(k) > 10) {
+    if (counts(k) > 100) {
       taus(k) = OptRot::vMF<3>::MLEstimateTau(xSum.col(k),
           xSum.col(k).cast<double>()/xSum.col(k).norm(), ws(k));
     }
   
   for(uint32_t k=0; k<K; ++k)
-    if (counts(k) > 10) {
+    if (counts(k) > 100) {
       vmfs.push_back(OptRot::vMF<3>(xSum.col(k).cast<double>()/xSum.col(k).norm(),
             taus(k), pis(k)));
     }
@@ -421,11 +421,11 @@ int main(int argc, char** argv) {
 
   std::vector<OptRot::vMF<3>> vmfsA;
   ComputevMFMMfromPC(pcA, cfg, vmfsA);
-//  for(uint32_t k=0; k<vmfsA.size(); ++k) vmfsA[k].Print(); 
+  for(uint32_t k=0; k<vmfsA.size(); ++k) vmfsA[k].Print(); 
 
   std::vector<OptRot::vMF<3>> vmfsB;
   ComputevMFMMfromPC(pcB, cfg, vmfsB);
-//  for(uint32_t k=0; k<vmfsB.size(); ++k) vmfsB[k].Print(); 
+  for(uint32_t k=0; k<vmfsB.size(); ++k) vmfsB[k].Print(); 
 
   if (egi_mode) {
     for(uint32_t k=0; k<vmfsA.size(); ++k) 
@@ -458,8 +458,8 @@ int main(int argc, char** argv) {
         nodes);
   }
   
-  double eps = 1e-9;
-  uint32_t max_it = 10000;
+  double eps = 1e-7;
+  uint32_t max_it = 15000;
   std::cout << " BB on S3 eps=" << eps << " max_it=" << max_it << std::endl;
 //  OptRot::BranchAndBound<OptRot::NodeS3> bb(lower_bound, upper_bound);
   OptRot::BranchAndBound<OptRot::NodeS3> bb(lower_bound, upper_bound_convex);
@@ -546,7 +546,7 @@ int main(int argc, char** argv) {
     }
 
     std::cout << "# initial nodes: " << nodesR3.size() << std::endl;
-    eps = 1e-9;
+    eps = 1e-10;
     max_it = 10000;
     OptRot::BranchAndBound<OptRot::NodeR3> bbR3(lower_bound_R3, upper_bound_convex_R3);
     std::cout << " BB on R3 eps=" << eps << " max_it=" << max_it << std::endl;

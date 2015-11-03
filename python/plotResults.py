@@ -37,6 +37,8 @@ version = "1.33" # working on returning dt
 version = "1.4" # Large scale eval. of all algos and BB with lambda S3 60, 70, 80 and LambdaR3 1.
 # ^^ all above here are in subfolder on expres1!
 version = "1.5" # Parameter sweep of BB
+version = "1.51" # Parameter sweep of BB
+#version = "1.4"
 errors = {"err_a":{}, "err_t":{}, "dt":{}, "Ks":{}, "overlap":[], "dangle":[],
   "dtranslation":[]}
 errTypes = ["err_a", "err_t", "dt", "Ks"]
@@ -218,9 +220,9 @@ if evalKs:
 evalBB = True
 if evalBB:
   # eval of BB s different parameters
-  paramEvalLambdaS3 = [45.,90.,135.]
+  paramEvalLambdaS3 = [30., 45.,60., 75., 90.,105.]
   paramEvalLambdaR3 = [0.3, 0.5, 0.75, 1.5]
-  algTypes = []
+  algTypes = ["BB"]
   for lambdaS3 in paramEvalLambdaS3:
     for lambdaR3 in paramEvalLambdaR3:
       key = "BB_{}_{}".format(lambdaS3, lambdaR3)
@@ -237,6 +239,16 @@ if evalBB:
         print " - {} - {} - {}".format(yMetric, algType, errType)
         WriteErrStats(np.array(errors[yMetric])[ids], errs[ids],
             yMetricResolution[yMetric])
+
+  algTypes = ["BB"]
+  for lambdaR3 in paramEvalLambdaR3:
+    key = "BB_{}_{}".format(45.0, lambdaR3)
+    algTypes.append(key)
+  algTypes = ["BB"]
+  for lambdaS3 in paramEvalLambdaS3:
+    key = "BB_{}_{}".format(lambdaS3, 0.75)
+    algTypes.append(key)
+  errTypes = ["err_a", "err_t"] #, "dt"]
 else:
   # eval of all algos against eachother
   errTypes = ["err_a", "err_t", "dt"]
