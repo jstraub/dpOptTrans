@@ -1,11 +1,9 @@
 import numpy as np
 from scipy.linalg import inv
 from js.data.plyParse import PlyParse
-import mayavi.mlab as mlab
 import os.path, re
 import subprocess as subp
 from js.geometry.rotations import Quaternion
-from js.utils.plot.colors import colorScheme
 import argparse, sys
 from helpers import *
 
@@ -62,15 +60,21 @@ transformationPathMMICP = '{}_{}_MM_ICP.csv'.format(nameA, nameB)
 transformationPathFFT = '{}_{}_FFT.csv'.format(nameA, nameB)
 transformationPathFFTICP = '{}_{}_FFT_ICP.csv'.format(nameA, nameB)
 
-runFFT = True
-runFFTICP = True
-runBB = True
-runBBICP = True
-runMM = True
-runMMICP = True
-runICP = True
-runBBEGI = True
-runBBEGIICP = True
+paramEvalLambdaS3 = [45.,90.,135.]
+paramEvalLambdaR3 = [0.3, 0.5, 0.75, 1.5]
+
+runFFT = False
+runFFTICP = False
+runBB = False
+runBBICP = False
+runMM = False
+runMMICP = False
+runICP = False
+runBBEGI = False
+runBBEGIICP = False
+runBBeval = True
+version = "1.4" # large scale eval of all algos and RunBB
+version = "1.5" # eval of BB vor different parameters
 
 args = ['../build/bin/renderPcFromPc',
     '-i ' + cmdArgs.input,
@@ -104,7 +108,7 @@ if subp.call(" ".join(args), shell=True) == 0:
     "dtranslation": np.sqrt((t_BA**2).sum()),
     "dangle": q_A.angleTo(q_B)*180./np.pi
     },
-    "version":"1.4"}
+    "version":version}
 
   if runFFT:
     q,t,dt,success = RunFFT(scanApath, scanBpath, transformationPathFFT)
@@ -133,6 +137,25 @@ if subp.call(" ".join(args), shell=True) == 0:
     print "FFT+ICP: {} deg {} m".format(err_a, err_t)
     results["FFT+ICP"] = {"err_a":err_a, "err_t":err_t,
         "q":q.q.tolist(), "t":t.tolist(), "dt":dt+dt2}
+
+  if runBBeval:
+    for lambdaS3 in paramEvalLambdaS3:
+      for lambdaR3 in paramEvalLambdaR3:
+        q,t,Ks,dt,success = RunBBsimple(scanApath, scanBpath,
+            transformationPathBB, lambdaS3, lambdaR3)
+        if not success:
+          err_a, err_t = np.nan, np.nan
+          if np.isnan(t).all(): 
+            # only translation is messed up -> err_a
+            err_a, _ = EvalError(q_gt, t_gt, q, t)
+          runBBICPsimple = False
+        else:
+          err_a, err_t = EvalError(q_gt, t_gt, q, t)
+        key = "BB_{}_{}".format(lambdaS3, lambdaR3)
+        print key+": {} deg {} m".format(err_a, err_t)
+        results[key] = {"err_a":err_a, "err_t":err_t,
+            "q":q.q.tolist(), "t":t.tolist(), "Ks":Ks.tolist(),
+            "dt":dt, "lambdaS3":lambdaS3, "lambdaR3":lambdaR3}
 
   if runBB:
     q,t,Ks, dt,success = RunBB(cfg, scanApath, scanBpath, transformationPathBB)
