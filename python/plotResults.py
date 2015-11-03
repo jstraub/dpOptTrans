@@ -83,7 +83,7 @@ for key,val in numRejected.iteritems():
   totalRejected += val
 print "Found {} valid and {} invalid result files. Found the following breakdown of invalid files:".format(counter, totalRejected)
 for key,val in numRejected.iteritems():
-  print "  {}: {}\t{}%".format(key, val, 100.*val/float(totalRejected+counter))
+  print "  {}: \t{}\t{}%".format(key, val, 100.*val/float(totalRejected+counter))
 
 if counter == 0:
   print "No results found for version "+version
@@ -132,6 +132,27 @@ def PlotErrBoxPlot(x, y, delta, ax, showXTicks):
     median.set(color=c2)
   for flier in bp["fliers"]:
     flier.set(color=c3, marker=".", alpha=0.5)
+
+def WriteErrStats(x, y, delta):
+  if x.size < 1:
+    return
+  ids = np.floor((x)/delta).astype(np.int)
+  data = []
+  for i in range(ids.min(), ids.max()+1):
+    if (ids==i).any():
+      data.append(y[ids==i])
+  ticks = np.floor((np.arange(ids.min(), ids.max()+1)+0.5)*delta).astype(np.int)
+  if np.unique(ticks).size < ticks.size:
+    ticks = np.floor((np.arange(ids.min(), ids.max()+1)+0.5)*delta*10.)/10.
+  for i,d in enumerate(data):
+    mean = np.mean(d)
+    std = np.std(d)
+    dSorted = np.sort(d)
+    median = d[d.size/2]
+    ninetyP = d[int(np.floor(d.size*0.1))]
+    tenP = d[int(np.floor(d.size*0.9))]
+    print "{}:\t{} +- {}\t median={}\t10% {}\t90% {}".format(ticks[i], mean, std,
+        median, ninetyP, tenP)
 
 errDesc = {"err_a":"$\Delta \\theta$ [deg]", 
     "err_t": "$\|\|t\|\|_2$ [m]", "dt":"dt [s]",
@@ -194,7 +215,6 @@ if evalKs:
     plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=0.1)
     plt.show()
 
-
 evalBB = True
 if evalBB:
   # eval of BB s different parameters
@@ -205,12 +225,26 @@ if evalBB:
     for lambdaR3 in paramEvalLambdaR3:
       key = "BB_{}_{}".format(lambdaS3, lambdaR3)
       algTypes.append(key)
-  errTypes = ["err_a", "err_t", "dt"]
+  errTypes = ["err_a"] #, "err_t", "dt"]
+
+  for yMetric in ["overlap", "dangle", "dtranslation"]:
+    for i,algType in enumerate(algTypes):
+      for j,errType in enumerate(errTypes):
+        errs = errors[errType][algType]
+        errs = np.array(errs)
+        errs = errs[np.logical_not(np.isnan(errs))]
+        ids = np.where(errs < errTypeMax[errType])
+        print " - {} - {} - {}".format(yMetric, algType, errType)
+        WriteErrStats(np.array(errors[yMetric])[ids], errs[ids],
+            yMetricResolution[yMetric])
 else:
   # eval of all algos against eachother
   errTypes = ["err_a", "err_t", "dt"]
   algTypes = ["BB", "BB+ICP", "BBEGI", "BBEGI+ICP", "FFT", "FFT+ICP", "ICP", "MM", "MM+ICP"]
   algTypes = ["BB", "BB+ICP", "FFT", "FFT+ICP", "ICP", "MM", "MM+ICP"]
+
+if not "DISPLAY" in os.environ:
+  sys.exit(0)
 
 print algTypes
 print errTypes
