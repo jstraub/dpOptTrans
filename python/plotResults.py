@@ -151,7 +151,7 @@ def WriteErrStats(x, y, delta):
     median = d[d.size/2]
     ninetyP = d[int(np.floor(d.size*0.1))]
     tenP = d[int(np.floor(d.size*0.9))]
-    print "{}:\t{} +- {}\t median={}\t10% {}\t90% {}".format(ticks[i], mean, std,
+    print "{}: |.| {}\t{} +- {}\t median={}\t10% {}\t90% {}".format(ticks[i], d.size, mean, std,
         median, ninetyP, tenP)
 
 errDesc = {"err_a":"$\Delta \\theta$ [deg]", 
