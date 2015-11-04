@@ -316,8 +316,8 @@ bool ComputeGMMfromPC(pcl::PointCloud<pcl::PointXYZRGBNormal>&
   for(uint32_t k=0; k<K; ++k)
     if (pis(k) > 0.) {
       gmm.push_back(OptRot::Normal<3>(centroids.col(k).cast<double>(),
-//            Ss[k]/float(counts(k))+0.01*Eigen::Matrix3d::Identity(), pis(k)));
-            Ss[k]/float(counts(k)), pis(k)));
+            Ss[k]/float(counts(k))+0.01*Eigen::Matrix3d::Identity(), pis(k)));
+//            Ss[k]/float(counts(k)), pis(k)));
     }
   return true;
 }

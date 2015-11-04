@@ -46,7 +46,7 @@ def DisplayPcs(scanApath, scanBpath, q,t):
   mlab.show(stop=True)
 
 cfgNYU = {"name":"nyu", "lambdaS3": [30., 45.,60., 75, 90.], "lambdaR3": 1.}
-cfgNYU = {"name":"nyu", "lambdaS3": [30.], "lambdaR3": 1.}
+cfgNYU = {"name":"nyu", "lambdaS3": [30.], "lambdaR3": 0.3}
 
 cfg = cfgNYU
 
