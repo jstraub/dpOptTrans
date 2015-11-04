@@ -26,6 +26,7 @@ for root, dirs, files in os.walk(cmdArgs.input):
   for f in files:
     if re.search(name, f):    
       results.append(os.path.join(root,f))
+  break # don recurse into subfolders
 
 version = "1.1" # tons of results without FFT
 version = "1.11" # some with FFT
@@ -38,7 +39,7 @@ version = "1.4" # Large scale eval. of all algos and BB with lambda S3 60, 70, 8
 # ^^ all above here are in subfolder on expres1!
 version = "1.5" # Parameter sweep of BB
 version = "1.51" # Parameter sweep of BB
-#version = "1.4"
+version = "2.0"
 errors = {"err_a":{}, "err_t":{}, "dt":{}, "Ks":{}, "overlap":[], "dangle":[],
   "dtranslation":[]}
 errTypes = ["err_a", "err_t", "dt", "Ks"]
@@ -217,11 +218,13 @@ if evalKs:
     plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=0.1)
     plt.show()
 
-evalBB = True
+evalBB = False
 if evalBB:
   # eval of BB s different parameters
-  paramEvalLambdaS3 = [30., 45.,60., 75., 90.,105.]
-  paramEvalLambdaR3 = [0.3, 0.5, 0.75, 1.5]
+#  paramEvalLambdaS3 = [30., 45.,60., 75., 90.,105.]
+#  paramEvalLambdaR3 = [0.3, 0.5, 0.75, 1.5]
+  paramEvalLambdaS3 = [20., 30., 45.,60., 75., 90.]
+  paramEvalLambdaR3 = [0.3, 0.5, 0.75, 1.0]
   algTypes = ["BB"]
   for lambdaS3 in paramEvalLambdaS3:
     for lambdaR3 in paramEvalLambdaR3:
@@ -241,19 +244,24 @@ if evalBB:
             yMetricResolution[yMetric])
 
   algTypes = ["BB"]
-  for lambdaR3 in paramEvalLambdaR3:
-    key = "BB_{}_{}".format(45.0, lambdaR3)
-    algTypes.append(key)
-  algTypes = ["BB"]
   for lambdaS3 in paramEvalLambdaS3:
     key = "BB_{}_{}".format(lambdaS3, 0.75)
     algTypes.append(key)
-  errTypes = ["err_a", "err_t"] #, "dt"]
+
+  algTypes = ["BB"]
+  for lambdaR3 in paramEvalLambdaR3:
+    key = "BB_{}_{}".format(45.0, lambdaR3)
+    algTypes.append(key)
+
+
+
+  errTypes = ["err_a", "err_t", "dt"]
 else:
   # eval of all algos against eachother
   errTypes = ["err_a", "err_t", "dt"]
   algTypes = ["BB", "BB+ICP", "BBEGI", "BBEGI+ICP", "FFT", "FFT+ICP", "ICP", "MM", "MM+ICP"]
-  algTypes = ["BB", "BB+ICP", "FFT", "FFT+ICP", "ICP", "MM", "MM+ICP"]
+  algTypes = ["BB", "BB+ICP", "BBEGI", "BB_45.0_0.5",
+      "FFT", "FFT+ICP", "ICP", "MM", "MM+ICP"]
 
 if not "DISPLAY" in os.environ:
   sys.exit(0)
