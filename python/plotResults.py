@@ -218,13 +218,16 @@ if evalKs:
     plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=0.1)
     plt.show()
 
-evalBB = False
+evalBB = True
 if evalBB:
   # eval of BB s different parameters
 #  paramEvalLambdaS3 = [30., 45.,60., 75., 90.,105.]
 #  paramEvalLambdaR3 = [0.3, 0.5, 0.75, 1.5]
-  paramEvalLambdaS3 = [20., 30., 45.,60., 75., 90.]
-  paramEvalLambdaR3 = [0.3, 0.5, 0.75, 1.0]
+#  paramEvalLambdaS3 = [20., 30., 45.,60., 75., 90.]
+#  paramEvalLambdaR3 = [0.3, 0.5, 0.75, 1.0]
+  paramEvalLambdaS3 = [40., 45., 52., 60., 75.] #, 90.]
+  paramEvalLambdaR3 = [0.5, 0.75, 1.0]
+
   algTypes = ["BB"]
   for lambdaS3 in paramEvalLambdaS3:
     for lambdaR3 in paramEvalLambdaR3:
@@ -243,16 +246,16 @@ if evalBB:
         WriteErrStats(np.array(errors[yMetric])[ids], errs[ids],
             yMetricResolution[yMetric])
 
-  algTypes = ["BB"]
-  for lambdaS3 in paramEvalLambdaS3:
-    key = "BB_{}_{}".format(lambdaS3, 0.75)
-    algTypes.append(key)
 
   algTypes = ["BB"]
   for lambdaR3 in paramEvalLambdaR3:
     key = "BB_{}_{}".format(45.0, lambdaR3)
     algTypes.append(key)
 
+  algTypes = ["BB"]
+  for lambdaS3 in paramEvalLambdaS3:
+    key = "BB_{}_{}".format(lambdaS3, 0.75)
+    algTypes.append(key)
 
 
   errTypes = ["err_a", "err_t", "dt"]

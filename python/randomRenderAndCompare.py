@@ -46,8 +46,8 @@ def DisplayPcs(scanApath, scanBpath, q,t):
   mlab.show(stop=True)
 
 #cfgNYU = {"name":"nyu", "lambdaS3": [30., 45.,60., 75, 90.], "lambdaR3": 1.}
-cfgNYU = {"name":"nyu", "lambdaS3": [45., 60., 75], "lambdaR3": 0.5}
 cfgNYU = {"name":"nyu", "lambdaS3": [45.], "lambdaR3": 0.5}
+cfgNYU = {"name":"nyu", "lambdaS3": [45., 52., 65], "lambdaR3": 0.5}
 
 cfg = cfgNYU
 
@@ -95,26 +95,27 @@ transformationPathMMICP = '{}_{}_MM_ICP.csv'.format(nameA, nameB)
 transformationPathFFT = '{}_{}_FFT.csv'.format(nameA, nameB)
 transformationPathFFTICP = '{}_{}_FFT_ICP.csv'.format(nameA, nameB)
 
-paramEvalLambdaS3 = [40., 45., 52., 60., 75.] #, 90.]
+paramEvalLambdaS3 = [45., 52., 60.] #, 90.]
 #paramEvalLambdaS3 = [20., 30.,  45.,60., 75.] #, 90.]
 #paramEvalLambdaR3 = [0.3, 0.5, 0.75, 1.0]
 paramEvalLambdaR3 = [0.5, 0.75, 1.0]
 
-runFFT = False
-runFFTICP = False
-runMM = False
-runMMICP = False
-runICP = False
+runFFT = True
+runFFTICP = True
+runMM = True
+runMMICP = True
+runICP = True
 runBB = True
-runBBICP = False
-runBBEGI = False
-runBBEGIICP = False
-runBBeval = False
+runBBICP = True
+runBBEGI = True
+runBBEGIICP = True
+runBBeval = True
 version = "1.4" # large scale eval of all algos and RunBB
 version = "1.5" # eval of BB vor different parameters
 version = "1.51" # eval of more different BB parameters as well as the best of approach
 version = "2.0" # squashed fabs bug
 version = "2.1" # more targeted eval to get more samples.
+version = "2.2" # made BB for translation more stable.
 
 args = ['../build/bin/renderPcFromPc',
     '-i ' + cmdArgs.input,
