@@ -94,22 +94,23 @@ transformationPathMMICP = '{}_{}_MM_ICP.csv'.format(nameA, nameB)
 transformationPathFFT = '{}_{}_FFT.csv'.format(nameA, nameB)
 transformationPathFFTICP = '{}_{}_FFT_ICP.csv'.format(nameA, nameB)
 
-paramEvalLambdaS3 = [30., 45.,60., 75., 90.,105.]
-paramEvalLambdaR3 = [0.3, 0.5, 0.75, 1.5]
+paramEvalLambdaS3 = [20., 30., 45.,60., 75., 90.]
+paramEvalLambdaR3 = [0.3, 0.5, 0.75, 1.0]
 
-runFFT = False
-runFFTICP = False
-runMM = False
-runMMICP = False
-runICP = False
+runFFT = True
+runFFTICP = True
+runMM = True
+runMMICP = True
+runICP = True
 runBB = True
-runBBICP = False
-runBBEGI = False
-runBBEGIICP = False
-runBBeval = False
+runBBICP = True
+runBBEGI = True
+runBBEGIICP = True
+runBBeval = True
 version = "1.4" # large scale eval of all algos and RunBB
 version = "1.5" # eval of BB vor different parameters
 version = "1.51" # eval of more different BB parameters as well as the best of approach
+version = "2.0" # squashed fabs bug
 
 args = ['../build/bin/renderPcFromPc',
     '-i ' + cmdArgs.input,
