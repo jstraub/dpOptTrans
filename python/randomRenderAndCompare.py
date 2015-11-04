@@ -100,16 +100,16 @@ paramEvalLambdaS3 = [45., 52., 60.] #, 90.]
 #paramEvalLambdaR3 = [0.3, 0.5, 0.75, 1.0]
 paramEvalLambdaR3 = [0.5, 0.75, 1.0]
 
-runFFT = True
-runFFTICP = True
-runMM = True
-runMMICP = True
-runICP = True
+runFFT = False
+runFFTICP = False
+runMM = False
+runMMICP = False
+runICP = False
 runBB = True
-runBBICP = True
-runBBEGI = True
-runBBEGIICP = True
-runBBeval = True
+runBBICP = False
+runBBEGI = False
+runBBEGIICP = False
+runBBeval = False
 version = "1.4" # large scale eval of all algos and RunBB
 version = "1.5" # eval of BB vor different parameters
 version = "1.51" # eval of more different BB parameters as well as the best of approach
@@ -146,6 +146,8 @@ if subp.call(" ".join(args), shell=True) == 0:
     "q_A_W":q_A.q.tolist(), "t_A_W":t_A.tolist(),
     "q_B_W":q_B.q.tolist(), "t_B_W":t_B.tolist(),
     "overlap":data_gt[0], "sizeA":data_gt[1], "sizeB": data_gt[2],
+    # compute magnitude of translation as well as rotation of the two
+    # viewpoints of the scene. 
     "dtranslation": np.sqrt((t_BA**2).sum()),
     "dangle": q_A.angleTo(q_B)*180./np.pi
     },

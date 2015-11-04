@@ -41,6 +41,7 @@ version = "1.5" # Parameter sweep of BB
 version = "1.51" # Parameter sweep of BB
 version = "2.0" # after bug fixing (fabs bug)
 version = "2.1" # more targeted eval
+
 errors = {"err_a":{}, "err_t":{}, "dt":{}, "Ks":{}, "overlap":[], "dangle":[],
   "dtranslation":[]}
 errTypes = ["err_a", "err_t", "dt", "Ks"]
@@ -161,7 +162,7 @@ def WriteErrStats(x, y, delta):
 errDesc = {"err_a":"$\Delta \\theta$ [deg]", 
     "err_t": "$\|\|t\|\|_2$ [m]", "dt":"dt [s]",
     "Ks1":"Ks", "Ks2":"Ks", "Ks3":"Ks", "Ks4":"Ks"}
-errTypeMax = {"err_a": 360., "err_t": 10., "dt": 120.,
+errTypeMax = {"err_a": 170., "err_t": 10., "dt": 120.,
     "Ks1":30, "Ks2":30, "Ks3":30, "Ks4":30}
 yMetricLabel={"overlap":"overlap [%]", "dangle":" $\Delta \\theta_{GT}$[deg]",
   "dtranslation":"$\|\|t_{GT}\|\|_2$ [m]"}
@@ -218,7 +219,7 @@ if evalKs:
     plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=0.1)
     plt.show()
 
-evalBB = True
+evalBB = False
 if evalBB:
   # eval of BB s different parameters
 #  paramEvalLambdaS3 = [30., 45.,60., 75., 90.,105.]
