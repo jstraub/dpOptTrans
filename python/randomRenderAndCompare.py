@@ -45,9 +45,9 @@ def DisplayPcs(scanApath, scanBpath, q,t):
         color=colors[1])
   mlab.show(stop=True)
 
-cfgNYU = {"name":"nyu", "lambdaS3": [30.], "lambdaR3": 0.3}
 #cfgNYU = {"name":"nyu", "lambdaS3": [30., 45.,60., 75, 90.], "lambdaR3": 1.}
 cfgNYU = {"name":"nyu", "lambdaS3": [45., 60., 75], "lambdaR3": 0.5}
+cfgNYU = {"name":"nyu", "lambdaS3": [45.], "lambdaR3": 0.5}
 
 cfg = cfgNYU
 
@@ -100,16 +100,16 @@ paramEvalLambdaS3 = [40., 45., 52., 60., 75.] #, 90.]
 #paramEvalLambdaR3 = [0.3, 0.5, 0.75, 1.0]
 paramEvalLambdaR3 = [0.5, 0.75, 1.0]
 
-runFFT = True
-runFFTICP = True
-runMM = True
-runMMICP = True
-runICP = True
+runFFT = False
+runFFTICP = False
+runMM = False
+runMMICP = False
+runICP = False
 runBB = True
-runBBICP = True
-runBBEGI = True
-runBBEGIICP = True
-runBBeval = True
+runBBICP = False
+runBBEGI = False
+runBBEGIICP = False
+runBBeval = False
 version = "1.4" # large scale eval of all algos and RunBB
 version = "1.5" # eval of BB vor different parameters
 version = "1.51" # eval of more different BB parameters as well as the best of approach
@@ -212,8 +212,6 @@ if subp.call(" ".join(args), shell=True) == 0:
     print "BB: {} deg {} m".format(err_a, err_t)
     results["BB"] = {"err_a":err_a, "err_t":err_t, "q":q.q.tolist(),
         "t":t.tolist(), "Ks":Ks.tolist(), "dt":dt}
-    if cmdArgs.display:
-      DisplayPcs(scanApath, scanBpath, q,t)
 
   if runBBICP:
     q,t,dt2,success = RunICP(scanApath, scanBpath, transformationPathBBICP,
@@ -282,6 +280,9 @@ if subp.call(" ".join(args), shell=True) == 0:
     print "ICP: {} deg {} m".format(err_a, err_t)
     results["ICP"] = {"err_a":err_a, "err_t":err_t, "q":q.q.tolist(),
         "t":t.tolist(), "dt":dt}
+
+  if cmdArgs.display:
+    DisplayPcs(scanApath, scanBpath, q,t)
 
   import json, time
 #  print results

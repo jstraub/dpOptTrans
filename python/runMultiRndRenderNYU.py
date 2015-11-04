@@ -32,6 +32,7 @@ for path in paths:
         "-o " + resultsPath,
         "-p " + prefix,
         "-m {}".format(overlap)]
+    print " ".join(args)
     err = subp.call(" ".join(args), shell=True)
     if err == 1: # some problem with this scene?!
       print "aborting processing of "+f  

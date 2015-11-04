@@ -39,7 +39,8 @@ version = "1.4" # Large scale eval. of all algos and BB with lambda S3 60, 70, 8
 # ^^ all above here are in subfolder on expres1!
 version = "1.5" # Parameter sweep of BB
 version = "1.51" # Parameter sweep of BB
-version = "2.0"
+version = "2.0" # after bug fixing (fabs bug)
+version = "2.1" # more targeted eval
 errors = {"err_a":{}, "err_t":{}, "dt":{}, "Ks":{}, "overlap":[], "dangle":[],
   "dtranslation":[]}
 errTypes = ["err_a", "err_t", "dt", "Ks"]
@@ -165,7 +166,6 @@ errTypeMax = {"err_a": 360., "err_t": 10., "dt": 120.,
 yMetricLabel={"overlap":"overlap [%]", "dangle":" $\Delta \\theta_{GT}$[deg]",
   "dtranslation":"$\|\|t_{GT}\|\|_2$ [m]"}
 yMetricResolution={"overlap":10, "dangle":12, "dtranslation":0.4}
-
 
 evalKs = False
 if evalKs:

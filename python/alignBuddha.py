@@ -14,7 +14,7 @@ cfgBuddha = {"name":"buddha", "lambdaS3": [80], "lambdaR3": 0.0008}
 cfgBunny = {"name":"bunny", "lambdaS3": [60, 70, 80], "lambdaR3": 0.003}
 cfgBunnyZipper = {"name":"bun_zipper", "lambdaS3": [60], "lambdaR3": 0.001}
 cfgEnschede = {"name":"enschede", "lambdaS3": [60, 70, 80], "lambdaR3":0.3}
-cfgBunnyAB = {"name":"bunnyAB", "lambdaS3": [60, 70, 80], "lambdaR3": 0.003}
+cfgBunnyAB = {"name":"bunnyAB", "lambdaS3": [45, 60, 70, 80], "lambdaR3": 0.003}
 
 cfg = cfgBunny
 cfg = cfgBunnyZipper
@@ -25,8 +25,8 @@ cfg = cfgBunnyAB
 loadCached = False
 stopToShow = False
 showUntransformed = False
-applyBB = False
-applyBBEGI = True
+applyBB = True
+applyBBEGI = False
 applyFFT = False
 applyMM = False
 applyICP = False
@@ -125,14 +125,14 @@ for i in range(1,len(scans)):
     if loadCached and os.path.isfile(transformationPathBB):
       print "found transformation file and using it "+transformationPathBB
     else:
-      q,t,_ = RunBB(cfg, scanApath, scanBpath, transformationPathBB)
+      q,t,Ks,dt,_ = RunBB(cfg, scanApath, scanBpath, transformationPathBB)
     transformationPath = transformationPathBB
 
   if applyBBEGI:
     if loadCached and os.path.isfile(transformationPathBBEGI):
       print "found transformation file and using it "+transformationPathBBEGI
     else:
-      q,t,_ = RunBB(cfg, scanApath, scanBpath, transformationPathBBEGI, True)
+      q,t,dt,_ = RunBB(cfg, scanApath, scanBpath, transformationPathBBEGI, True)
     transformationPath = transformationPathBBEGI
 
   if applyFFT:
@@ -150,14 +150,14 @@ for i in range(1,len(scans)):
     if loadCached and os.path.isfile(transformationPathMM):
       print "found transformation file and using it " +transformationPathMM
     else:
-      q,t,_ = RunMM(scanApath, scanBpath, transformationPathMM)
+      q,t,dt,_ = RunMM(scanApath, scanBpath, transformationPathMM)
     transformationPath = transformationPathMM
 
   if applyICP:
     if loadCached and os.path.isfile(transformationPathICP):
       print "found transformation file and using it "+transformationPathICP
     else:
-      q,t,_ = RunICP(scanApath, scanBpath, transformationPathICP,
+      q,t,dt,_ = RunICP(scanApath, scanBpath, transformationPathICP,
           useSurfaceNormalsInICP, transformationPath)
     transformationPath = transformationPathICP
 
