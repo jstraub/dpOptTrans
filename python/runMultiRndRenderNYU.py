@@ -2,6 +2,11 @@ import subprocess as subp
 import os.path
 import re, random, argparse, time
 import numpy as np
+import time
+
+# to generate different random prefixes even if all processes aree
+# started at the same time with high probability
+time.sleep(random.random()*5.)
 
 parser = argparse.ArgumentParser(description = 'randomly sample two renders and align them')
 parser.add_argument('-p','--prefix',
