@@ -284,15 +284,15 @@ bool ComputeGMMfromPC(pcl::PointCloud<pcl::PointXYZRGBNormal>&
   // Compute Gaussian statistics: 
   std::vector<MatrixXd> Ss(K,Matrix3d::Zero());
   Eigen::MatrixXd xSum = Eigen::MatrixXd::Zero(3,K);
-  counts.fill(0.);
+  Eigen::VectorXf ws = Eigen::VectorXf::Zero(K);
   for (uint32_t i=0; i<xyz->cols(); ++i) 
     if(z(i) < K) {
       float w = pc.at(i).curvature; // curvature is used to store the weights.
-      counts(z(i)) += w;
+      ws(z(i)) += w;
       xSum.col(z(i)) += xyz->col(i).cast<double>()*w;
     }
   for(uint32_t k=0; k<K; ++k)
-    centroids.col(k) = xSum.col(k).cast<float>()/counts(k);
+    centroids.col(k) = xSum.col(k).cast<float>()/ws(k);
 
   for (uint32_t i=0; i<xyz->cols(); ++i) 
     if(z(i) < K) {
@@ -311,13 +311,14 @@ bool ComputeGMMfromPC(pcl::PointCloud<pcl::PointXYZRGBNormal>&
       }
   }
   // Fractions belonging to each cluster.
-  Eigen::VectorXd pis = (counts.array() / counts.sum()).matrix().cast<double>();
+  Eigen::VectorXd pis = (ws.array() / ws.sum()).matrix().cast<double>();
   
   for(uint32_t k=0; k<K; ++k)
-    if (pis(k) > 0.) {
+//    if (pis(k) > 0.) {
+    if (counts(k) > 100) {
       gmm.push_back(OptRot::Normal<3>(centroids.col(k).cast<double>(),
-            Ss[k]/float(counts(k))+0.01*Eigen::Matrix3d::Identity(), pis(k)));
-//            Ss[k]/float(counts(k)), pis(k)));
+            Ss[k]/float(ws(k))+0.01*Eigen::Matrix3d::Identity(), pis(k)));
+//        Ss[k]/float(ws(k)), pis(k)));
     }
   return true;
 }

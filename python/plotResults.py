@@ -39,7 +39,8 @@ version = "1.4" # Large scale eval. of all algos and BB with lambda S3 60, 70, 8
 # ^^ all above here are in subfolder on expres1!
 version = "1.5" # Parameter sweep of BB
 version = "1.51" # Parameter sweep of BB
-version = "2.0"
+version = "2.0" # after bug fixing (fabs bug)
+version = "2.1" # more targeted eval
 errors = {"err_a":{}, "err_t":{}, "dt":{}, "Ks":{}, "overlap":[], "dangle":[],
   "dtranslation":[]}
 errTypes = ["err_a", "err_t", "dt", "Ks"]
@@ -166,7 +167,6 @@ yMetricLabel={"overlap":"overlap [%]", "dangle":" $\Delta \\theta_{GT}$[deg]",
   "dtranslation":"$\|\|t_{GT}\|\|_2$ [m]"}
 yMetricResolution={"overlap":10, "dangle":12, "dtranslation":0.4}
 
-
 evalKs = False
 if evalKs:
   errTypes = ["Ks1","Ks2","Ks3","Ks4", "err_a", "err_t"]
@@ -218,13 +218,16 @@ if evalKs:
     plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=0.1)
     plt.show()
 
-evalBB = False
+evalBB = True
 if evalBB:
   # eval of BB s different parameters
 #  paramEvalLambdaS3 = [30., 45.,60., 75., 90.,105.]
 #  paramEvalLambdaR3 = [0.3, 0.5, 0.75, 1.5]
-  paramEvalLambdaS3 = [20., 30., 45.,60., 75., 90.]
-  paramEvalLambdaR3 = [0.3, 0.5, 0.75, 1.0]
+#  paramEvalLambdaS3 = [20., 30., 45.,60., 75., 90.]
+#  paramEvalLambdaR3 = [0.3, 0.5, 0.75, 1.0]
+  paramEvalLambdaS3 = [40., 45., 52., 60., 75.] #, 90.]
+  paramEvalLambdaR3 = [0.5, 0.75, 1.0]
+
   algTypes = ["BB"]
   for lambdaS3 in paramEvalLambdaS3:
     for lambdaR3 in paramEvalLambdaR3:
@@ -243,16 +246,16 @@ if evalBB:
         WriteErrStats(np.array(errors[yMetric])[ids], errs[ids],
             yMetricResolution[yMetric])
 
-  algTypes = ["BB"]
-  for lambdaS3 in paramEvalLambdaS3:
-    key = "BB_{}_{}".format(lambdaS3, 0.75)
-    algTypes.append(key)
 
   algTypes = ["BB"]
   for lambdaR3 in paramEvalLambdaR3:
     key = "BB_{}_{}".format(45.0, lambdaR3)
     algTypes.append(key)
 
+  algTypes = ["BB"]
+  for lambdaS3 in paramEvalLambdaS3:
+    key = "BB_{}_{}".format(lambdaS3, 0.75)
+    algTypes.append(key)
 
 
   errTypes = ["err_a", "err_t", "dt"]
