@@ -191,18 +191,51 @@ int main(int argc, char** argv) {
   ComputeMoments(pcB, SB, muB);
 
   // Assume xB = R*xA + t
-  Eigen::EigenSolver<Eigen::Matrix3d> eigA(SA);
-  Eigen::EigenSolver<Eigen::Matrix3d> eigB(SB);
-  Eigen::Matrix3cd U = eigA.eigenvectors();
-  Eigen::Matrix3cd V = eigB.eigenvectors();
+  Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> eigA(SA);
+  Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> eigB(SB);
+  Eigen::Matrix3d U = eigA.eigenvectors();
+  Eigen::Matrix3d V = eigB.eigenvectors();
 
-  Eigen::Matrix3d R = (V*U.inverse()).real();
   // Because R apears in a quadratic form we are free to negate it.
   // Since R \in R^3 this negates the determinant and makes it +1. -- a
   // rotation instead of a reflection.
-  if (R.determinant() < 0.) R*=-1.; 
+  double min_cost = 9999999.;
+  Eigen::Matrix3d R_star;
+  Eigen::Vector3d t_star;
+
+  for (uint32_t x=0; x < 3; x++)
+    for (uint32_t y=0; y < 3; y++)
+      for (uint32_t z=0; z < 3; z++)
+        for (float i=-1.; i<=1.; i+=2.) 
+          for (float j=-1.; j<=1.; j+=2.) 
+            for (float k=-1.; k<=1.; k+=2.) {
+              Eigen::Matrix3d P = Eigen::Matrix3d::Zero();
+              if (x == y || x == z || y == z)
+                continue;
+              P(0, x) = 1;
+              P(1, y) = 1;
+              P(2, z) = 1;
+              Eigen::Matrix3d R_ = V*P*U.inverse();
+              R_.col(0) *= i;
+              R_.col(1) *= j;
+              R_.col(2) *= k;
+              if (R_.determinant() > 0.) {
+                Eigen::Quaterniond q_(R_);
+                Eigen::Vector3d t_ = muB - R_*muA;
+                double c = ComputeClosestPointEucledianCost(pcA, pcB, &R_, &t_); 
+                std::cout << "permutation " << P << "\t cost=" << c << std::endl;
+                std::cout << q_.coeffs().transpose() 
+                  << "\tt: " << t_.transpose() << std::endl;
+                if(min_cost > c) {
+                  min_cost = c;
+                  R_star = R_;
+                  t_star = t_;
+                }
+              }
+            }
+  Eigen::Matrix3d R = R_star;
   Eigen::Quaterniond q(R);
-  Eigen::Vector3d t = muB - R*muA;
+  Eigen::Vector3d t = muB - R.transpose()*muA;
   std::cout << "R:\n"<< R << std::endl;
   std::cout << "det(R) = " << R.determinant() << std::endl;
   std::cout << "t: " << t.transpose() << std::endl;
