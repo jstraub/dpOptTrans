@@ -13,9 +13,10 @@ def EvalError(q_gt, t_gt, q, t):
   err_t = np.sqrt(((t_gt-t)**2).sum())
   return err_a, err_t
 
-def DisplayPcs(scanApath, scanBpath, q,t):
+def DisplayPcs(scanApath, scanBpath, q,t, plotCosies, stopToDisplay):
   from js.data.plyParse import PlyParse
   from js.utils.plot.colors import colorScheme
+  from js.geometry.rotations import plotCosy
   import mayavi.mlab as mlab
   colors = colorScheme("label")
   plyA = PlyParse();
@@ -27,14 +28,20 @@ def DisplayPcs(scanApath, scanBpath, q,t):
   pcB = plyB.getPc()
   nB = plyB.getNormals()
 
-  R = q.toRot().R.T
-  t = -R.dot(t)
-  pcB = (1.001*R.dot(pcB.T)).T + t
-  nB = (1.001*R.dot(nB.T)).T
+  R = q.toRot().R
 
   figm = mlab.figure(bgcolor=(1,1,1))
   mlab.points3d(pcA[:,0], pcA[:,1], pcA[:,2], mode="point",
       color=colors[0])
+#  if plotCosies:
+#    plotCosy(figm, np.eye(3), np.zeros(3), 0.5)
+#    plotCosy(figm, R.T, -R.T.dot(t), 0.5)
+
+  R = R.T
+  t = -R.dot(t)
+  pcB = (1.001*R.dot(pcB.T)).T + t
+  nB = (1.001*R.dot(nB.T)).T
+
   mlab.points3d(pcB[:,0], pcB[:,1], pcB[:,2], mode="point",
         color=colors[1])
 
@@ -43,7 +50,9 @@ def DisplayPcs(scanApath, scanBpath, q,t):
       color=colors[0])
   mlab.points3d(nB[:,0], nB[:,1], nB[:,2], mode="point",
         color=colors[1])
-  mlab.show(stop=True)
+
+  if stopToDisplay:
+    mlab.show(stop=True)
 
 #cfgNYU = {"name":"nyu", "lambdaS3": [30., 45.,60., 75, 90.], "lambdaR3": 1.}
 cfgNYU = {"name":"nyu", "lambdaS3": [45.], "lambdaR3": 0.5}
@@ -51,7 +60,7 @@ cfgNYU = {"name":"nyu", "lambdaS3": [45., 65, 80], "lambdaR3": 0.5}
 
 cfg = cfgNYU
 
-showUntransformed = False
+showUntransformed = True
 useSurfaceNormalsInICP = True
 
 parser = argparse.ArgumentParser(description = 'randomly sample two renders and align them')
@@ -89,16 +98,16 @@ transformationPathFFTICP = '{}_{}_FFT_ICP.csv'.format(nameA, nameB)
 paramEvalLambdaS3 = [45., 60., 80 ] #, 90.]
 paramEvalLambdaR3 = [0.5, 0.75, 1.0]
 
-runFFT = True
-runFFTICP = True
-runMM = True
-runMMICP = True
-runICP = True
-runBB = True
-runBBICP = True
-runBBEGI = True
-runBBEGIICP = True
-runBBeval = True
+runFFT = False
+runFFTICP = False
+runMM = False
+runMMICP = False
+runICP = False
+runBB = False
+runBBICP = False
+runBBEGI = False
+runBBEGIICP = False
+runBBeval = False
 version = "1.4" # large scale eval of all algos and RunBB
 version = "1.5" # eval of BB vor different parameters
 version = "1.51" # eval of more different BB parameters as well as the best of approach
@@ -147,7 +156,9 @@ if subp.call(" ".join(args), shell=True) == 0:
     "version":version}
 
   if showUntransformed:
-    DisplayPcs(scanApath, scanBpath, q_gt,t_gt)
+    q0 = Quaternion(1.,0.,0.,0.)
+    DisplayPcs(scanApath, scanBpath, q0, np.zeros(3), False, False)
+    DisplayPcs(scanApath, scanBpath, q_gt,t_gt, True, True)
 
   if runFFT:
     q,t,dt,success = RunFFT(scanApath, scanBpath, transformationPathFFT)

@@ -9,7 +9,7 @@ mpl.rc('font',size=25)
 mpl.rc('lines',linewidth=3.)
 figSize = (14, 5.5)
 figSize = (14, 10)
-figSize = (21, 10)
+figSize = (12, 8)
 c1 = colorScheme("labelMap")["turquoise"]
 c2 = colorScheme("labelMap")["orange"]
 c3 = colorScheme("labelMap")["red"]
@@ -43,6 +43,7 @@ version = "2.0" # after bug fixing (fabs bug)
 version = "2.1" # more targeted eval
 version = "2.3" # more targeted eval
 version = "2.5" # more targeted eval
+version = "2.6" # 
 
 errors = {"err_a":{}, "err_t":{}, "dt":{}, "Ks":{}, "overlap":[], "dangle":[],
   "dtranslation":[]}
@@ -138,7 +139,38 @@ def PlotErrBoxPlot(x, y, delta, ax, showXTicks):
   for median in bp["medians"]:
     median.set(color=c2)
   for flier in bp["fliers"]:
-    flier.set(color=c3, marker=".", alpha=0.5)
+    flier.set(color=c3, marker=".", alpha=0.3)
+
+def PlotErrDensity(x, y, deltax, ymax, deltay, ax, showXTicks):
+  if x.size < 1:
+    return
+  idsx = np.floor((x)/deltax*0.5).astype(np.int)
+#  idsy = np.floor((y)/deltay).astype(np.int)
+#  density = np.zeros((int(np.floor(ymax/deltay))+1,
+#    int(np.floor(x.max()/deltax*0.5))+1))
+#  print density.shape
+#  for i in range(idsx.min(), idsx.max()+1):
+#    if (idsx==i).any():
+#      for j in idsy[idsx==i]:
+#        density[j, i] += 1.
+#  density /= density.sum()
+#  print density
+#  plt.imshow(density, interpolation="nearest")
+
+  from matplotlib.colors import LogNorm
+
+  bins = ( int(np.floor(x.max()/deltax*0.5))+1), (int(np.floor(ymax/deltay))+1)
+  plt.hist2d(x,y, bins=bins, range=[[x.min(),x.max()],[0.,ymax]],
+      norm=LogNorm())
+  # set xticks
+#  if showXTicks:
+#    ticks = np.floor((np.arange(idsx.min(), idsx.max()+1)+0.5)*deltax).astype(np.int)
+#    if np.unique(ticks).size < ticks.size:
+#      ticks = np.floor((np.arange(idsx.min(), idsx.max()+1)+0.5)*deltax*10.)/10.
+#    xtickNames = plt.setp(ax, xticklabels=ticks)
+#    plt.setp(xtickNames, rotation=45)
+#  else:
+#    plt.setp(ax.get_xticklabels(), visible=False) 
 
 def WriteErrStats(x, y, delta):
   if x.size < 1:
@@ -162,13 +194,13 @@ def WriteErrStats(x, y, delta):
         median, ninetyP, tenP)
 
 errDesc = {"err_a":"$\Delta \\theta$ [deg]", 
-    "err_t": "$\|\|t\|\|_2$ [m]", "dt":"dt [s]",
+    "err_t": "$\|\|\Delta t\|\|_2$ [m]", "dt":"dt [s]",
     "Ks1":"Ks", "Ks2":"Ks", "Ks3":"Ks", "Ks4":"Ks"}
-errTypeMax = {"err_a": 360., "err_t": 10., "dt": 120.,
+errTypeMax = {"err_a": 300., "err_t": 10., "dt": 120.,
     "Ks1":30, "Ks2":30, "Ks3":30, "Ks4":30}
 yMetricLabel={"overlap":"overlap [%]", "dangle":" $\Delta \\theta_{GT}$[deg]",
-  "dtranslation":"$\|\|t_{GT}\|\|_2$ [m]"}
-yMetricResolution={"overlap":10, "dangle":12, "dtranslation":0.4}
+  "dtranslation":"$\|\|\Delta t_{GT}\|\|_2$ [m]"}
+yMetricResolution={"overlap":15, "dangle":12, "dtranslation":0.4}
 
 evalKs = False
 if evalKs:
@@ -255,22 +287,30 @@ if evalBB:
   for lambdaR3 in paramEvalLambdaR3:
     key = "BB_{}_{}".format(45.0, lambdaR3)
     algTypes.append(key)
+
   algTypes = ["BB"]
   for lambdaS3 in paramEvalLambdaS3:
     key = "BB_{}_{}".format(lambdaS3, 0.75)
     algTypes.append(key)
 
-
   errTypes = ["err_a", "err_t", "dt"]
 else:
   # eval of all algos against eachother
-  errTypes = ["err_a", "err_t", "dt"]
+  errTypes = ["err_a", "err_t"] #, "dt"]
   algTypes = ["BB", "BB+ICP", "BBEGI", "BBEGI+ICP", "FFT", "FFT+ICP", "ICP", "MM", "MM+ICP"]
   algTypes = ["BB", "BB+ICP", "BBEGI", "BB_45.0_0.5",
       "FFT", "FFT+ICP", "ICP", "MM", "MM+ICP"]
+  algTypes = ["BB_45.0_0.5", "BB", "BB+ICP",
+      "FFT", "FFT+ICP", "ICP", "MM", "MM+ICP"]
+  algTypes = ["BB","BB_45.0_0.5", "FFT",  "MM", "ICP"]
+  algTypes = ["BB", "FFT",  "MM", "ICP"]
+
 
 if not "DISPLAY" in os.environ:
   sys.exit(0)
+
+algDesc = {"BB_45.0_0.5":"BB45"}
+errTypeResolution = {"err_a": 5., "err_t": 0.2, "dt": 3.}
 
 print algTypes
 print errTypes
@@ -291,14 +331,19 @@ for yMetric in ["overlap", "dangle", "dtranslation"]:
           color='lightgrey', alpha=0.5, linewidth=2)
       axs[-1].set_axisbelow(True) # hide grey lines behind plot
       errs = errors[errType][algType]
-#      print algType, " num errors ", len(errs), "num nans ", np.isnan(np.array(errs)).sum()
       errs = np.array(errs)
       errs = errs[np.logical_not(np.isnan(errs))]
       ids = np.where(errs < errTypeMax[errType])
+#      PlotErrDensity(np.array(errors[yMetric])[ids], errs[ids],
+#          yMetricResolution[yMetric], errTypeMax[errType],
+#          errTypeResolution[errType], axs[-1], j==len(errTypes)-1)
       PlotErrBoxPlot(np.array(errors[yMetric])[ids], errs[ids],
           yMetricResolution[yMetric], axs[-1], j==len(errTypes)-1)
       if j == 0:
-        plt.title(algType)
+        if algType in algDesc:
+          plt.title(algDesc[algType])
+        else:
+          plt.title(algType)
       if j == len(errTypes)-1:
         plt.xlabel(yMetricLabel[yMetric])
       if i == 0:
@@ -307,9 +352,8 @@ for yMetric in ["overlap", "dangle", "dtranslation"]:
         plt.setp(axs[-1].get_yticklabels(), visible=False)
       if i==0 and j==1:
         axs[-1].set_yticks(axs[-1].get_yticks()[:-1])
-#    plt.ylim([0, errTypeMax[errType]])
   plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=0.1)
-  plt.savefig("deviation_"+yMetric+"_results.png", figure=fig)
+  plt.savefig("deviation_"+yMetric+"_N_{}_".format(counter)+"_".join(algTypes)+"_results.png", figure=fig)
   plt.show()
 
 import sys
