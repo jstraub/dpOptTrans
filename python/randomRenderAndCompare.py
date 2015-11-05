@@ -51,18 +51,8 @@ cfgNYU = {"name":"nyu", "lambdaS3": [45., 65, 80], "lambdaR3": 0.5}
 
 cfg = cfgNYU
 
-loadCached = True
-stopToShow = True
-showUntransformed = True
-
-applyBB = True
-applyEGI = False
-applyMM = False
-applyICP = True
-loadGlobalsolutionforICP = True
+showUntransformed = False
 useSurfaceNormalsInICP = True
-
-#if cfg["name"] == "nyu":
 
 parser = argparse.ArgumentParser(description = 'randomly sample two renders and align them')
 parser.add_argument('-i','--input',
@@ -97,8 +87,6 @@ transformationPathFFT = '{}_{}_FFT.csv'.format(nameA, nameB)
 transformationPathFFTICP = '{}_{}_FFT_ICP.csv'.format(nameA, nameB)
 
 paramEvalLambdaS3 = [45., 60., 80 ] #, 90.]
-#paramEvalLambdaS3 = [20., 30.,  45.,60., 75.] #, 90.]
-#paramEvalLambdaR3 = [0.3, 0.5, 0.75, 1.0]
 paramEvalLambdaR3 = [0.5, 0.75, 1.0]
 
 runFFT = True
@@ -120,6 +108,7 @@ version = "2.2" # made BB for translation more stable.
 version = "2.3" # more fine tuning of BB
 version = "2.4" # moment matching
 version = "2.5" # actual sampling of point clouds.
+version = "2.6" # fixed sampling of point clouds.
 
 args = ['../build/bin/renderPcFromPc',
     '-i ' + cmdArgs.input,

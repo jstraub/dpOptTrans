@@ -251,8 +251,6 @@ if evalBB:
         WriteErrStats(np.array(errors[yMetric])[ids], errs[ids],
             yMetricResolution[yMetric])
 
-
-
   algTypes = ["BB"]
   for lambdaR3 in paramEvalLambdaR3:
     key = "BB_{}_{}".format(45.0, lambdaR3)

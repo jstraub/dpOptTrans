@@ -459,7 +459,7 @@ int main(int argc, char** argv) {
         nodes);
   }
   
-  double eps = 1e-10;
+  double eps = 8e-7;
   uint32_t max_it = 10000;
   std::cout << " BB on S3 eps=" << eps << " max_it=" << max_it << std::endl;
 //  OptRot::BranchAndBound<OptRot::NodeS3> bb(lower_bound, upper_bound);
