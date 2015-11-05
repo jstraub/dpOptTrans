@@ -41,6 +41,8 @@ version = "1.5" # Parameter sweep of BB
 version = "1.51" # Parameter sweep of BB
 version = "2.0" # after bug fixing (fabs bug)
 version = "2.1" # more targeted eval
+version = "2.3" # more targeted eval
+version = "2.5" # more targeted eval
 
 errors = {"err_a":{}, "err_t":{}, "dt":{}, "Ks":{}, "overlap":[], "dangle":[],
   "dtranslation":[]}
@@ -162,7 +164,7 @@ def WriteErrStats(x, y, delta):
 errDesc = {"err_a":"$\Delta \\theta$ [deg]", 
     "err_t": "$\|\|t\|\|_2$ [m]", "dt":"dt [s]",
     "Ks1":"Ks", "Ks2":"Ks", "Ks3":"Ks", "Ks4":"Ks"}
-errTypeMax = {"err_a": 170., "err_t": 10., "dt": 120.,
+errTypeMax = {"err_a": 360., "err_t": 10., "dt": 120.,
     "Ks1":30, "Ks2":30, "Ks3":30, "Ks4":30}
 yMetricLabel={"overlap":"overlap [%]", "dangle":" $\Delta \\theta_{GT}$[deg]",
   "dtranslation":"$\|\|t_{GT}\|\|_2$ [m]"}
@@ -226,7 +228,9 @@ if evalBB:
 #  paramEvalLambdaR3 = [0.3, 0.5, 0.75, 1.5]
 #  paramEvalLambdaS3 = [20., 30., 45.,60., 75., 90.]
 #  paramEvalLambdaR3 = [0.3, 0.5, 0.75, 1.0]
-  paramEvalLambdaS3 = [40., 45., 52., 60., 75.] #, 90.]
+#  paramEvalLambdaS3 = [40., 45., 52., 60., 75.] #, 90.]
+#  paramEvalLambdaR3 = [0.5, 0.75, 1.0]
+  paramEvalLambdaS3 = [45., 60., 80] #, 90.]
   paramEvalLambdaR3 = [0.5, 0.75, 1.0]
 
   algTypes = ["BB"]
@@ -248,11 +252,11 @@ if evalBB:
             yMetricResolution[yMetric])
 
 
+
   algTypes = ["BB"]
   for lambdaR3 in paramEvalLambdaR3:
     key = "BB_{}_{}".format(45.0, lambdaR3)
     algTypes.append(key)
-
   algTypes = ["BB"]
   for lambdaS3 in paramEvalLambdaS3:
     key = "BB_{}_{}".format(lambdaS3, 0.75)

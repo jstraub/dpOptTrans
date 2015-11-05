@@ -53,7 +53,8 @@ cfg = cfgNYU
 
 loadCached = True
 stopToShow = True
-showUntransformed = False
+showUntransformed = True
+
 applyBB = True
 applyEGI = False
 applyMM = False

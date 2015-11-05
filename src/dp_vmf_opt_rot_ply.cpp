@@ -459,7 +459,7 @@ int main(int argc, char** argv) {
         nodes);
   }
   
-  double eps = 8e-7;
+  double eps = 1e-10;
   uint32_t max_it = 10000;
   std::cout << " BB on S3 eps=" << eps << " max_it=" << max_it << std::endl;
 //  OptRot::BranchAndBound<OptRot::NodeS3> bb(lower_bound, upper_bound);
@@ -547,7 +547,7 @@ int main(int argc, char** argv) {
     }
 
     std::cout << "# initial nodes: " << nodesR3.size() << std::endl;
-    eps = 1e-13;
+    eps = 1e-11;
     max_it = 10000;
     OptRot::BranchAndBound<OptRot::NodeR3> bbR3(lower_bound_R3, upper_bound_convex_R3);
     std::cout << " BB on R3 eps=" << eps << " max_it=" << max_it << std::endl;
