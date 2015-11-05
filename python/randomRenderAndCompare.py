@@ -72,7 +72,7 @@ parser.add_argument('-d','--display', action="store_true",
 cmdArgs = parser.parse_args()
 
 resultsPath = cmdArgs.output + "/" + os.path.splitext(os.path.split(cmdArgs.input)[1])[0]
-outputPath = "./" + cmdArgs.prefix
+outputPath = "/scratch/optRotTrans/" + cmdArgs.prefix
 nameA = cmdArgs.prefix+"_A"
 nameB = cmdArgs.prefix+"_B"
 transformationPathBB = '{}_{}_BB.csv'.format(nameA, nameB)
