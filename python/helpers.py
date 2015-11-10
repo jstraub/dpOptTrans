@@ -193,3 +193,37 @@ def LoadTransformationAndData(transformationPath):
       data = qt[0,:]
     q = Quaternion(w=q[0], x=q[1], y=q[2], z=q[3])
   return q,t,data
+
+def LoadNodesPerIteration(path):
+  with open(path, 'r') as f:
+    qs, tetras, props = [], [], []
+    while f.read(1):
+      f.seek(-1,1)
+      stats = np.fromstring(f.readline(), sep=" ")
+      print stats
+      N = int(stats[2])
+      qs.append(np.zeros((N*4,4)))
+      tetras.append(np.zeros((N,4), dtype=np.int))
+      props.append(np.zeros((N,4)))
+      j,k = 0,0
+      for i in range(N*5):
+        if i%5 == 0:
+          props[-1][i/5,:] = np.fromstring(f.readline(), sep=" ")
+          tetras[-1][i/5,:] = [j, j+1, j+2, j+3]
+          k = 0
+        else:
+          q = np.fromstring(f.readline(), sep=" ")
+          if j==0:
+            qs[-1][j,:] = q
+            j+=1
+          else:
+            thetas = np.arccos(np.minimum(1.,np.maximum(-1.,q.dot(qs[-1][:j,:].T))))
+            if np.any(thetas < 1.e-6):
+              tetras[-1][i/5,k] = np.where(thetas < 1e-6)[0]
+            else:
+              qs[-1][j,:] = q
+              tetras[-1][i/5,k] = j
+              j+=1
+          k+=1
+      qs[-1] = np.resize(qs[-1], (j,4))
+  return qs, tetras, props

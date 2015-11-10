@@ -1,0 +1,1 @@
+../optimalRotationEstimation/python/project4d_600cell.py

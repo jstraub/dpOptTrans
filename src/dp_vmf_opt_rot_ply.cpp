@@ -459,7 +459,7 @@ int main(int argc, char** argv) {
         nodes);
   }
   
-  double eps = 1e-3;
+  double eps = 1e-5;
 //  double eps = 8e-7;
   uint32_t max_it = 10000;
   std::cout << " BB on S3 eps=" << eps << " max_it=" << max_it << std::endl;
@@ -494,14 +494,12 @@ int main(int argc, char** argv) {
     lbsS3prelim.push_back(node_star.GetLB());
   } else {
     std::cout << "======== K > 1: " << dpvMF.K() << std::endl;
-    //  Eigen::Vector3d t_star; 
     for (uint32_t k=0; k<dpvMF.K(); ++k) {
-//      Eigen::Vector4d q_vec = dpvMF.centroids().col(k);
-      Eigen::Quaterniond q_k; //(q_vec(0), q_vec(1), q_vec(2), q_vec(3));
       auto it = nodes.begin();
       auto z = dpvMF.z();
       // Find the node whith maximum LB in each cluster.
       double lb_max = -1.e20;
+      Eigen::Quaterniond q_k; 
       for (uint32_t i=0; i<nodes.size(); ++i, it++) 
         if (z(i) == k && lb_max < it->GetLB()) {
           lb_max = it->GetLB();
@@ -634,7 +632,7 @@ int main(int argc, char** argv) {
   }
 
   // Display the loaded point clouds.
-  if (qs.size()>1 || vm.count("display")) {
+  if (vm.count("display")) {
     DisplayPcs(pcA, pcB, gmmA, gmmB, vmfsA, vmfsB, q_star, t_star, cfg.lambda/10.);
   }
 
