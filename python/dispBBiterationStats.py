@@ -4,11 +4,11 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 from js.utils.plot.colors import colorScheme
 
-mpl.rc('font',size=30) 
-mpl.rc('lines',linewidth=3.)
+mpl.rc('font',size=35) 
+mpl.rc('lines',linewidth=4.)
 figSize = (14, 5.5)
 figSize = (9, 12)
-figSize = (14, 10)
+figSize = [(15.4, 10), (12.6, 10)]
 
 c1 = colorScheme("labelMap")["turquoise"]
 c2 = colorScheme("labelMap")["orange"]
@@ -22,12 +22,12 @@ for i, path in enumerate(['./bb_iteration_stats_S3.csv',
   s[:2,:] = np.log(s[:2,:])/np.log(10)
   Y = np.floor(s.shape[1]*disp[i])
 
-  fig = plt.figure(figsize = figSize, dpi = 80, facecolor="w",
+  fig = plt.figure(figsize = figSize[i], dpi = 80, facecolor="w",
       edgecolor="k")
   ax1 = plt.subplot(2,1,1)
   
   plt.plot(s[0,:Y],label="LB",color=c1)
-  plt.plot(s[1,:Y],label="joint UB",color=c2)
+  plt.plot(s[1,:Y],label="convex UB",color=c2)
   if i == 0:
     plt.legend(loc="best")
 #  plt.xlabel("iterations of B&B")
@@ -55,6 +55,7 @@ for i, path in enumerate(['./bb_iteration_stats_S3.csv',
   for tl in ax3.get_yticklabels():
     tl.set_color(c2)
   ax3.set_yticks(ax3.get_yticks()[:-1])
+  ax3.set_xticks(ax3.get_xticks()[:-1])
   plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=0.1)
   plt.savefig(re.sub(".csv",".png",path), figure=fig)
 #  plt.savefig(re.sub(".csv","_nodes.png",path), figure=fig)

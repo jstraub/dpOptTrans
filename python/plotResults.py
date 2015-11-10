@@ -10,6 +10,7 @@ mpl.rc('lines',linewidth=3.)
 figSize = (14, 5.5)
 figSize = (14, 10)
 figSize = (12, 8)
+figSize = (20, 8)
 c1 = colorScheme("labelMap")["turquoise"]
 c2 = colorScheme("labelMap")["orange"]
 c3 = colorScheme("labelMap")["red"]
@@ -43,7 +44,8 @@ version = "2.0" # after bug fixing (fabs bug)
 version = "2.1" # more targeted eval
 version = "2.3" # more targeted eval
 version = "2.5" # more targeted eval
-version = "2.6" # 
+version = "2.8" # 
+version = "2.6" # monster final eval
 
 errors = {"err_a":{}, "err_t":{}, "dt":{}, "Ks":{}, "overlap":[], "dangle":[],
   "dtranslation":[]}
@@ -120,6 +122,7 @@ def PlotErrBoxPlot(x, y, delta, ax, showXTicks):
     if (ids==i).any():
       data.append(y[ids==i])
   bp = plt.boxplot(data)
+#  plt.plot(x,y,'.', color=c1, alpha=0.3)
   # set xticks
   if showXTicks:
     ticks = np.floor((np.arange(ids.min(), ids.max()+1)+0.5)*delta).astype(np.int)
@@ -139,7 +142,15 @@ def PlotErrBoxPlot(x, y, delta, ax, showXTicks):
   for median in bp["medians"]:
     median.set(color=c2)
   for flier in bp["fliers"]:
-    flier.set(color=c3, marker=".", alpha=0.3)
+    flier.set(color=c3, marker=".", alpha=0.15,s=6)
+
+def PlotScatter(x, y, delta, ax, showXTicks):
+  if x.size < 1:
+    return
+  plt.plot(x,y,'.', color=c1, alpha=0.3)
+  # set xticks
+  if not showXTicks:
+    plt.setp(ax.get_xticklabels(), visible=False) 
 
 def PlotErrDensity(x, y, deltax, ymax, deltay, ax, showXTicks):
   if x.size < 1:
@@ -198,9 +209,10 @@ errDesc = {"err_a":"$\Delta \\theta$ [deg]",
     "Ks1":"Ks", "Ks2":"Ks", "Ks3":"Ks", "Ks4":"Ks"}
 errTypeMax = {"err_a": 300., "err_t": 10., "dt": 120.,
     "Ks1":30, "Ks2":30, "Ks3":30, "Ks4":30}
-yMetricLabel={"overlap":"overlap [%]", "dangle":" $\Delta \\theta_{GT}$[deg]",
+yMetricLabel={"overlap":"overlap [%]", "dangle":" $\Delta\\theta_{GT}$ [deg]",
   "dtranslation":"$\|\|\Delta t_{GT}\|\|_2$ [m]"}
-yMetricResolution={"overlap":15, "dangle":12, "dtranslation":0.4}
+yMetricResolution={"overlap":9, "dangle":8, "dtranslation":0.4}
+#yMetricResolution={"overlap":15, "dangle":12, "dtranslation":0.4}
 
 evalKs = False
 if evalKs:
@@ -303,6 +315,7 @@ else:
   algTypes = ["BB_45.0_0.5", "BB", "BB+ICP",
       "FFT", "FFT+ICP", "ICP", "MM", "MM+ICP"]
   algTypes = ["BB","BB_45.0_0.5", "FFT",  "MM", "ICP"]
+  algTypes = ["BB_45.0_0.5"]
   algTypes = ["BB", "FFT",  "MM", "ICP"]
 
 
@@ -339,6 +352,8 @@ for yMetric in ["overlap", "dangle", "dtranslation"]:
 #          errTypeResolution[errType], axs[-1], j==len(errTypes)-1)
       PlotErrBoxPlot(np.array(errors[yMetric])[ids], errs[ids],
           yMetricResolution[yMetric], axs[-1], j==len(errTypes)-1)
+#      PlotScatter(np.array(errors[yMetric])[ids], errs[ids],
+#          yMetricResolution[yMetric], axs[-1], j==len(errTypes)-1)
       if j == 0:
         if algType in algDesc:
           plt.title(algDesc[algType])

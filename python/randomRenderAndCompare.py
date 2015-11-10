@@ -60,7 +60,7 @@ cfgNYU = {"name":"nyu", "lambdaS3": [45., 65, 80], "lambdaR3": 0.5}
 
 cfg = cfgNYU
 
-showUntransformed = True
+showUntransformed = False
 useSurfaceNormalsInICP = True
 
 parser = argparse.ArgumentParser(description = 'randomly sample two renders and align them')
@@ -98,6 +98,9 @@ transformationPathFFTICP = '{}_{}_FFT_ICP.csv'.format(nameA, nameB)
 paramEvalLambdaS3 = [45., 60., 80 ] #, 90.]
 paramEvalLambdaR3 = [0.5, 0.75, 1.0]
 
+paramEvalLambdaS3 = [45. ] #, 90.]
+paramEvalLambdaR3 = [0.5]
+
 runFFT = False
 runFFTICP = False
 runMM = False
@@ -107,7 +110,7 @@ runBB = False
 runBBICP = False
 runBBEGI = False
 runBBEGIICP = False
-runBBeval = False
+runBBeval = True
 version = "1.4" # large scale eval of all algos and RunBB
 version = "1.5" # eval of BB vor different parameters
 version = "1.51" # eval of more different BB parameters as well as the best of approach
@@ -117,7 +120,9 @@ version = "2.2" # made BB for translation more stable.
 version = "2.3" # more fine tuning of BB
 version = "2.4" # moment matching
 version = "2.5" # actual sampling of point clouds.
-version = "2.6" # fixed sampling of point clouds.
+version = "2.6" # fixed sampling of point clouds. Gigantic eval - currently in final version of paper.
+version = "2.7" # implementing and testing multi cluster tracking...
+version = "2.8" # evaluating multi rotation cluster optimization
 
 args = ['../build/bin/renderPcFromPc',
     '-i ' + cmdArgs.input,
@@ -194,6 +199,8 @@ if subp.call(" ".join(args), shell=True) == 0:
         q,t,Ks,dt,success = RunBBsimple(scanApath, scanBpath,
             transformationPathBB, lambdaS3, lambdaR3)
         if not success:
+          print "BB simple failed - hopefully due to mutliple maxima."
+          raw_input()
           err_a, err_t = np.nan, np.nan
           if np.isnan(t).all(): 
             # only translation is messed up -> err_a

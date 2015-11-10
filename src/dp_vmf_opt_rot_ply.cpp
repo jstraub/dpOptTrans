@@ -347,6 +347,7 @@ int main(int argc, char** argv) {
     ("scale,s", po::value<float>(),"scale for point-cloud")
     ("egi,e", "make the vMF MM pis uniform - like a EGI")
     ("display,d", "display results")
+    ("verbose,v", "be verbose")
     ;
 
   po::variables_map vm;
@@ -422,11 +423,11 @@ int main(int argc, char** argv) {
 
   std::vector<OptRot::vMF<3>> vmfsA;
   ComputevMFMMfromPC(pcA, cfg, vmfsA);
-  for(uint32_t k=0; k<vmfsA.size(); ++k) vmfsA[k].Print(); 
+//  for(uint32_t k=0; k<vmfsA.size(); ++k) vmfsA[k].Print(); 
 
   std::vector<OptRot::vMF<3>> vmfsB;
   ComputevMFMMfromPC(pcB, cfg, vmfsB);
-  for(uint32_t k=0; k<vmfsB.size(); ++k) vmfsB[k].Print(); 
+//  for(uint32_t k=0; k<vmfsB.size(); ++k) vmfsB[k].Print(); 
 
   if (egi_mode) {
     for(uint32_t k=0; k<vmfsA.size(); ++k) 
@@ -444,7 +445,6 @@ int main(int argc, char** argv) {
   ComputeGMMfromPC(pcB, cfg, gmmB, false);
 //  for(uint32_t k=0; k<gmmB.size(); ++k) gmmB[k].Print(); 
 
-
   OptRot::vMFMM<3> vmfmmA(vmfsA);
   OptRot::vMFMM<3> vmfmmB(vmfsB);
   std::cout << " Tessellate S3" << std::endl;
@@ -459,7 +459,8 @@ int main(int argc, char** argv) {
         nodes);
   }
   
-  double eps = 8e-7;
+  double eps = 1e-3;
+//  double eps = 8e-7;
   uint32_t max_it = 10000;
   std::cout << " BB on S3 eps=" << eps << " max_it=" << max_it << std::endl;
 //  OptRot::BranchAndBound<OptRot::NodeS3> bb(lower_bound, upper_bound);
@@ -471,45 +472,80 @@ int main(int argc, char** argv) {
       << " angle: " << 2.*acos(q_star.w()) * 180. / M_PI << std::endl
       << q_star.toRotationMatrix()
       << std::endl;
-  std::cout << node_star.GetTetrahedron().GetCenterQuaternion().coeffs().transpose() << std::endl;
-  Eigen::Quaterniond q = q_star;
   Eigen::Vector3d t_star; 
 
-//  shared_ptr<Eigen::MatrixXd> qs(new MatrixXd(4, nodes.size()));
-//  auto it=nodes.begin();
-//  for (uint32_t i=0; i < nodes.size(); ++i, it++) {
-//    qs->col(i) = it->GetTetrahedron().GetCenter();
-//  }
-//  double lambda_q = cos(2.*10.*M_PI/180.) - 1.; // TODO
-//  dplv::DPMeans<double, dplv::Spherical<double>> dpvMF(qs, 0, lambda_q);
-//  for (uint32_t t=0; t<20; ++t) {
-//    dpvMF.updateLabels(); 
-//    dpvMF.updateCenters(); 
-//  }
-//  std::cout << dpvMF.centroids() << std::endl; 
-//
-//  double lb_R3 = -1e40;
-//  Eigen::Vector3d t_star; 
-//  for (uint32_t k=0; k<dpvMF.K(); ++k) {
-//    Eigen::Vector4d q_vec = dpvMF.centroids().col(k);
-//    Eigen::Quaterniond q(q_vec(0), q_vec(1), q_vec(2), q_vec(3));
-////    auto it = nodes.begin();
-////    auto z = dpvMF.z();
-////    double lb_max = 9999.;
-////    for (uint32_t i=0; i<nodes.size(); ++i, it++) 
-////      if (z(i) == k && lb_max > it->GetBoundGap()) {
-////        lb_max = it->GetBoundGap();
-////        q = it->GetTetrahedron().GetCenterQuaternion();
-////      }
-//    //  Eigen::Quaterniond q = node_star.GetTetrahedron().GetCenterQuaternion();
-//    std::cout << "in cluster " << k << ": center = "  
-//      << dpvMF.centroids().col(k).transpose() << std::endl;
-//    std::cout << "optimum quaternion: "  << q.coeffs().transpose()
-//      << " angle: " << 2.*acos(q.w()) * 180. / M_PI
-//      << std::endl;
-    // This q is the inverse of the rotation that brings B to A.
-    q = q.inverse(); // A little ugly but this is because of the way we setup the problem...
+  shared_ptr<Eigen::MatrixXd> qAll(new MatrixXd(4, nodes.size()));
+  auto it=nodes.begin();
+  for (uint32_t i=0; i < nodes.size(); ++i, it++) {
+    qAll->col(i) = it->GetTetrahedron().GetCenter();
+  }
+  double lambda_q = cos(2.*10.*M_PI/180.) - 1.; // TODO
+  dplv::DPMeans<double, dplv::Spherical<double>> dpvMF(qAll, 0, lambda_q);
+  for (uint32_t t=0; t<20; ++t) {
+    dpvMF.updateLabels(); 
+    dpvMF.updateCenters(); 
+  }
+  std::cout << dpvMF.centroids() << std::endl; 
 
+  std::vector<Eigen::Quaterniond> qsPrelim;
+  std::vector<double> lbsS3prelim;
+  if (dpvMF.K() == 1) {
+    qsPrelim.push_back(q_star);
+    lbsS3prelim.push_back(node_star.GetLB());
+  } else {
+    std::cout << "======== K > 1: " << dpvMF.K() << std::endl;
+    //  Eigen::Vector3d t_star; 
+    for (uint32_t k=0; k<dpvMF.K(); ++k) {
+//      Eigen::Vector4d q_vec = dpvMF.centroids().col(k);
+      Eigen::Quaterniond q_k; //(q_vec(0), q_vec(1), q_vec(2), q_vec(3));
+      auto it = nodes.begin();
+      auto z = dpvMF.z();
+      // Find the node whith maximum LB in each cluster.
+      double lb_max = -1.e20;
+      for (uint32_t i=0; i<nodes.size(); ++i, it++) 
+        if (z(i) == k && lb_max < it->GetLB()) {
+          lb_max = it->GetLB();
+          q_k = it->GetTetrahedron().GetCenterQuaternion();
+        }
+      qsPrelim.push_back(q_k);
+      lbsS3prelim.push_back(lb_max);
+      //  Eigen::Quaterniond q = node_star.GetTetrahedron().GetCenterQuaternion();
+      std::cout << "in cluster " << k << ": center = "  
+        << dpvMF.centroids().col(k).transpose() << std::endl;
+      std::cout << " max LB quaternion: "  << q_k.coeffs().transpose()
+        << " angle: " << 2.*acos(q_k.w()) * 180. / M_PI << std::endl;
+    }
+  }
+
+  // TODO could be foldet into above.
+  std::vector<bool> toDelete(dpvMF.K(), false);
+  uint32_t n_delete = 0;
+  for (uint32_t k=0; k<dpvMF.K(); ++k) 
+    for (uint32_t j=k+1; j<dpvMF.K(); ++j) { 
+      double dAng = qsPrelim[k].angularDistance(qsPrelim[j]);
+      std::cout << " dang " << k << ";" << j << ": " << dAng*180./M_PI << std::endl;
+      toDelete[k] = dAng < 0.1/180.*M_PI;
+      if (toDelete[k]) ++n_delete;
+    }
+  Eigen::VectorXd lbsS3(qsPrelim.size()-n_delete);
+  std::vector<Eigen::Quaterniond> qs;
+  uint32_t j=0;
+  for (uint32_t k=0; k<dpvMF.K(); ++k) 
+    if (!toDelete[k]) {
+      qs.push_back(qsPrelim[k]);
+      lbsS3(j++) = lbsS3prelim[k];
+    }
+  Eigen::VectorXd lbsR3(qs.size());
+  Eigen::VectorXd lbs(qs.size());
+
+  std::cout << "===filtered==== K: " << qs.size() << std::endl;
+  std::vector<Eigen::Vector3d> ts;
+  for (uint32_t k=0; k<qs.size(); ++k) {
+    // This q is the inverse of the rotation that brings B to A.
+    qs[k] = qs[k].inverse(); // A little ugly but this is because of the way we setup the problem...
+  }
+  for (uint32_t k=0; k<qs.size(); ++k) {
+    Eigen::Quaterniond q = qs[k]; 
     // To get all corners of the bounding box.j
     OptRot::Box box(minA, maxA);
     // Update the boundaries of the the rotated point cloud A to get
@@ -517,7 +553,7 @@ int main(int argc, char** argv) {
     for (uint32_t i=0; i<8; ++i) {
       Eigen::Vector3d c;
       box.GetCorner(i,c);
-      c = q._transformVector(c);
+      c = q.inverse()._transformVector(c);
       for (uint32_t d=0; d<3; ++d) {
         minA(d) = std::min(minA(d), c(d));
         maxA(d) = std::max(maxA(d), c(d));
@@ -553,34 +589,54 @@ int main(int argc, char** argv) {
     std::cout << " BB on R3 eps=" << eps << " max_it=" << max_it << std::endl;
     OptRot::NodeR3 nodeR3_star = bbR3.Compute(nodesR3, eps, max_it);
     Eigen::Vector3d t =  nodeR3_star.GetLbArgument();
-//    OptRot::CountBranchesInTree<OptRot::NodeR3>(nodesR3);
+    //    OptRot::CountBranchesInTree<OptRot::NodeR3>(nodesR3);
     std::cout << "with LB " << nodeR3_star.GetLB() << " optimum translation: " 
       << t.transpose() << std::endl;
-//    if (lb_R3 < nodeR3_star.GetLB()) {
-      std::cout << "Updating overall optimum transformation to: " << std::endl;
-      t_star = t;
-      q_star = q;
-//      lb_R3 = nodeR3_star.GetLB();
-      std::cout << "q: " << q_star.coeffs().transpose() 
-        << " t: " << t_star.transpose() <<  std::endl;
+    ts.push_back(t);
+    lbsR3(k) = nodeR3_star.GetLB();
+    lbs(k) = lbsS3(k) * lbsR3(k);
+
+//    for (auto& node: nodesR3) {
+//      std::cout << node.GetLbArgument().transpose() << std::endl;
 //    }
-    if(pathOut.size() > 1) {
-      std::ofstream out(pathOut + std::string(".csv"));
-      out << "q_w q_x q_y q_z t_x t_y t_z lb_S3 lb_R3 KvmfA KvmfB KgmmA KgmmB" << std::endl; 
-      out << q_star.w() << " " << q_star.x() << " " 
-        << q_star.y() << " " << q_star.z() << " " << t_star(0)
-        << " " << t_star(1) << " " << t_star(2) 
-        << " " << node_star.GetLB() << " " << nodeR3_star.GetLB()
-        << " " << vmfsA.size() << " " << vmfsB.size() 
-        << " " << gmmA.size() << " " << gmmB.size() 
-        << std::endl;
-      out.close();
-    }
 
     // Display the loaded point clouds.
-    if (vm.count("display")) {
-      DisplayPcs(pcA, pcB, gmmA, gmmB, vmfsA, vmfsB, q_star, t_star, cfg.lambda/10.);
+    if (vm.count("display") && vm.count("verbose")) {
+      DisplayPcs(pcA, pcB, gmmA, gmmB, vmfsA, vmfsB, qs[k], ts[k], cfg.lambda/10.);
     }
+  }
+  std::cout << "Have LbS3: " << lbsS3.transpose() << std::endl;
+  std::cout << "Have LbR3: " << lbsR3.transpose() << std::endl;
+  std::cout << "Have LBs (LbS3 * LbR3): " << lbs.transpose() << std::endl;
+  uint32_t id_max = 0;
+  double lb_max = lbs.maxCoeff(&id_max);
+  double lbS3 = lbsS3(id_max);
+  double lbR3 = lbsR3(id_max);
+  t_star = ts[id_max];
+  q_star = qs[id_max];
+  std::cout << "Updating overall optimum transformation to: " << std::endl;
+  std::cout << "q: " << q_star.coeffs().transpose() 
+    << " t: " << t_star.transpose() <<  std::endl;
+
+  if(pathOut.size() > 1) {
+    std::ofstream out(pathOut + std::string(".csv"));
+    out << "q_w q_x q_y q_z t_x t_y t_z lb_S3 lb_R3 KvmfA KvmfB KgmmA KgmmB K" << std::endl; 
+    out << q_star.w() << " " << q_star.x() << " " 
+      << q_star.y() << " " << q_star.z() << " " << t_star(0)
+      << " " << t_star(1) << " " << t_star(2) 
+      << " " << lbS3 << " " << lbR3
+//      << " " << node_star.GetLB() << " " << nodeR3_star.GetLB()
+      << " " << vmfsA.size() << " " << vmfsB.size() 
+      << " " << gmmA.size() << " " << gmmB.size() 
+      << " " << qs.size()
+      << std::endl;
+    out.close();
+  }
+
+  // Display the loaded point clouds.
+  if (qs.size()>1 || vm.count("display")) {
+    DisplayPcs(pcA, pcB, gmmA, gmmB, vmfsA, vmfsB, q_star, t_star, cfg.lambda/10.);
+  }
 
   std::cout<<cudaDeviceReset()<<std::endl;
   return (0);

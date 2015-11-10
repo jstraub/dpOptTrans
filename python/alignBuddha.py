@@ -12,16 +12,17 @@ cfgBuddhaRnd = {"name":"buddhaRnd", "lambdaS3": [60, 70, 80],
   "lambdaR3": 0.002}
 cfgBuddha = {"name":"buddha", "lambdaS3": [80], "lambdaR3": 0.0008}
 cfgBunny = {"name":"bunny", "lambdaS3": [60, 70, 80], "lambdaR3": 0.003}
-cfgBunnyZipper = {"name":"bun_zipper", "lambdaS3": [60], "lambdaR3": 0.001}
 cfgEnschede = {"name":"enschede", "lambdaS3": [60, 70, 80], "lambdaR3":0.3}
 cfgBunnyAB = {"name":"bunnyAB", "lambdaS3": [45, 60, 70, 80], "lambdaR3": 0.003}
+cfgBunnyZipper = {"name":"bun_zipper", "lambdaS3": [60], "lambdaR3": 0.001}
 
 cfg = cfgBunny
-cfg = cfgBunnyZipper
 cfg = cfgBuddha
 cfg = cfgEnschede
 cfg = cfgBuddhaRnd
 cfg = cfgBunnyAB
+cfg = cfgBunnyZipper
+
 loadCached = False
 stopToShow = False
 showUntransformed = False
