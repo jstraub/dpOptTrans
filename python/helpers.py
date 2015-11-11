@@ -194,36 +194,78 @@ def LoadTransformationAndData(transformationPath):
     q = Quaternion(w=q[0], x=q[1], y=q[2], z=q[3])
   return q,t,data
 
-def LoadNodesPerIteration(path):
-  with open(path, 'r') as f:
-    qs, tetras, props = [], [], []
-    while f.read(1):
-      f.seek(-1,1)
-      stats = np.fromstring(f.readline(), sep=" ")
-      print stats
-      N = int(stats[2])
-      qs.append(np.zeros((N*4,4)))
-      tetras.append(np.zeros((N,4), dtype=np.int))
-      props.append(np.zeros((N,4)))
-      j,k = 0,0
-      for i in range(N*5):
-        if i%5 == 0:
-          props[-1][i/5,:] = np.fromstring(f.readline(), sep=" ")
-          tetras[-1][i/5,:] = [j, j+1, j+2, j+3]
-          k = 0
-        else:
-          q = np.fromstring(f.readline(), sep=" ")
-          if j==0:
-            qs[-1][j,:] = q
-            j+=1
+def LoadNodesPerIteration(path, maxNodes=None):
+  if re.search("S3", path):
+    with open(path, 'r') as f:
+      qs, tetras, props = [], [], []
+      while f.read(1):
+        f.seek(-1,1)
+        stats = np.fromstring(f.readline(), sep=" ")
+        print stats
+        N = int(stats[2])
+        qs.append(np.zeros((N*4,4)))
+        tetras.append(np.zeros((N,4), dtype=np.int))
+        props.append(np.zeros((N,4)))
+        j,k = 0,0
+        for i in range(N*5):
+          if i%5 == 0:
+            props[-1][i/5,:] = np.fromstring(f.readline(), sep=" ")
+            tetras[-1][i/5,:] = [j, j+1, j+2, j+3]
+            k = 0
           else:
-            thetas = np.arccos(np.minimum(1.,np.maximum(-1.,q.dot(qs[-1][:j,:].T))))
-            if np.any(thetas < 1.e-6):
-              tetras[-1][i/5,k] = np.where(thetas < 1e-6)[0]
-            else:
+            q = np.fromstring(f.readline(), sep=" ")
+            if j==0:
               qs[-1][j,:] = q
-              tetras[-1][i/5,k] = j
               j+=1
-          k+=1
-      qs[-1] = np.resize(qs[-1], (j,4))
-  return qs, tetras, props
+            else:
+              thetas = np.arccos(np.minimum(1.,np.maximum(-1.,q.dot(qs[-1][:j,:].T))))
+              if np.any(thetas < 1.e-6):
+                tetras[-1][i/5,k] = np.where(thetas < 1e-6)[0][0]
+              else:
+                qs[-1][j,:] = q
+                tetras[-1][i/5,k] = j
+                j+=1
+            k+=1
+        qs[-1] = np.resize(qs[-1], (j,4))
+        if not maxNodes is None and len(qs) >= maxNodes:
+          break
+    return qs, tetras, props
+  if re.search("R3", path):
+    with open(path, 'r') as f:
+      ts, tetras, props = [], [], []
+      while f.read(1):
+        f.seek(-1,1)
+        stats = np.fromstring(f.readline(), sep=" ")
+        print stats
+        N = int(stats[2])
+        ts.append(np.zeros((N*4,3)))
+        tetras.append(np.zeros((N,8), dtype=np.int))
+        props.append(np.zeros((N,4)))
+        j,k = 0,0
+        for i in range(N*9):
+          if i%9 == 0:
+            props[-1][i/9,:] = np.fromstring(f.readline(), sep=" ")
+#            tetras[-1][i/9,:] = [j, j+1, j+2, j+3]
+            k = 0
+          else:
+            t = np.fromstring(f.readline(), sep=" ")
+            if j==0:
+              ts[-1][j,:] = t
+              j+=1
+            else:
+              thetas = np.sqrt(((ts[-1][:j,:]-t)**2).sum(axis=1))
+#              print "t1++ "
+#              print thetas
+              if np.any(thetas < 1.e-6):
+                tetras[-1][i/9,k] = np.where(thetas < 1e-6)[0][0]
+              else:
+                ts[-1][j,:] = t
+                tetras[-1][i/9,k] = j
+                j+=1
+            k+=1
+        ts[-1] = np.resize(ts[-1], (j,3))
+        print ts[-1].shape
+        if not maxNodes is None and len(ts) >= maxNodes:
+          break
+    return ts, tetras, props
+

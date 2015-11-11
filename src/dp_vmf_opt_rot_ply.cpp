@@ -459,7 +459,7 @@ int main(int argc, char** argv) {
         nodes);
   }
   
-  double eps = 1e-5;
+  double eps = 1e-9;
 //  double eps = 8e-7;
   uint32_t max_it = 10000;
   std::cout << " BB on S3 eps=" << eps << " max_it=" << max_it << std::endl;
@@ -570,7 +570,7 @@ int main(int argc, char** argv) {
       << " max t: " << max.transpose() << std::endl;
 
     std::list<OptRot::NodeR3> nodesR3 =
-      OptRot::GenerateNotesThatTessellateR3(min, max, (max-min).norm()/10.);
+      OptRot::GenerateNotesThatTessellateR3(min, max, (max-min).norm());
     OptRot::LowerBoundR3 lower_bound_R3(gmmA, gmmB, q);
     OptRot::UpperBoundIndepR3 upper_bound_R3(gmmA, gmmB, q);
     OptRot::UpperBoundConvexR3 upper_bound_convex_R3(gmmA, gmmB, q);
@@ -581,7 +581,7 @@ int main(int argc, char** argv) {
     }
 
     std::cout << "# initial nodes: " << nodesR3.size() << std::endl;
-    eps = 1e-11;
+    eps = 1e-9;
     max_it = 10000;
     OptRot::BranchAndBound<OptRot::NodeR3> bbR3(lower_bound_R3, upper_bound_convex_R3);
     std::cout << " BB on R3 eps=" << eps << " max_it=" << max_it << std::endl;

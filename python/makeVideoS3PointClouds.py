@@ -44,8 +44,8 @@ qs, tetras, props = LoadNodesPerIteration(path)
 
 figm = mlab.figure(bgcolor=(1,1,1))
 for n in range(len(qs)):
-  # plot max
-  idMax = np.argmax(props[n][:,1])
+  # plot max UB rotation
+  idMax = np.argmax(props[n][:,0])
   Q = np.zeros((4,4))
   for j in range(4):
     Q[:,j] = qs[n][tetras[n][idMax, j],:]
