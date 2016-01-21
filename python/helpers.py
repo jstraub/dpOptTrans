@@ -2,6 +2,7 @@ import numpy as np
 from js.geometry.quaternion import Quaternion
 import re, os.path, time
 import subprocess as subp
+from js.data.plyParse import PlyParse
 
 def RunFFT(scanApath, scanBpath, transformationPathFFT, q_gt=None,
     t_gt=None, returnBoth=False):
@@ -140,6 +141,36 @@ def RunICP(scanApath, scanBpath, transformationPathICP,
     return Quaternion(), np.zeros(3), dt,False
   q,t = LoadTransformation(transformationPathICP)
   return q,t,dt,True
+def RunGoICP(scanApath, scanBpath, transformationPathGoICP,
+    NdDownsampled=0):
+  print scanApath
+  plyA = PlyParse()
+  plyA.parse(scanApath)
+  pcA = plyA.getPc()
+  with open(re.sub(".csv",".txt",scanApath),'w') as f:
+    print pcA.shape
+    f.write("{}\n".format(pcA.shape[0]))
+    np.savetxt(f, pcA)
+
+  plyB = PlyParse()
+  plyB.parse(scanBpath)
+  pcB = plyB.getPc()
+  with open(re.sub(".csv",".txt",scanBpath),'w') as f:
+    print pcB.shape
+    f.write("{}\n".format(pcB.shape[0]))
+    np.savetxt(f, pcB)
+
+  args = ['../goIcp/src/build/GoICP', 
+      re.sub(".csv",".txt",scanApath),
+      re.sub(".csv",".txt",scanBpath),
+      '{}'.format(NdDownsampled),
+      '../goIcp/config.txt',
+      re.sub(".csv",".txt",transformationPathGoICP)
+      ]
+  print " ".join(args)
+  err = subp.call(" ".join(args), shell=True)
+  q,t,dt = LoadTransformationGoICP(re.sub(".csv",".txt",transformationPathGoICP))
+  return q,t,dt,True
 
 def LoadTransformation(transformationPath):
   with open(transformationPath) as f:
@@ -269,3 +300,15 @@ def LoadNodesPerIteration(path, maxNodes=None):
           break
     return ts, tetras, props
 
+def LoadTransformationGoICP(transformationPathGoICP):
+  with open(transformationPathGoICP) as f:
+    dt = float(f.readline())
+    R = np.zeros((3,3))
+    for i in range(3):
+      R[i,:] = np.array([float(Ri) for Ri in f.readline().split(" ")])
+    t = np.zeros(3)
+    for i in range(3):
+      t[i] = float(f.readline())
+    q = Quaternion()
+    q.fromRot3(R)
+    return q,t,dt

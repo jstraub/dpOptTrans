@@ -94,6 +94,7 @@ transformationPathMM = '{}_{}_MM.csv'.format(nameA, nameB)
 transformationPathMMICP = '{}_{}_MM_ICP.csv'.format(nameA, nameB)
 transformationPathFFT = '{}_{}_FFT.csv'.format(nameA, nameB)
 transformationPathFFTICP = '{}_{}_FFT_ICP.csv'.format(nameA, nameB)
+transformationPathGoICP = '{}_{}_GoICP.csv'.format(nameA, nameB)
 
 paramEvalLambdaS3 = [45., 60., 80 ] #, 90.]
 paramEvalLambdaR3 = [0.5, 0.75, 1.0]
@@ -110,7 +111,8 @@ runBB = False
 runBBICP = False
 runBBEGI = False
 runBBEGIICP = False
-runBBeval = True
+runBBeval = False
+runGoICP = True
 version = "1.4" # large scale eval of all algos and RunBB
 version = "1.5" # eval of BB vor different parameters
 version = "1.51" # eval of more different BB parameters as well as the best of approach
@@ -123,6 +125,7 @@ version = "2.5" # actual sampling of point clouds.
 version = "2.6" # fixed sampling of point clouds. Gigantic eval - currently in final version of paper.
 version = "2.7" # implementing and testing multi cluster tracking...
 version = "2.8" # evaluating multi rotation cluster optimization
+version = "2.9" # only temporary for GoICP
 
 args = ['../build/bin/renderPcFromPc',
     '-i ' + cmdArgs.input,
@@ -164,6 +167,16 @@ if subp.call(" ".join(args), shell=True) == 0:
     q0 = Quaternion(1.,0.,0.,0.)
     DisplayPcs(scanApath, scanBpath, q0, np.zeros(3), False, False)
     DisplayPcs(scanApath, scanBpath, q_gt,t_gt, True, True)
+
+  if runGoICP:
+    q,t,dt,success = RunGoICP(scanApath, scanBpath, transformationPathGoICP)
+    if not success:
+      err_a, err_t = np.nan, np.nan
+    else:
+      err_a, err_t = EvalError(q_gt, t_gt, q, t)
+    print "GoICP: {} deg {} m".format(err_a, err_t)
+    results["GoICP"] = {"err_a":err_a, "err_t":err_t, "q":q.q.tolist(),
+        "t":t.tolist(), "dt":dt}
 
   if runFFT:
     q,t,dt,success = RunFFT(scanApath, scanBpath, transformationPathFFT)
