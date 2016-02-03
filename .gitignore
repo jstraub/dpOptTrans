@@ -20,6 +20,7 @@ cudaPcl
 jsCore
 dpMMlowVar
 optimalRotationEstimation
+bbTrans
 .directory
 data
 pod-build
