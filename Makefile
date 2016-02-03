@@ -71,14 +71,14 @@ checkout:
 	git clone git@github.com:jstraub/cudaPcl.git
 	git clone git@github.com:jstraub/dpMMlowVar.git
 	git clone git@github.com:jstraub/rtDDPvMF.git
-	git clone git@github.com:jstraub/optimalRotationEstimation.git
+	git clone git@github.mit.edu:jstraub/bbTrans.git
 
 update:
 	cd cudaPcl; git pull; cd -
 	cd dpMMlowVar; git pull; cd -
 	cd rtDDPvMF; git pull; cd -
 	cd jsCore; git pull; cd -
-	cd optimalRotationEstimation; git pull; cd -
+	cd bbTrans; git pull; cd -
 
 # other (custom) targets are passed through to the cmake-generated Makefile
 %::

@@ -9,14 +9,14 @@
 
 #include "rtDDPvMF/rtDDPvMF.hpp"
 //#include "rtDDPvMF/realtimeDDPvMF_openni.hpp"
-#include "optRot/lower_bound_S3.h"
-#include "optRot/upper_bound_indep_S3.h"
-#include "optRot/upper_bound_convex_S3.h"
-#include "optRot/branch_and_bound.h"
-#include "optRot/vmf_mm.h"
-#include "optRot/node.h"
-#include "dpvMFoptRot/dp_vmf_opt_rot.h"
-#include "dpvMFoptRot/pc_helper.h"
+#include "bbTrans/lower_bound_S3.h"
+#include "bbTrans/upper_bound_indep_S3.h"
+#include "bbTrans/upper_bound_convex_S3.h"
+#include "bbTrans/branch_and_bound.h"
+#include "bbTrans/vmf_mm.h"
+#include "bbTrans/node.h"
+#include "dpOptTrans/dp_vmf_opt_rot.h"
+#include "dpOptTrans/pc_helper.h"
 
 #include <boost/program_options.hpp>
 namespace po = boost::program_options;
@@ -27,7 +27,7 @@ bool ComputevMFMMfromDepth(
     const std::string& path, bool display,
     cv::Mat *dI, 
     cv::Mat *gI, 
-    std::vector<::OptRot::vMF<3>>* vmfs) {
+    std::vector<::bb::vMF<3>>* vmfs) {
 
   std::cout<<"reading depth image from "<<path<<std::endl;
   cv::Mat depth = cv::imread(path, CV_LOAD_IMAGE_ANYDEPTH);
@@ -103,7 +103,7 @@ bool ComputevMFMMfromDepth(
   *dI = depth;
 
   for(uint32_t k=0; k<centroids.cols(); ++k) {
-    vmfs->push_back(::OptRot::vMF<3>(centroids.col(k).cast<double>(),
+    vmfs->push_back(::bb::vMF<3>(centroids.col(k).cast<double>(),
           concentrations(k), proportions(k)));
   }
   return true;
@@ -184,20 +184,20 @@ int main(int argc, char** argv) {
     <<"nFramesSurvive="<<cfg.nFramesSurvive_<<std::endl;
   std::cout<<"output path: "<<cfg.pathOut<<std::endl;
 
-  std::vector<OptRot::vMF<3>> vmfs_A;
+  std::vector<bb::vMF<3>> vmfs_A;
 
   cv::Mat dIa, gIa;
   shared_ptr<RtDDPvMF> pRtDDPvMF_A;
   pRtDDPvMF_A = shared_ptr<RtDDPvMF>(new RtDDPvMF(cfg,cfgNormals));
   ComputevMFMMfromDepth(pRtDDPvMF_A, cfg, pathA, vm.count("display"), &dIa, &gIa, &vmfs_A);
-  OptRot::vMFMM<3> vmf_mm_A(vmfs_A);
+  bb::vMFMM<3> vmf_mm_A(vmfs_A);
 
   cv::Mat dIb, gIb;
-  std::vector<OptRot::vMF<3>> vmfs_B;
+  std::vector<bb::vMF<3>> vmfs_B;
   shared_ptr<RtDDPvMF> pRtDDPvMF_B;
   pRtDDPvMF_B = shared_ptr<RtDDPvMF>(new RtDDPvMF(cfg,cfgNormals));
   ComputevMFMMfromDepth(pRtDDPvMF_B, cfg, pathB, vm.count("display"), &dIb, &gIb, &vmfs_B);
-  OptRot::vMFMM<3> vmf_mm_B(vmfs_B);
+  bb::vMFMM<3> vmf_mm_B(vmfs_B);
 
   std::cout << "A:" << std::endl;
   for (uint32_t i=0; i<vmf_mm_A.GetK(); ++i)
@@ -211,15 +211,15 @@ int main(int argc, char** argv) {
       << " tau " << vmf_mm_B.Get(i).GetTau()
       << " pi " << vmf_mm_B.Get(i).GetPi() << std::endl;
 
-  std::list<OptRot::NodeS3> nodes = OptRot::GenerateNotesThatTessellateS3();
-  OptRot::LowerBoundS3 lower_bound(vmf_mm_A, vmf_mm_B);
-  OptRot::UpperBoundIndepS3 upper_bound(vmf_mm_A, vmf_mm_B);
-  OptRot::UpperBoundConvexS3 upper_bound_convexity(vmf_mm_A, vmf_mm_B);
+  std::list<bb::NodeS3> nodes = bb::GenerateNotesThatTessellateS3();
+  bb::LowerBoundS3 lower_bound(vmf_mm_A, vmf_mm_B);
+  bb::UpperBoundIndepS3 upper_bound(vmf_mm_A, vmf_mm_B);
+  bb::UpperBoundConvexS3 upper_bound_convexity(vmf_mm_A, vmf_mm_B);
   
-  OptRot::BranchAndBound<OptRot::NodeS3> bb(lower_bound, upper_bound_convexity);
+  bb::BranchAndBound<bb::NodeS3> bb(lower_bound, upper_bound_convexity);
   double eps = 1e-4 / 180. * M_PI;
   uint32_t max_it = 300;
-  OptRot::NodeS3 node_star = bb.Compute(nodes, eps, max_it);
+  bb::NodeS3 node_star = bb.Compute(nodes, eps, max_it);
 
   std::cout << "optimum quaternion: " 
     << node_star.GetTetrahedron().GetCenter().transpose()

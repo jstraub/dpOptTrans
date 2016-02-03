@@ -10,7 +10,7 @@
 #include <pcl/common/transforms.h>
 #include <pcl/registration/icp.h>
 
-#include "dpvMFoptRot/pc_helper.h"
+#include "dpOptTrans/pc_helper.h"
 
 #include <boost/program_options.hpp>
 namespace po = boost::program_options;

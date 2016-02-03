@@ -13,18 +13,18 @@
 
 //#include "rtDDPvMF/rtDDPvMF.hpp"
 //#include "rtDDPvMF/realtimeDDPvMF_openni.hpp"
-#include "optRot/lower_bound_R3.h"
-#include "optRot/upper_bound_indep_R3.h"
-#include "optRot/upper_bound_convex_R3.h"
-#include "optRot/lower_bound_S3.h"
-#include "optRot/upper_bound_indep_S3.h"
-#include "optRot/upper_bound_convex_S3.h"
-#include "optRot/branch_and_bound.h"
-#include "optRot/vmf.h"
-#include "optRot/vmf_mm.h"
-#include "optRot/normal.h"
-#include "dpvMFoptRot/dp_vmf_opt_rot.h"
-#include "dpvMFoptRot/pc_helper.h"
+#include "bbTrans/lower_bound_R3.h"
+#include "bbTrans/upper_bound_indep_R3.h"
+#include "bbTrans/upper_bound_convex_R3.h"
+#include "bbTrans/lower_bound_S3.h"
+#include "bbTrans/upper_bound_indep_S3.h"
+#include "bbTrans/upper_bound_convex_S3.h"
+#include "bbTrans/branch_and_bound.h"
+#include "bbTrans/vmf.h"
+#include "bbTrans/vmf_mm.h"
+#include "bbTrans/normal.h"
+#include "dpOptTrans/dp_vmf_opt_rot.h"
+#include "dpOptTrans/pc_helper.h"
 #include "dpMMlowVar/ddpmeansCUDA.hpp"
 
 #include <boost/program_options.hpp>
@@ -69,10 +69,10 @@ struct CfgRtDDPvMF
 
 void DisplayPcs(const pcl::PointCloud<pcl::PointXYZRGBNormal>& pcA, 
   const pcl::PointCloud<pcl::PointXYZRGBNormal>& pcB, 
-  const std::vector<OptRot::Normal<3>>& gmmA, 
-  const std::vector<OptRot::Normal<3>>& gmmB, 
-  const std::vector<OptRot::vMF<3>>& vmfsA,
-  const std::vector<OptRot::vMF<3>>& vmfsB,
+  const std::vector<bb::Normal<3>>& gmmA, 
+  const std::vector<bb::Normal<3>>& gmmB, 
+  const std::vector<bb::vMF<3>>& vmfsA,
+  const std::vector<bb::vMF<3>>& vmfsB,
   const Eigen::Quaterniond& q_star, const Eigen::Vector3d& t_star,
   float scale) {
 
@@ -191,7 +191,7 @@ void DisplayPcs(const pcl::PointCloud<pcl::PointXYZRGBNormal>& pcA,
 }
 
 bool ComputevMFMMfromPC(const pcl::PointCloud<pcl::PointXYZRGBNormal>&
-    pc, const CfgRtDDPvMF& cfg, std::vector<OptRot::vMF<3>>& vmfs) {
+    pc, const CfgRtDDPvMF& cfg, std::vector<bb::vMF<3>>& vmfs) {
   // take 3 values (x,y,z of normal) with an offset of 4 values (x,y,z
   // and one float which is undefined) and the step is 12 (4 for xyz, 4
   // for normal xyz and 4 for curvature and rgb).
@@ -236,20 +236,20 @@ bool ComputevMFMMfromPC(const pcl::PointCloud<pcl::PointXYZRGBNormal>&
   Eigen::VectorXf taus(K);
   for(uint32_t k=0; k<K; ++k)
     if (counts(k) > 100) {
-      taus(k) = OptRot::vMF<3>::MLEstimateTau(xSum.col(k),
+      taus(k) = bb::vMF<3>::MLEstimateTau(xSum.col(k),
           xSum.col(k).cast<double>()/xSum.col(k).norm(), ws(k));
     }
   
   for(uint32_t k=0; k<K; ++k)
     if (counts(k) > 100) {
-      vmfs.push_back(OptRot::vMF<3>(xSum.col(k).cast<double>()/xSum.col(k).norm(),
+      vmfs.push_back(bb::vMF<3>(xSum.col(k).cast<double>()/xSum.col(k).norm(),
             taus(k), pis(k)));
     }
   return true;
 }
 
 bool ComputeGMMfromPC(pcl::PointCloud<pcl::PointXYZRGBNormal>&
-    pc, const CfgRtDDPvMF& cfg, std::vector<OptRot::Normal<3>>& gmm,
+    pc, const CfgRtDDPvMF& cfg, std::vector<bb::Normal<3>>& gmm,
     bool colorLables) {
   // take 3 values (x,y,z of normal) with an offset of 4 values (x,y,z
   // and one float which is undefined) and the step is 12 (4 for xyz, 4
@@ -316,7 +316,7 @@ bool ComputeGMMfromPC(pcl::PointCloud<pcl::PointXYZRGBNormal>&
   for(uint32_t k=0; k<K; ++k)
 //    if (pis(k) > 0.) {
     if (counts(k) > 100) {
-      gmm.push_back(OptRot::Normal<3>(centroids.col(k).cast<double>(),
+      gmm.push_back(bb::Normal<3>(centroids.col(k).cast<double>(),
             Ss[k]/float(ws(k))+0.001*Eigen::Matrix3d::Identity(), pis(k)));
 //        Ss[k]/float(ws(k)), pis(k)));
     }
@@ -421,11 +421,11 @@ int main(int argc, char** argv) {
     <<"nFramesSurvive="<<cfg.nFramesSurvive_<<std::endl;
   std::cout<<"output path: "<<cfg.pathOut<<std::endl;
 
-  std::vector<OptRot::vMF<3>> vmfsA;
+  std::vector<bb::vMF<3>> vmfsA;
   ComputevMFMMfromPC(pcA, cfg, vmfsA);
 //  for(uint32_t k=0; k<vmfsA.size(); ++k) vmfsA[k].Print(); 
 
-  std::vector<OptRot::vMF<3>> vmfsB;
+  std::vector<bb::vMF<3>> vmfsB;
   ComputevMFMMfromPC(pcB, cfg, vmfsB);
 //  for(uint32_t k=0; k<vmfsB.size(); ++k) vmfsB[k].Print(); 
 
@@ -437,25 +437,25 @@ int main(int argc, char** argv) {
   }
 
   cfg.lambda = lambdaT;
-  std::vector<OptRot::Normal<3>> gmmA;
+  std::vector<bb::Normal<3>> gmmA;
   ComputeGMMfromPC(pcA, cfg, gmmA, false);
 //  for(uint32_t k=0; k<gmmA.size(); ++k) gmmA[k].Print(); 
 
-  std::vector<OptRot::Normal<3>> gmmB;
+  std::vector<bb::Normal<3>> gmmB;
   ComputeGMMfromPC(pcB, cfg, gmmB, false);
 //  for(uint32_t k=0; k<gmmB.size(); ++k) gmmB[k].Print(); 
 
-  OptRot::vMFMM<3> vmfmmA(vmfsA);
-  OptRot::vMFMM<3> vmfmmB(vmfsB);
+  bb::vMFMM<3> vmfmmA(vmfsA);
+  bb::vMFMM<3> vmfmmB(vmfsB);
   std::cout << " Tessellate S3" << std::endl;
-  std::list<OptRot::NodeS3> nodes = OptRot::GenerateNotesThatTessellateS3();
+  std::list<bb::NodeS3> nodes = bb::GenerateNotesThatTessellateS3();
   std::cout << "# initial nodes: " << nodes.size() << std::endl;
-  OptRot::LowerBoundS3 lower_bound(vmfmmA, vmfmmB);
-  OptRot::UpperBoundIndepS3 upper_bound(vmfmmA, vmfmmB);
-  OptRot::UpperBoundConvexS3 upper_bound_convex(vmfmmA, vmfmmB);
+  bb::LowerBoundS3 lower_bound(vmfmmA, vmfmmB);
+  bb::UpperBoundIndepS3 upper_bound(vmfmmA, vmfmmB);
+  bb::UpperBoundConvexS3 upper_bound_convex(vmfmmA, vmfmmB);
 
   if (output_init_bounds) {
-    WriteBounds<OptRot::NodeS3>(lower_bound, upper_bound, upper_bound_convex,
+    WriteBounds<bb::NodeS3>(lower_bound, upper_bound, upper_bound_convex,
         nodes);
   }
   
@@ -463,10 +463,10 @@ int main(int argc, char** argv) {
 //  double eps = 8e-7;
   uint32_t max_it = 10000;
   std::cout << " BB on S3 eps=" << eps << " max_it=" << max_it << std::endl;
-//  OptRot::BranchAndBound<OptRot::NodeS3> bb(lower_bound, upper_bound);
-  OptRot::BranchAndBound<OptRot::NodeS3> bb(lower_bound, upper_bound_convex);
-  OptRot::NodeS3 node_star = bb.Compute(nodes, eps, max_it);
-//  OptRot::CountBranchesInTree<OptRot::NodeS3>(nodes);
+//  bb::BranchAndBound<bb::NodeS3> bb(lower_bound, upper_bound);
+  bb::BranchAndBound<bb::NodeS3> bb(lower_bound, upper_bound_convex);
+  bb::NodeS3 node_star = bb.Compute(nodes, eps, max_it);
+//  bb::CountBranchesInTree<bb::NodeS3>(nodes);
   Eigen::Quaterniond q_star = node_star.GetLbArgument();
   std::cout << "optimum BB quaternion: "  << q_star.coeffs().transpose()
       << " angle: " << 2.*acos(q_star.w()) * 180. / M_PI << std::endl
@@ -545,7 +545,7 @@ int main(int argc, char** argv) {
   for (uint32_t k=0; k<qs.size(); ++k) {
     Eigen::Quaterniond q = qs[k]; 
     // To get all corners of the bounding box.j
-    OptRot::Box box(minA, maxA);
+    bb::Box box(minA, maxA);
     // Update the boundaries of the the rotated point cloud A to get
     // the full translation space later on.
     for (uint32_t i=0; i<8; ++i) {
@@ -569,25 +569,25 @@ int main(int argc, char** argv) {
     std::cout << "min t: " << min.transpose() 
       << " max t: " << max.transpose() << std::endl;
 
-    std::list<OptRot::NodeR3> nodesR3 =
-      OptRot::GenerateNotesThatTessellateR3(min, max, (max-min).norm());
-    OptRot::LowerBoundR3 lower_bound_R3(gmmA, gmmB, q);
-    OptRot::UpperBoundIndepR3 upper_bound_R3(gmmA, gmmB, q);
-    OptRot::UpperBoundConvexR3 upper_bound_convex_R3(gmmA, gmmB, q);
+    std::list<bb::NodeR3> nodesR3 =
+      bb::GenerateNotesThatTessellateR3(min, max, (max-min).norm());
+    bb::LowerBoundR3 lower_bound_R3(gmmA, gmmB, q);
+    bb::UpperBoundIndepR3 upper_bound_R3(gmmA, gmmB, q);
+    bb::UpperBoundConvexR3 upper_bound_convex_R3(gmmA, gmmB, q);
 
     if (output_init_bounds) {
-      WriteBounds<OptRot::NodeR3>(lower_bound_R3, upper_bound_R3,
+      WriteBounds<bb::NodeR3>(lower_bound_R3, upper_bound_R3,
           upper_bound_convex_R3, nodesR3);
     }
 
     std::cout << "# initial nodes: " << nodesR3.size() << std::endl;
     eps = 1e-9;
     max_it = 10000;
-    OptRot::BranchAndBound<OptRot::NodeR3> bbR3(lower_bound_R3, upper_bound_convex_R3);
+    bb::BranchAndBound<bb::NodeR3> bbR3(lower_bound_R3, upper_bound_convex_R3);
     std::cout << " BB on R3 eps=" << eps << " max_it=" << max_it << std::endl;
-    OptRot::NodeR3 nodeR3_star = bbR3.Compute(nodesR3, eps, max_it);
+    bb::NodeR3 nodeR3_star = bbR3.Compute(nodesR3, eps, max_it);
     Eigen::Vector3d t =  nodeR3_star.GetLbArgument();
-    //    OptRot::CountBranchesInTree<OptRot::NodeR3>(nodesR3);
+    //    bb::CountBranchesInTree<bb::NodeR3>(nodesR3);
     std::cout << "with LB " << nodeR3_star.GetLB() << " optimum translation: " 
       << t.transpose() << std::endl;
     ts.push_back(t);

@@ -4,13 +4,13 @@
 
 #include <fstream>
 #include <sstream>
-#include "optRot/bound.h"
-#include "optRot/branch_and_bound.h"
+#include "bbTrans/bound.h"
+#include "bbTrans/branch_and_bound.h"
 
 
 template<class Node>
-void WriteBounds(OptRot::Bound<Node>& lower_bound, OptRot::Bound<Node>&
-    upper_bound, OptRot::Bound<Node>& upper_bound_convex, const
+void WriteBounds(bb::Bound<Node>& lower_bound, bb::Bound<Node>&
+    upper_bound, bb::Bound<Node>& upper_bound_convex, const
     std::list<Node>& nodes) {
     std::stringstream ss;
     ss << "./bb_bounds_" << nodes.begin()->GetSpace() << "_t0.csv";

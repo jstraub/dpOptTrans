@@ -1,9 +1,9 @@
 # Copyright (c) 2015, Julian Straub <jstraub@csail.mit.edu>
 # Licensed under the MIT license. See the license file LICENSE.
 
-project(dpvMFoptRot)
+project(dpOptTrans)
 cmake_minimum_required(VERSION 2.8.1)
-set(POD_NAME dpvMFoptRot)
+set(POD_NAME dpOptTrans)
 include(cmake/pods.cmake)
 
 if(COMMAND cmake_policy)
@@ -48,9 +48,9 @@ link_directories(
   ${PCL_LIBRARY_DIRS}
 )
 
-cuda_add_executable(dpvMFoptRotPly ./src/dp_vmf_opt_rot_ply.cpp
+cuda_add_executable(dpOptTransPly ./src/dp_vmf_opt_rot_ply.cpp
   ./src/pc_helper.cpp)
-target_link_libraries(dpvMFoptRotPly optRot
+target_link_libraries(dpOptTransPly bbTrans
     jsCore dpMMlowVar #cudaPcl
     boost_system boost_thread boost_program_options
     pcl_common pcl_io pcl_visualization pcl_filters pcl_search
@@ -59,9 +59,9 @@ target_link_libraries(dpvMFoptRotPly optRot
     ${OpenCV_LIBS}
   )
 
-#cuda_add_executable(dpvMFoptRot ./src/dp_vmf_opt_rot.cpp
+#cuda_add_executable(dpOptTrans ./src/dp_vmf_opt_rot.cpp
 #  ./src/pc_helper.cpp)
-#target_link_libraries(dpvMFoptRot optRot
+#target_link_libraries(dpOptTrans bbTrans
 #    jsCore dpMMlowVar cudaPcl
 #    boost_system boost_thread boost_program_options
 #    pcl_common pcl_io pcl_visualization pcl_filters pcl_search
@@ -72,7 +72,7 @@ target_link_libraries(dpvMFoptRotPly optRot
 
 cuda_add_executable(moment_matched_T3 ./src/moment_matched_T3.cpp
   ./src/pc_helper.cpp)
-target_link_libraries(moment_matched_T3 optRot
+target_link_libraries(moment_matched_T3 bbTrans
     jsCore dpMMlowVar 
     boost_system boost_thread boost_program_options
     pcl_common pcl_io pcl_visualization pcl_filters pcl_search
@@ -83,7 +83,7 @@ target_link_libraries(moment_matched_T3 optRot
 
 cuda_add_executable(icp_T3 ./src/icp_T3.cpp
   ./src/pc_helper.cpp)
-target_link_libraries(icp_T3 optRot
+target_link_libraries(icp_T3 bbTrans
     jsCore dpMMlowVar 
     boost_system boost_thread boost_program_options
     pcl_common pcl_io pcl_visualization pcl_filters pcl_search
@@ -92,10 +92,10 @@ target_link_libraries(icp_T3 optRot
     ${OpenCV_LIBS}
   )
 
-pods_install_executables(dpvMFoptRotPly moment_matched_T3
+pods_install_executables(dpOptTransPly moment_matched_T3
   icp_T3)
-#pods_install_libraries(optRot)
+#pods_install_libraries(bbTrans)
 pods_install_headers(
-  ./include/dpvMFoptRot/dp_vmf_opt_rot.h
-  ./include/dpvMFoptRot/pc_helper.h
-  DESTINATION dpvMFoptRot)
+  ./include/dpOptTrans/dp_vmf_opt_rot.h
+  ./include/dpOptTrans/pc_helper.h
+  DESTINATION dpOptTrans)
