@@ -37,7 +37,8 @@ below).
 
 - *Linux:* 
 
-    Install Eigen3, Boost, OpenCV, and PCL
+    Install Eigen3, Boost, OpenCV, and PCL (install instructions are at
+    http://pointclouds.org/downloads/linux.html)
 
     ```
     sudo apt-get install libeigen3-dev libboost-dev libopencv-dev libpcl-1.7-all-dev
