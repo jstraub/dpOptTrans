@@ -13,16 +13,19 @@ def EvalError(q_gt, t_gt, q, t):
   err_t = np.sqrt(((t_gt-t)**2).sum())
   return err_a, err_t
 
-def DisplayPcs(scanApath, scanBpath, q,t, plotCosies, stopToDisplay):
+def DisplayPcs(scanApath, scanBpath, q,t, plotCosies, stopToDisplay,
+    displayNormals):
   from js.data.plyParse import PlyParse
   from js.utils.plot.colors import colorScheme
   from js.geometry.rotations import plotCosy
   import mayavi.mlab as mlab
   colors = colorScheme("label")
+  print "parsing", scanApath
   plyA = PlyParse();
   plyA.parse(scanApath)
   pcA = plyA.getPc()
   nA = plyA.getNormals()
+  print "parsing", scanBpath
   plyB = PlyParse();
   plyB.parse(scanBpath)
   pcB = plyB.getPc()
@@ -45,11 +48,12 @@ def DisplayPcs(scanApath, scanBpath, q,t, plotCosies, stopToDisplay):
   mlab.points3d(pcB[:,0], pcB[:,1], pcB[:,2], mode="point",
         color=colors[1])
 
-  figm = mlab.figure(bgcolor=(1,1,1))
-  mlab.points3d(nA[:,0], nA[:,1], nA[:,2], mode="point",
-      color=colors[0])
-  mlab.points3d(nB[:,0], nB[:,1], nB[:,2], mode="point",
-        color=colors[1])
+  if displayNormals:
+    figm = mlab.figure(bgcolor=(1,1,1))
+    mlab.points3d(nA[:,0], nA[:,1], nA[:,2], mode="point",
+        color=colors[0])
+    mlab.points3d(nB[:,0], nB[:,1], nB[:,2], mode="point",
+          color=colors[1])
 
   if stopToDisplay:
     mlab.show(stop=True)
@@ -177,6 +181,13 @@ if subp.call(" ".join(args), shell=True) == 0:
     print "GoICP: {} deg {} m".format(err_a, err_t)
     results["GoICP"] = {"err_a":err_a, "err_t":err_t, "q":q.q.tolist(),
         "t":t.tolist(), "dt":dt}
+
+    q0 = Quaternion(1.,0.,0.,0.)
+    DisplayPcs(scanApath, scanBpath, q0, np.zeros(3), False, False, False)
+    DisplayPcs(scanApath, scanBpath, q,t, False,False,False)
+#    print "displaying"
+    DisplayPcs(scanApath, scanBpath, q.inverse(),-q.toRot().R.T.dot(t),
+        True,True,False)
 
   if runFFT:
     q,t,dt,success = RunFFT(scanApath, scanBpath, transformationPathFFT)

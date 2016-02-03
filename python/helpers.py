@@ -142,27 +142,12 @@ def RunICP(scanApath, scanBpath, transformationPathICP,
   q,t = LoadTransformation(transformationPathICP)
   return q,t,dt,True
 def RunGoICP(scanApath, scanBpath, transformationPathGoICP,
-    NdDownsampled=0):
-  print scanApath
-  plyA = PlyParse()
-  plyA.parse(scanApath)
-  pcA = plyA.getPc()
-  with open(re.sub(".csv",".txt",scanApath),'w') as f:
-    print pcA.shape
-    f.write("{}\n".format(pcA.shape[0]))
-    np.savetxt(f, pcA)
-
-  plyB = PlyParse()
-  plyB.parse(scanBpath)
-  pcB = plyB.getPc()
-  with open(re.sub(".csv",".txt",scanBpath),'w') as f:
-    print pcB.shape
-    f.write("{}\n".format(pcB.shape[0]))
-    np.savetxt(f, pcB)
+    NdDownsampled=1000):
+  scale = PreparePcForGoICP(scanApath, scanBpath)
 
   args = ['../goIcp/src/build/GoICP', 
-      re.sub(".csv",".txt",scanApath),
-      re.sub(".csv",".txt",scanBpath),
+      re.sub(".ply",".txt",scanApath),
+      re.sub(".ply",".txt",scanBpath),
       '{}'.format(NdDownsampled),
       '../goIcp/config.txt',
       re.sub(".csv",".txt",transformationPathGoICP)
@@ -170,7 +155,45 @@ def RunGoICP(scanApath, scanBpath, transformationPathGoICP,
   print " ".join(args)
   err = subp.call(" ".join(args), shell=True)
   q,t,dt = LoadTransformationGoICP(re.sub(".csv",".txt",transformationPathGoICP))
+  t*= scale
   return q,t,dt,True
+
+def PreparePcForGoICP(scanApath, scanBpath):
+  plyA = PlyParse()
+  plyA.parse(scanApath)
+  pcA = plyA.getPc()
+#  for i in range(3):
+#    pcA[i,:] = 2.*(pcA[i,:]-np.min(pcA[i,:]))/(np.max(pcA[i,:])-np.min(pcA[i,:])) - 1.
+
+  plyB = PlyParse()
+  plyB.parse(scanBpath)
+  pcB = plyB.getPc()
+
+#  pcA -= np.mean(pcA, axis=0)
+#  pcB -= np.mean(pcB, axis=0)
+#  scale = max([np.max(pcA), np.max(pcB), np.max(-pcA), np.max(-pcB)])
+#  pcA *= 1./scale
+#  pcB *= 1./scale
+#  print "min/maxes after scaling", [np.max(pcA), np.max(pcB), np.min(pcA), np.min(pcB)]
+
+  with open(re.sub(".ply",".txt",scanApath),'w') as f:
+    print pcA.shape
+    np.random.shuffle(pcA)
+    if pcA.shape[0] > 30000:
+      pcA = pcA[:30000,:]
+      print pcA.shape
+    print pcA.shape
+    f.write("{}\n".format(pcA.shape[0]))
+    np.savetxt(f, pcA)
+  with open(re.sub(".ply",".txt",scanBpath),'w') as f:
+    np.random.shuffle(pcB)
+    print pcB.shape
+    if pcB.shape[0] > 30000:
+      pcB = pcB[:30000,:]
+    f.write("{}\n".format(pcB.shape[0]))
+    np.savetxt(f, pcB)
+
+  return 1.
 
 def LoadTransformation(transformationPath):
   with open(transformationPath) as f:
@@ -305,10 +328,18 @@ def LoadTransformationGoICP(transformationPathGoICP):
     dt = float(f.readline())
     R = np.zeros((3,3))
     for i in range(3):
-      R[i,:] = np.array([float(Ri) for Ri in f.readline().split(" ")])
+      Ristring = f.readline()[:-1].split(" ")
+      print Ristring
+      R[i,:] = np.array([float(Ri) for Ri in Ristring if len(Ri) > 1])
     t = np.zeros(3)
     for i in range(3):
-      t[i] = float(f.readline())
+      t[i] = float(f.readline()[:-1])
+    print "R",R
+    print "t",t
+    print "dt",dt
+#    R = R.T
+#    t = - R.dot(t)
     q = Quaternion()
-    q.fromRot3(R)
-    return q,t,dt
+    q.fromRot3(R.T)
+    return q, -R.T.dot(t), dt
+

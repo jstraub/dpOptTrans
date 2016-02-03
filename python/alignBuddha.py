@@ -8,32 +8,45 @@ from js.geometry.rotations import Quaternion
 from js.utils.plot.colors import colorScheme
 from helpers import *
 
+cfgBuddha = {"name":"buddha", "lambdaS3": [80], "lambdaR3": 0.0008}
+cfgEnschede = {"name":"enschede", "lambdaS3": [60, 70, 80], "lambdaR3":0.3}
+cfgBunnyZipper = {"name":"bun_zipper", "lambdaS3": [60], "lambdaR3": 0.001}
+cfgBunnyAB = {"name":"bunnyAB", "lambdaS3": [45, 60, 70, 80], "lambdaR3": 0.003}
+cfgBunny = {"name":"bunny", "lambdaS3": [60, 70, 80], "lambdaR3": 0.003}
 cfgBuddhaRnd = {"name":"buddhaRnd", "lambdaS3": [60, 70, 80],
   "lambdaR3": 0.002}
-cfgBuddha = {"name":"buddha", "lambdaS3": [80], "lambdaR3": 0.0008}
-cfgBunny = {"name":"bunny", "lambdaS3": [60, 70, 80], "lambdaR3": 0.003}
-cfgEnschede = {"name":"enschede", "lambdaS3": [60, 70, 80], "lambdaR3":0.3}
-cfgBunnyAB = {"name":"bunnyAB", "lambdaS3": [45, 60, 70, 80], "lambdaR3": 0.003}
-cfgBunnyZipper = {"name":"bun_zipper", "lambdaS3": [60], "lambdaR3": 0.001}
+cfgLymph = {"name":"lymph", "lambdaS3": [80], "lambdaR3": 1.}
 
 cfg = cfgBunny
-cfg = cfgBuddha
 cfg = cfgEnschede
 cfg = cfgBuddhaRnd
-cfg = cfgBunnyAB
 cfg = cfgBunnyZipper
+cfg = cfgBunnyAB
+cfg = cfgBuddha
+cfg = cfgLymph
 
 loadCached = False
 stopToShow = False
 showUntransformed = False
-applyBB = True
+applyBB = False
 applyBBEGI = False
 applyFFT = False
 applyMM = False
 applyICP = False
+runGoICP = True
 loadGlobalsolutionforICP = True
 useSurfaceNormalsInICP = True
 
+if cfg["name"] == "lymph":
+  pattern = "frame_[0-9]+.ply$"
+  scans = []
+  for root, dirs, files in os.walk("../data/lymph/dataset_3/"):
+    for f in files:
+      if re.search(pattern, f):
+        scans.append(os.path.join(root, f))
+  scans = sorted(scans, key=lambda f: 
+    int(re.sub(".ply","",re.sub("frame_","",os.path.split(f)[1]))))
+  gt = []
 if cfg["name"] == "buddha":
   pattern = "happyStandRight_[0-9]+.ply$"
   scans = []
@@ -113,6 +126,7 @@ for i in range(1,len(scans)):
   transformationPathICP = '{}_{}_ICP.csv'.format(nameA, nameB)
   transformationPathFFT = '{}_{}_FFT.csv'.format(nameA, nameB)
   transformationPathMM = '{}_{}_MM.csv'.format(nameA, nameB)
+  transformationPathGoICP = '{}_{}_GoICP.csv'.format(nameA, nameB)
 
   if i == 1:
     plyA = PlyParse();
@@ -121,6 +135,9 @@ for i in range(1,len(scans)):
     figm = mlab.figure(bgcolor=(1,1,1))
     mlab.points3d(pcA[:,0], pcA[:,1], pcA[:,2], mode="point",
         color=colors[0])
+
+  if runGoICP:
+    q,t,dt,success = RunGoICP(scanApath, scanBpath, transformationPathGoICP)
 
   if applyBB:
     if loadCached and os.path.isfile(transformationPathBB):
