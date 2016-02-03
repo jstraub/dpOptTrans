@@ -20,20 +20,20 @@ cfgLymph = {"name":"lymph", "lambdaS3": [80], "lambdaR3": 1.}
 cfg = cfgBunny
 cfg = cfgEnschede
 cfg = cfgBuddhaRnd
-cfg = cfgBunnyZipper
 cfg = cfgBunnyAB
 cfg = cfgBuddha
 cfg = cfgLymph
+cfg = cfgBunnyZipper
 
 loadCached = False
 stopToShow = False
 showUntransformed = False
-applyBB = False
+applyBB = True
 applyBBEGI = False
 applyFFT = False
 applyMM = False
 applyICP = False
-runGoICP = True
+runGoICP = False
 loadGlobalsolutionforICP = True
 useSurfaceNormalsInICP = True
 

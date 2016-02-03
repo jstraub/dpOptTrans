@@ -35,7 +35,7 @@ def RunFFT(scanApath, scanBpath, transformationPathFFT, q_gt=None,
     return qs[id_best], ts[id_best], dt, True
 def RunBBsimple(scanApath, scanBpath, transformationPathBB, lambdaS3,
     lambdaR3, EGImode=False):
-  args = ['../pod-build/bin/dpvMFoptRotPly', 
+  args = ['../pod-build/bin/dpOptTransPly', 
       '-a {}'.format(scanApath), 
       '-b {}'.format(scanBpath), 
       '-l {}'.format(lambdaS3),
@@ -66,7 +66,7 @@ def RunBB(cfg, scanApath, scanBpath, transformationPathBB,\
   qs, ts = [],[]
   dt = 0.
   for j,lambdaS3 in enumerate(cfg["lambdaS3"]):
-    args = ['../pod-build/bin/dpvMFoptRotPly', 
+    args = ['../pod-build/bin/dpOptTransPly', 
         '-a {}'.format(scanApath), 
         '-b {}'.format(scanBpath), 
         '-l {}'.format(lambdaS3),
