@@ -1,6 +1,8 @@
 build
 *~
 *.pyc
+*.txt
+*.mp4
 *.csv
 tags
 *.swp
