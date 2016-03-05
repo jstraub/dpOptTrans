@@ -218,8 +218,9 @@ int main(int argc, char** argv) {
   
   bb::BranchAndBound<bb::NodeS3> bb(lower_bound, upper_bound_convexity);
   double eps = 1e-4 / 180. * M_PI;
+  uint32_t max_lvl = 60;
   uint32_t max_it = 300;
-  bb::NodeS3 node_star = bb.Compute(nodes, eps, max_it);
+  bb::NodeS3 node_star = bb.Compute(nodes, eps, max_lvl, max_it);
 
   std::cout << "optimum quaternion: " 
     << node_star.GetTetrahedron().GetCenter().transpose()

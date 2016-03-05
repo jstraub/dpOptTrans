@@ -19,6 +19,9 @@
 #include "bbTrans/lower_bound_S3.h"
 #include "bbTrans/upper_bound_indep_S3.h"
 #include "bbTrans/upper_bound_convex_S3.h"
+#include "bbTrans/lower_bound_TpS3.h"
+#include "bbTrans/upper_bound_indep_TpS3.h"
+#include "bbTrans/upper_bound_convex_TpS3.h"
 #include "bbTrans/branch_and_bound.h"
 #include "bbTrans/vmf.h"
 #include "bbTrans/vmf_mm.h"
@@ -346,6 +349,7 @@ int main(int argc, char** argv) {
     ("out,o", po::value<string>(), "path to output file")
     ("scale,s", po::value<float>(),"scale for point-cloud")
     ("egi,e", "make the vMF MM pis uniform - like a EGI")
+    ("TpS", "use TpS-based tessellation instead of 600-cell based (not recommended)")
     ("display,d", "display results")
     ("verbose,v", "be verbose")
     ;
@@ -374,6 +378,7 @@ int main(int argc, char** argv) {
 
   bool output_init_bounds = false;
   bool egi_mode = false;
+  bool TpS_mode = false;
   string pathA = "";
   string pathB = "";
   std::string pathOut = "";
@@ -385,6 +390,7 @@ int main(int argc, char** argv) {
   float scale = 1.;
   if(vm.count("scale")) scale = vm["scale"].as<float>();
   if(vm.count("egi")) egi_mode = true;
+  if(vm.count("TpS")) TpS_mode = true;
   if (egi_mode)
     std::cout << "Using EGI mode - making pis of vMF MM uniform." << std::endl;
 
@@ -447,36 +453,80 @@ int main(int argc, char** argv) {
 
   bb::vMFMM<3> vmfmmA(vmfsA);
   bb::vMFMM<3> vmfmmB(vmfsB);
-  std::cout << " Tessellate S3" << std::endl;
-  std::list<bb::NodeS3> nodes = bb::GenerateNotesThatTessellateS3();
-  std::cout << "# initial nodes: " << nodes.size() << std::endl;
-  bb::LowerBoundS3 lower_bound(vmfmmA, vmfmmB);
-  bb::UpperBoundIndepS3 upper_bound(vmfmmA, vmfmmB);
-  bb::UpperBoundConvexS3 upper_bound_convex(vmfmmA, vmfmmB);
+  bb::LowerBoundS3 lower_bound_S3(vmfmmA, vmfmmB);
+  bb::UpperBoundIndepS3 upper_bound_S3(vmfmmA, vmfmmB);
+  bb::UpperBoundConvexS3 upper_bound_convex_S3(vmfmmA, vmfmmB);
 
-  if (output_init_bounds) {
-    WriteBounds<bb::NodeS3>(lower_bound, upper_bound, upper_bound_convex,
-        nodes);
-  }
-  
-  double eps = 1e-9;
-//  double eps = 8e-7;
-  uint32_t max_it = 10000;
-  std::cout << " BB on S3 eps=" << eps << " max_it=" << max_it << std::endl;
-//  bb::BranchAndBound<bb::NodeS3> bb(lower_bound, upper_bound);
-  bb::BranchAndBound<bb::NodeS3> bb(lower_bound, upper_bound_convex);
-  bb::NodeS3 node_star = bb.Compute(nodes, eps, max_it);
+  std::list<bb::NodeS3> nodesS3;
+  Eigen::Quaterniond q_star;
+  double lb_star = 1e99;
+  if (TpS_mode)  {
+
+    std::cout << " Tessellate TpS3" << std::endl;
+    Eigen::Vector3d p_min(-M_PI,-M_PI,-M_PI);
+    Eigen::Vector3d p_max(M_PI,M_PI,M_PI);
+    bb::NodeTpS3 root(bb::Box(p_min, p_max),std::vector<uint32_t>(0));
+    std::cout << root.ToString() << std::endl;
+    std::vector<bb::NodeTpS3> l1 = root.Branch();
+    std::list<bb::NodeTpS3> nodes;
+    for (auto& node1 : l1) {
+      std::vector<bb::NodeTpS3> l2 = node1.Branch();
+      for (auto& node2 : l2) {
+        std::vector<bb::NodeTpS3> l3 = node2.Branch();
+        nodes.insert(nodes.end(), l3.begin(), l3.end());
+      }
+    }
+    std::cout << "# initial nodes: " << nodes.size() << std::endl;
+
+    bb::LowerBoundTpS3 lower_bound_TpS3(lower_bound_S3);
+    bb::UpperBoundIndepTpS3 upper_bound_TpS3(upper_bound_S3);
+    bb::UpperBoundConvexTpS3 upper_bound_convex_TpS3(upper_bound_convex_S3);
+    if (output_init_bounds) {
+      WriteBounds<bb::NodeTpS3>(lower_bound_TpS3, upper_bound_TpS3,
+          upper_bound_convex_TpS3, nodes);
+    }
+    double eps = 1e-9;
+  //  double eps = 8e-7;
+    uint32_t max_lvl = 80;
+    uint32_t max_it = 10000;
+    std::cout << " BB on S3 eps=" << eps << " max_it=" << max_it << std::endl;
+    bb::BranchAndBound<bb::NodeTpS3> bb(lower_bound_TpS3, upper_bound_convex_TpS3);
+    bb::NodeTpS3 node_star = bb.Compute(nodes, eps, max_lvl, max_it);
 //  bb::CountBranchesInTree<bb::NodeS3>(nodes);
-  Eigen::Quaterniond q_star = node_star.GetLbArgument();
+    q_star = node_star.GetLbArgument();
+    lb_star = node_star.GetLB();
+    // output a list of NodeS3s for further processing; use the
+    // interior Node for this.
+    for (const auto& node : nodes)
+      nodesS3.push_back(node.GetNodeS3(4));
+  } else {
+    std::cout << " Tessellate S3" << std::endl;
+    nodesS3 = bb::GenerateNotesThatTessellateS3();
+    std::cout << "# initial nodes: " << nodesS3.size() << std::endl;
+    if (output_init_bounds) {
+      WriteBounds<bb::NodeS3>(lower_bound_S3, upper_bound_S3,
+          upper_bound_convex_S3, nodesS3);
+    }
+    double eps = 1e-9;
+  //  double eps = 8e-7;
+    uint32_t max_lvl = 80;
+    uint32_t max_it = 10000;
+    std::cout << " BB on S3 eps=" << eps << " max_it=" << max_it << std::endl;
+    bb::BranchAndBound<bb::NodeS3> bb(lower_bound_S3, upper_bound_convex_S3);
+    bb::NodeS3 node_star = bb.Compute(nodesS3, eps, max_lvl, max_it);
+//  bb::CountBranchesInTree<bb::NodeS3>(nodesS3);
+    q_star = node_star.GetLbArgument();
+    lb_star = node_star.GetLB();
+  }
   std::cout << "optimum BB quaternion: "  << q_star.coeffs().transpose()
       << " angle: " << 2.*acos(q_star.w()) * 180. / M_PI << std::endl
       << q_star.toRotationMatrix()
       << std::endl;
   Eigen::Vector3d t_star; 
 
-  shared_ptr<Eigen::MatrixXd> qAll(new MatrixXd(4, nodes.size()));
-  auto it=nodes.begin();
-  for (uint32_t i=0; i < nodes.size(); ++i, it++) {
+  shared_ptr<Eigen::MatrixXd> qAll(new MatrixXd(4, nodesS3.size()));
+  auto it=nodesS3.begin();
+  for (uint32_t i=0; i < nodesS3.size(); ++i, it++) {
     qAll->col(i) = it->GetTetrahedron().GetCenter();
   }
   double lambda_q = cos(2.*10.*M_PI/180.) - 1.; // TODO
@@ -491,16 +541,16 @@ int main(int argc, char** argv) {
   std::vector<double> lbsS3prelim;
   if (dpvMF.K() == 1) {
     qsPrelim.push_back(q_star);
-    lbsS3prelim.push_back(node_star.GetLB());
+    lbsS3prelim.push_back(lb_star);
   } else {
     std::cout << "======== K > 1: " << dpvMF.K() << std::endl;
     for (uint32_t k=0; k<dpvMF.K(); ++k) {
-      auto it = nodes.begin();
+      auto it = nodesS3.begin();
       auto z = dpvMF.z();
       // Find the node whith maximum LB in each cluster.
       double lb_max = -1.e20;
       Eigen::Quaterniond q_k; 
-      for (uint32_t i=0; i<nodes.size(); ++i, it++) 
+      for (uint32_t i=0; i<nodesS3.size(); ++i, it++) 
         if (z(i) == k && lb_max < it->GetLB()) {
           lb_max = it->GetLB();
           q_k = it->GetTetrahedron().GetCenterQuaternion();
@@ -581,11 +631,12 @@ int main(int argc, char** argv) {
     }
 
     std::cout << "# initial nodes: " << nodesR3.size() << std::endl;
-    eps = 1e-9;
-    max_it = 10000;
+    double eps = 1e-9;
+    uint32_t max_it = 10000;
+    uint32_t max_lvl = 80;
     bb::BranchAndBound<bb::NodeR3> bbR3(lower_bound_R3, upper_bound_convex_R3);
     std::cout << " BB on R3 eps=" << eps << " max_it=" << max_it << std::endl;
-    bb::NodeR3 nodeR3_star = bbR3.Compute(nodesR3, eps, max_it);
+    bb::NodeR3 nodeR3_star = bbR3.Compute(nodesR3, eps, max_lvl, max_it);
     Eigen::Vector3d t =  nodeR3_star.GetLbArgument();
     //    bb::CountBranchesInTree<bb::NodeR3>(nodesR3);
     std::cout << "with LB " << nodeR3_star.GetLB() << " optimum translation: " 
