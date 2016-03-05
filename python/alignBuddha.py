@@ -34,6 +34,7 @@ applyFFT = False
 applyMM = False
 applyICP = False
 runGoICP = False
+useTpStessellation = True
 loadGlobalsolutionforICP = True
 useSurfaceNormalsInICP = True
 
@@ -143,14 +144,17 @@ for i in range(1,len(scans)):
     if loadCached and os.path.isfile(transformationPathBB):
       print "found transformation file and using it "+transformationPathBB
     else:
-      q,t,Ks,dt,_ = RunBB(cfg, scanApath, scanBpath, transformationPathBB)
+      q,t,Ks,dt,_ = RunBB(cfg, scanApath, scanBpath,
+          transformationPathBB, TpSmode=useTpStessellation)
     transformationPath = transformationPathBB
 
   if applyBBEGI:
     if loadCached and os.path.isfile(transformationPathBBEGI):
       print "found transformation file and using it "+transformationPathBBEGI
     else:
-      q,t,dt,_ = RunBB(cfg, scanApath, scanBpath, transformationPathBBEGI, True)
+      q,t,dt,_ = RunBB(cfg, scanApath, scanBpath,
+          transformationPathBBEGI, EGImode=True, TpSmode=
+          useTpStessellation)
     transformationPath = transformationPathBBEGI
 
   if applyFFT:

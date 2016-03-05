@@ -8,15 +8,15 @@ mpl.rc('font',size=35)
 mpl.rc('lines',linewidth=4.)
 figSize = (14, 5.5)
 figSize = (9, 12)
-figSize = [(15.4, 10), (12.6, 10)]
+figSize = [(15.4, 10), (15.4, 10), (12.6, 10)]
 
 c1 = colorScheme("labelMap")["turquoise"]
 c2 = colorScheme("labelMap")["orange"]
 
-space = ["$\mathbb{S}^{3}$", "$\mathbb{R}^3$"]
-disp = [1,0.7]
+space = ["$Tp\mathbb{S}^{3}$", "$\mathbb{S}^{3}$", "$\mathbb{R}^3$"]
+disp = [1,1,0.7]
 
-for i, path in enumerate(['./bb_iteration_stats_S3.csv',
+for i, path in enumerate(['./bb_iteration_stats_TpS3.csv','./bb_iteration_stats_S3.csv',
   './bb_iteration_stats_R3.csv']):
   s = np.loadtxt(path).T
   s[:2,:] = np.log(s[:2,:])/np.log(10)

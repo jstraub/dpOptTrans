@@ -59,7 +59,7 @@ def RunBBsimple(scanApath, scanBpath, transformationPathBB, lambdaS3,
     return q, np.array([np.nan, np.nan, np.nan]), Ks,dt,False
   return q,t, Ks, dt,True
 def RunBB(cfg, scanApath, scanBpath, transformationPathBB,\
-    EGImode=False):
+    EGImode=False, TpSmode=False):
   lbsS3 = np.zeros(len(cfg["lambdaS3"]))
   lbsR3 = np.zeros(len(cfg["lambdaS3"]))
   Ks = np.zeros((len(cfg["lambdaS3"]), 4))
@@ -75,6 +75,8 @@ def RunBB(cfg, scanApath, scanBpath, transformationPathBB,\
         ]
     if EGImode:
       args.append('-e')
+    if TpSmode:
+      args.append('--TpS')
     print " ".join(args)
     t0 = time.time()
     err = subp.call(" ".join(args), shell=True)
