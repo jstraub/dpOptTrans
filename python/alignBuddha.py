@@ -20,9 +20,9 @@ cfgLymph = {"name":"lymph", "lambdaS3": [80], "lambdaR3": 1.}
 cfg = cfgBunny
 cfg = cfgEnschede
 cfg = cfgBuddhaRnd
-cfg = cfgBunnyAB
 cfg = cfgBuddha
 cfg = cfgLymph
+cfg = cfgBunnyAB
 cfg = cfgBunnyZipper
 
 loadCached = False
@@ -34,7 +34,11 @@ applyFFT = False
 applyMM = False
 applyICP = False
 runGoICP = False
-useTpStessellation = True
+
+useTpStessellation = False
+useAAtessellation = False
+
+outputBoundsAt0 = True
 loadGlobalsolutionforICP = True
 useSurfaceNormalsInICP = True
 
@@ -145,7 +149,9 @@ for i in range(1,len(scans)):
       print "found transformation file and using it "+transformationPathBB
     else:
       q,t,Ks,dt,_ = RunBB(cfg, scanApath, scanBpath,
-          transformationPathBB, TpSmode=useTpStessellation)
+          transformationPathBB, TpSmode=useTpStessellation,
+          outputBoundsAt0=outputBoundsAt0,
+          AAmode=useAAtessellation)
     transformationPath = transformationPathBB
 
   if applyBBEGI:

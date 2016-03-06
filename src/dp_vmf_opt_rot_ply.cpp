@@ -19,9 +19,8 @@
 #include "bbTrans/lower_bound_S3.h"
 #include "bbTrans/upper_bound_indep_S3.h"
 #include "bbTrans/upper_bound_convex_S3.h"
-#include "bbTrans/lower_bound_TpS3.h"
-#include "bbTrans/upper_bound_indep_TpS3.h"
-#include "bbTrans/upper_bound_convex_TpS3.h"
+#include "bbTrans/lower_bound_Lin.h"
+#include "bbTrans/upper_bound_Lin.h"
 #include "bbTrans/branch_and_bound.h"
 #include "bbTrans/vmf.h"
 #include "bbTrans/vmf_mm.h"
@@ -349,7 +348,9 @@ int main(int argc, char** argv) {
     ("out,o", po::value<string>(), "path to output file")
     ("scale,s", po::value<float>(),"scale for point-cloud")
     ("egi,e", "make the vMF MM pis uniform - like a EGI")
+    ("oB0", "output bounds at level 0")
     ("TpS", "use TpS-based tessellation instead of 600-cell based (not recommended)")
+    ("AA", "use axis-angle-based tessellation instead of 600-cell based (not recommended)")
     ("display,d", "display results")
     ("verbose,v", "be verbose")
     ;
@@ -379,6 +380,7 @@ int main(int argc, char** argv) {
   bool output_init_bounds = false;
   bool egi_mode = false;
   bool TpS_mode = false;
+  bool AA_mode = false;
   string pathA = "";
   string pathB = "";
   std::string pathOut = "";
@@ -391,6 +393,8 @@ int main(int argc, char** argv) {
   if(vm.count("scale")) scale = vm["scale"].as<float>();
   if(vm.count("egi")) egi_mode = true;
   if(vm.count("TpS")) TpS_mode = true;
+  if(vm.count("AA")) AA_mode = true;
+  if(vm.count("oB0")) output_init_bounds = true;
   if (egi_mode)
     std::cout << "Using EGI mode - making pis of vMF MM uniform." << std::endl;
 
@@ -463,8 +467,8 @@ int main(int argc, char** argv) {
   if (TpS_mode)  {
 
     std::cout << " Tessellate TpS3" << std::endl;
-    Eigen::Vector3d p_min(-M_PI,-M_PI,-M_PI);
-    Eigen::Vector3d p_max(M_PI,M_PI,M_PI);
+    Eigen::Vector3d p_min(-M_PI*0.5,-M_PI*0.5,-M_PI*0.5);
+    Eigen::Vector3d p_max( M_PI*0.5, M_PI*0.5, M_PI*0.5);
     bb::NodeTpS3 root(bb::Box(p_min, p_max),std::vector<uint32_t>(0));
     std::cout << root.ToString() << std::endl;
     std::vector<bb::NodeTpS3> l1 = root.Branch();
@@ -492,6 +496,44 @@ int main(int argc, char** argv) {
     std::cout << " BB on S3 eps=" << eps << " max_it=" << max_it << std::endl;
     bb::BranchAndBound<bb::NodeTpS3> bb(lower_bound_TpS3, upper_bound_convex_TpS3);
     bb::NodeTpS3 node_star = bb.Compute(nodes, eps, max_lvl, max_it);
+//  bb::CountBranchesInTree<bb::NodeS3>(nodes);
+    q_star = node_star.GetLbArgument();
+    lb_star = node_star.GetLB();
+    // output a list of NodeS3s for further processing; use the
+    // interior Node for this.
+    for (const auto& node : nodes)
+      nodesS3.push_back(node.GetNodeS3(4));
+  } else if (AA_mode)  {
+    std::cout << " Tessellate axis angle space" << std::endl;
+    Eigen::Vector3d p_min(-M_PI,-M_PI,-M_PI);
+    Eigen::Vector3d p_max( M_PI, M_PI, M_PI);
+    bb::NodeAA root(bb::Box(p_min, p_max),std::vector<uint32_t>(0));
+    std::cout << root.ToString() << std::endl;
+    std::vector<bb::NodeAA> l1 = root.Branch();
+    std::list<bb::NodeAA> nodes;
+    for (auto& node1 : l1) {
+      std::vector<bb::NodeAA> l2 = node1.Branch();
+      for (auto& node2 : l2) {
+        std::vector<bb::NodeAA> l3 = node2.Branch();
+        nodes.insert(nodes.end(), l3.begin(), l3.end());
+      }
+    }
+    std::cout << "# initial nodes: " << nodes.size() << std::endl;
+
+    bb::LowerBoundAA lower_bound_AA(lower_bound_S3);
+    bb::UpperBoundIndepAA upper_bound_AA(upper_bound_S3);
+    bb::UpperBoundConvexAA upper_bound_convex_AA(upper_bound_convex_S3);
+    if (output_init_bounds) {
+      WriteBounds<bb::NodeAA>(lower_bound_AA, upper_bound_AA,
+          upper_bound_convex_AA, nodes);
+    }
+    double eps = 1e-9;
+  //  double eps = 8e-7;
+    uint32_t max_lvl = 80;
+    uint32_t max_it = 10000;
+    std::cout << " BB on S3 eps=" << eps << " max_it=" << max_it << std::endl;
+    bb::BranchAndBound<bb::NodeAA> bb(lower_bound_AA, upper_bound_convex_AA);
+    bb::NodeAA node_star = bb.Compute(nodes, eps, max_lvl, max_it);
 //  bb::CountBranchesInTree<bb::NodeS3>(nodes);
     q_star = node_star.GetLbArgument();
     lb_star = node_star.GetLB();
