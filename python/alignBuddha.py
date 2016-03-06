@@ -11,7 +11,8 @@ from helpers import *
 cfgBuddha = {"name":"buddha", "lambdaS3": [80], "lambdaR3": 0.0008}
 cfgEnschede = {"name":"enschede", "lambdaS3": [60, 70, 80], "lambdaR3":0.3}
 cfgBunnyZipper = {"name":"bun_zipper", "lambdaS3": [60], "lambdaR3": 0.001}
-cfgBunnyAB = {"name":"bunnyAB", "lambdaS3": [45, 60, 70, 80], "lambdaR3": 0.003}
+#cfgBunnyAB = {"name":"bunnyAB", "lambdaS3": [45, 60, 70, 80], "lambdaR3": 0.003}
+cfgBunnyAB = {"name":"bunnyAB", "lambdaS3": [60], "lambdaR3": 0.001}
 cfgBunny = {"name":"bunny", "lambdaS3": [60, 70, 80], "lambdaR3": 0.003}
 cfgBuddhaRnd = {"name":"buddhaRnd", "lambdaS3": [60, 70, 80],
   "lambdaR3": 0.002}
@@ -22,8 +23,8 @@ cfg = cfgEnschede
 cfg = cfgBuddhaRnd
 cfg = cfgBuddha
 cfg = cfgLymph
-cfg = cfgBunnyAB
 cfg = cfgBunnyZipper
+cfg = cfgBunnyAB
 
 loadCached = False
 stopToShow = False
@@ -36,7 +37,7 @@ applyICP = False
 runGoICP = False
 
 useTpStessellation = False
-useAAtessellation = False
+useAAtessellation = True
 
 outputBoundsAt0 = True
 loadGlobalsolutionforICP = True

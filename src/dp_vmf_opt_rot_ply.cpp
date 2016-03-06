@@ -492,7 +492,7 @@ int main(int argc, char** argv) {
     double eps = 1e-9;
   //  double eps = 8e-7;
     uint32_t max_lvl = 80;
-    uint32_t max_it = 10000;
+    uint32_t max_it = 5000;
     std::cout << " BB on S3 eps=" << eps << " max_it=" << max_it << std::endl;
     bb::BranchAndBound<bb::NodeTpS3> bb(lower_bound_TpS3, upper_bound_convex_TpS3);
     bb::NodeTpS3 node_star = bb.Compute(nodes, eps, max_lvl, max_it);
@@ -530,7 +530,7 @@ int main(int argc, char** argv) {
     double eps = 1e-9;
   //  double eps = 8e-7;
     uint32_t max_lvl = 80;
-    uint32_t max_it = 10000;
+    uint32_t max_it = 5000;
     std::cout << " BB on S3 eps=" << eps << " max_it=" << max_it << std::endl;
     bb::BranchAndBound<bb::NodeAA> bb(lower_bound_AA, upper_bound_convex_AA);
     bb::NodeAA node_star = bb.Compute(nodes, eps, max_lvl, max_it);
@@ -552,7 +552,7 @@ int main(int argc, char** argv) {
     double eps = 1e-9;
   //  double eps = 8e-7;
     uint32_t max_lvl = 80;
-    uint32_t max_it = 10000;
+    uint32_t max_it = 5000;
     std::cout << " BB on S3 eps=" << eps << " max_it=" << max_it << std::endl;
     bb::BranchAndBound<bb::NodeS3> bb(lower_bound_S3, upper_bound_convex_S3);
     bb::NodeS3 node_star = bb.Compute(nodesS3, eps, max_lvl, max_it);
@@ -674,7 +674,7 @@ int main(int argc, char** argv) {
 
     std::cout << "# initial nodes: " << nodesR3.size() << std::endl;
     double eps = 1e-9;
-    uint32_t max_it = 10000;
+    uint32_t max_it = 5000;
     uint32_t max_lvl = 80;
     bb::BranchAndBound<bb::NodeR3> bbR3(lower_bound_R3, upper_bound_convex_R3);
     std::cout << " BB on R3 eps=" << eps << " max_it=" << max_it << std::endl;

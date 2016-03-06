@@ -8,18 +8,19 @@ mpl.rc('font',size=35)
 mpl.rc('lines',linewidth=4.)
 figSize = (14, 5.5)
 figSize = (9, 12)
-figSize = [(15.4, 10), (15.4, 10), (12.6, 10)]
+figSize = [(15.4, 10),  (15.4, 10), (15.4, 10), (12.6, 10)]
 
 c1 = colorScheme("labelMap")["turquoise"]
 c2 = colorScheme("labelMap")["orange"]
 cs = [colorScheme("labelMap")["turquoise"],
-    colorScheme("labelMap")["orange"] ]
+    colorScheme("labelMap")["orange"],
+    colorScheme("labelMap")["green"] ]
 
-space = ["AA", "$\mathbb{S}^{3}$", "$\mathbb{R}^3$"]
+space = ["$Tp\mathbb{S}^{3}$", "AA", "$\mathbb{S}^{3}$", "$\mathbb{R}^3$"]
 #space = ["$Tp\mathbb{S}^{3}$", "$\mathbb{S}^{3}$", "$\mathbb{R}^3$"]
-disp = [1,1,0.7]
+disp = [1,1,1,0.7]
 
-for i, path in enumerate(['./bb_iteration_stats_TpS3.csv',
+for i, path in enumerate(['./bb_iteration_stats_TpS3.csv', './bb_iteration_stats_AA.csv',
   './bb_iteration_stats_S3.csv', './bb_iteration_stats_R3.csv']):
   s = np.loadtxt(path).T
   s[:2,:] = np.log(s[:2,:])/np.log(10)
@@ -66,7 +67,7 @@ for i, path in enumerate(['./bb_iteration_stats_TpS3.csv',
 #  plt.show()
   plt.close(fig)
 
-paths = ['./bb_iteration_stats_TpS3.csv', './bb_iteration_stats_S3.csv']
+paths = ['./bb_iteration_stats_TpS3.csv', './bb_iteration_stats_AA.csv', './bb_iteration_stats_S3.csv']
 Ys = []
 fig = plt.figure(figsize = figSize[0], dpi = 80, facecolor="w", edgecolor="k")
 for i, path in enumerate(paths):
