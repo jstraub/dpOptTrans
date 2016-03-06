@@ -475,10 +475,10 @@ int main(int argc, char** argv) {
     std::list<bb::NodeTpS3> nodes;
     for (auto& node1 : l1) {
       std::vector<bb::NodeTpS3> l2 = node1.Branch();
-      for (auto& node2 : l2) {
-        std::vector<bb::NodeTpS3> l3 = node2.Branch();
-        nodes.insert(nodes.end(), l3.begin(), l3.end());
-      }
+//      for (auto& node2 : l2) {
+//        std::vector<bb::NodeTpS3> l3 = node2.Branch();
+        nodes.insert(nodes.end(), l2.begin(), l2.end());
+//      }
     }
     std::cout << "# initial nodes: " << nodes.size() << std::endl;
 
@@ -513,10 +513,10 @@ int main(int argc, char** argv) {
     std::list<bb::NodeAA> nodes;
     for (auto& node1 : l1) {
       std::vector<bb::NodeAA> l2 = node1.Branch();
-      for (auto& node2 : l2) {
-        std::vector<bb::NodeAA> l3 = node2.Branch();
-        nodes.insert(nodes.end(), l3.begin(), l3.end());
-      }
+//      for (auto& node2 : l2) {
+//        std::vector<bb::NodeAA> l3 = node2.Branch();
+        nodes.insert(nodes.end(), l2.begin(), l2.end());
+//      }
     }
     std::cout << "# initial nodes: " << nodes.size() << std::endl;
 

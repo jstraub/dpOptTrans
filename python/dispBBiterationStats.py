@@ -84,7 +84,7 @@ for i, path in enumerate(paths):
 #  s[:2,:] = np.log(s[:2,:])/np.log(10)
   plt.plot(s[0,:Ys[i]],label=space[i],color=cs[i])
   plt.plot(s[1,:Ys[i]],color=cs[i])
-  plt.fill_between(np.arange(Ys[i]), s[0,:], s[1,:], color=cs[i])
+#  plt.fill_between(np.arange(Ys[i]), s[0,:], s[1,:], color=cs[i])
 ax1.set_yscale("log", nonposy='clip')
 ax1.grid(True)
 plt.ylabel("bounds")
