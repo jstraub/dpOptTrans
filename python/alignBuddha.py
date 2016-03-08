@@ -36,8 +36,8 @@ applyMM = False
 applyICP = False
 runGoICP = False
 
-useTpStessellation = True
-useAAtessellation = False
+useTpStessellation = False
+useAAtessellation = True
 
 outputBoundsAt0 = True
 loadGlobalsolutionforICP = True
