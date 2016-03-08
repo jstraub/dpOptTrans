@@ -502,7 +502,7 @@ int main(int argc, char** argv) {
     // output a list of NodeS3s for further processing; use the
     // interior Node for this.
     for (const auto& node : nodes)
-      nodesS3.push_back(node.GetNodeS3(4));
+      nodesS3.push_back(node.GetNodeS3());
   } else if (AA_mode)  {
     std::cout << " Tessellate axis angle space" << std::endl;
     Eigen::Vector3d p_min(-M_PI,-M_PI,-M_PI);
@@ -540,7 +540,7 @@ int main(int argc, char** argv) {
     // output a list of NodeS3s for further processing; use the
     // interior Node for this.
     for (const auto& node : nodes)
-      nodesS3.push_back(node.GetNodeS3(4));
+      nodesS3.push_back(node.GetNodeS3());
   } else {
     std::cout << " Tessellate S3" << std::endl;
     nodesS3 = bb::GenerateNotesThatTessellateS3();

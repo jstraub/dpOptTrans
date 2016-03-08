@@ -1,7 +1,6 @@
 import numpy as np
 from scipy.linalg import inv
 from js.data.plyParse import PlyParse
-import mayavi.mlab as mlab
 import os.path, re
 import subprocess as subp
 from js.geometry.rotations import Quaternion
@@ -23,11 +22,12 @@ cfg = cfgEnschede
 cfg = cfgBuddhaRnd
 cfg = cfgBuddha
 cfg = cfgLymph
-cfg = cfgBunnyZipper
 cfg = cfgBunnyAB
+cfg = cfgBunnyZipper
 
 loadCached = False
 stopToShow = False
+showTransformed = False
 showUntransformed = False
 applyBB = True
 applyBBEGI = False
@@ -109,6 +109,9 @@ if cfg["name"] == "enschede":
 print scans
 colors = colorScheme("label")
 
+if showUntransformed or showTransformed:
+  import mayavi.mlab as mlab
+
 if showUntransformed:
   figm = mlab.figure(bgcolor=(1,1,1))
   for i in range(len(scans)):
@@ -138,9 +141,10 @@ for i in range(1,len(scans)):
     plyA = PlyParse();
     plyA.parse(scanApath)
     pcA = plyA.getPc()
-    figm = mlab.figure(bgcolor=(1,1,1))
-    mlab.points3d(pcA[:,0], pcA[:,1], pcA[:,2], mode="point",
-        color=colors[0])
+    if showTransformed:
+      figm = mlab.figure(bgcolor=(1,1,1))
+      mlab.points3d(pcA[:,0], pcA[:,1], pcA[:,2], mode="point",
+          color=colors[0])
 
   if runGoICP:
     q,t,dt,success = RunGoICP(scanApath, scanBpath, transformationPathGoICP)
@@ -210,9 +214,11 @@ for i in range(1,len(scans)):
   t = W_T_B[:3,3]
   pcB = (1.001*R.dot(pcB.T)).T + t
   
-  mlab.points3d(pcB[:,0], pcB[:,1], pcB[:,2], mode="point",
-        color=colors[i%len(colors)])
-  if stopToShow:
-    mlab.show(stop=True)
+  if showTransformed:
+    mlab.points3d(pcB[:,0], pcB[:,1], pcB[:,2], mode="point",
+          color=colors[i%len(colors)])
+    if stopToShow:
+      mlab.show(stop=True)
 print "Done!"
-mlab.show(stop=True)
+if showTransformed or showUntransformed:
+  mlab.show(stop=True)
