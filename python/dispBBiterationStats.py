@@ -91,7 +91,7 @@ for i, path in enumerate(paths):
 #  plt.fill_between(np.arange(Ys[i]), s[0,:], s[1,:], color=cs[i])
 ax1.set_yscale("log", nonposy='clip')
 ax1.grid(True)
-plt.ylabel("bounds")
+plt.ylabel("bound gap")
 ax1.yaxis.set_label_coords(labelx, 0.5)
 plt.xlim([0, Y-1])
 plt.setp(ax1.get_xticklabels(), visible=False)
