@@ -20,6 +20,9 @@ space = ["$Tp\mathbb{S}^{3}$", "AA", "$\mathbb{S}^{3}$", "$\mathbb{R}^3$"]
 #space = ["$Tp\mathbb{S}^{3}$", "$\mathbb{S}^{3}$", "$\mathbb{R}^3$"]
 disp = [1,1,1,0.7]
 
+# volume of half of the sphere S^3 in 4D
+VS3 = np.pi**2 
+
 for i, path in enumerate(['./bb_iteration_stats_TpS3.csv', './bb_iteration_stats_AA.csv',
   './bb_iteration_stats_S3.csv', './bb_iteration_stats_R3.csv']):
   s = np.loadtxt(path).T
@@ -82,8 +85,9 @@ ax1.locator_params(axis="y", nbins=10, tight=True)
 for i, path in enumerate(paths):
   s = np.loadtxt(path).T
 #  s[:2,:] = np.log(s[:2,:])/np.log(10)
-  plt.plot(s[0,:Ys[i]],label=space[i],color=cs[i])
-  plt.plot(s[1,:Ys[i]],color=cs[i])
+#  plt.plot(s[0,:Ys[i]],label=space[i],color=cs[i])
+#  plt.plot(s[1,:Ys[i]],color=cs[i])
+  plt.plot(np.arange(1,Ys[i]),s[1,1:Ys[i]]-s[0,1:Ys[i]],color=cs[i])
 #  plt.fill_between(np.arange(Ys[i]), s[0,:], s[1,:], color=cs[i])
 ax1.set_yscale("log", nonposy='clip')
 ax1.grid(True)
@@ -109,12 +113,13 @@ ax3 = plt.subplot(313, sharex=ax1)
 ax3.locator_params(axis="y", nbins=5, tight=True)
 for i, path in enumerate(paths):
   s = np.loadtxt(path).T
-  plt.plot(100.*(s[3,0]-s[3,:Ys[i]])/s[3,0], label=space[i], color=cs[i])
+  plt.plot(100.*s[3,:Ys[i]]/VS3, label=space[i], color=cs[i])
+#  plt.plot(100.*(VS3-s[3,:Ys[i]])/VS3, label=space[i], color=cs[i])
   plt.xlim([0, Y-1])
-ax3.set_ylabel("% explored")
+ax3.set_ylabel("% unexplored")
 ax3.yaxis.set_label_coords(labelx, 0.5)
 plt.xlabel("iterations of BB")
-ax3.set_ylim([0,101])
+ax3.set_ylim([0,150])
 ax3.grid(True)
 plt.legend(loc="best")
 plt.savefig("./bb_iteration_stats_S3_and_TpS3.png", figure=fig)
