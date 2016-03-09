@@ -119,4 +119,40 @@ ax3.grid(True)
 plt.legend(loc="best")
 plt.savefig("./bb_iteration_stats_S3_and_TpS3.png", figure=fig)
 print "saving result to ./bb_iteration_stats_S3_and_TpS3.png"
+
+
+fig = plt.figure(figsize = figSize[0], dpi = 80, facecolor="w", edgecolor="k")
+labelx = -0.09
+ax1 = plt.subplot(211)
+ax1.locator_params(axis="x", nbins=7, tight=True)
+ax1.locator_params(axis="y", nbins=10, tight=True)
+for i, path in enumerate(paths):
+  s = np.loadtxt(path).T
+#  s[:2,:] = np.log(s[:2,:])/np.log(10)
+  plt.plot(s[4,:Ys[i]],label=space[i],color=cs[i])
+  plt.plot(s[5,:Ys[i]],color=cs[i])
+#  plt.fill_between(np.arange(Ys[i]), s[0,:], s[1,:], color=cs[i])
+ax1.set_yscale("log", nonposy='clip')
+ax1.grid(True)
+plt.ylabel("bounds of best node")
+ax1.yaxis.set_label_coords(labelx, 0.5)
+plt.xlim([0, Y-1])
+plt.setp(ax1.get_xticklabels(), visible=False)
+
+ax2 = plt.subplot(212)
+ax2.locator_params(axis="x", nbins=7, tight=True)
+ax2.locator_params(axis="y", nbins=10, tight=True)
+for i, path in enumerate(paths):
+  s = np.loadtxt(path).T
+#  s[:2,:] = np.log(s[:2,:])/np.log(10)
+  lvl = s[6,:Ys[i]]
+  lvl[lvl>50] = 0
+  plt.plot(lvl,color=cs[i])
+#  plt.fill_between(np.arange(Ys[i]), s[0,:], s[1,:], color=cs[i])
+ax2.grid(True)
+plt.ylabel("depth of best node")
+ax2.yaxis.set_label_coords(labelx, 0.5)
+plt.xlim([0, Y-1])
+plt.setp(ax2.get_xticklabels(), visible=False)
+
 plt.show()

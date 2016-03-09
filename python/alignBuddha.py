@@ -22,12 +22,12 @@ cfg = cfgEnschede
 cfg = cfgBuddhaRnd
 cfg = cfgBuddha
 cfg = cfgLymph
-cfg = cfgBunnyAB
 cfg = cfgBunnyZipper
+cfg = cfgBunnyAB
 
 loadCached = False
 stopToShow = False
-showTransformed = False
+showTransformed = True
 showUntransformed = False
 applyBB = True
 applyBBEGI = False
@@ -36,8 +36,9 @@ applyMM = False
 applyICP = False
 runGoICP = False
 
-useTpStessellation = False
-useAAtessellation = True
+useS3tessellation = True
+useTpStessellation = not useS3tessellation and False
+useAAtessellation = not useS3tessellation and not useTpStessellation
 
 outputBoundsAt0 = True
 loadGlobalsolutionforICP = True

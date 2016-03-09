@@ -21,6 +21,8 @@
 #include "bbTrans/upper_bound_convex_S3.h"
 #include "bbTrans/lower_bound_Lin.h"
 #include "bbTrans/upper_bound_Lin.h"
+#include "bbTrans/node_TpS3.h"
+#include "bbTrans/node_AA.h"
 #include "bbTrans/branch_and_bound.h"
 #include "bbTrans/vmf.h"
 #include "bbTrans/vmf_mm.h"
@@ -467,19 +469,7 @@ int main(int argc, char** argv) {
   if (TpS_mode)  {
 
     std::cout << " Tessellate TpS3" << std::endl;
-    Eigen::Vector3d p_min(-M_PI*0.5,-M_PI*0.5,-M_PI*0.5);
-    Eigen::Vector3d p_max( M_PI*0.5, M_PI*0.5, M_PI*0.5);
-    bb::NodeTpS3 root(bb::Box(p_min, p_max),std::vector<uint32_t>(0));
-    std::cout << root.ToString() << std::endl;
-    std::vector<bb::NodeTpS3> l1 = root.Branch();
-    std::list<bb::NodeTpS3> nodes;
-    for (auto& node1 : l1) {
-      std::vector<bb::NodeTpS3> l2 = node1.Branch();
-//      for (auto& node2 : l2) {
-//        std::vector<bb::NodeTpS3> l3 = node2.Branch();
-        nodes.insert(nodes.end(), l2.begin(), l2.end());
-//      }
-    }
+    std::list<bb::NodeTpS3> nodes = bb::TessellateTpS3();
     std::cout << "# initial nodes: " << nodes.size() << std::endl;
 
     bb::LowerBoundTpS3 lower_bound_TpS3(lower_bound_S3);
@@ -505,19 +495,7 @@ int main(int argc, char** argv) {
       nodesS3.push_back(node.GetNodeS3());
   } else if (AA_mode)  {
     std::cout << " Tessellate axis angle space" << std::endl;
-    Eigen::Vector3d p_min(-M_PI,-M_PI,-M_PI);
-    Eigen::Vector3d p_max( M_PI, M_PI, M_PI);
-    bb::NodeAA root(bb::Box(p_min, p_max),std::vector<uint32_t>(0));
-    std::cout << root.ToString() << std::endl;
-    std::vector<bb::NodeAA> l1 = root.Branch();
-    std::list<bb::NodeAA> nodes;
-    for (auto& node1 : l1) {
-      std::vector<bb::NodeAA> l2 = node1.Branch();
-//      for (auto& node2 : l2) {
-//        std::vector<bb::NodeAA> l3 = node2.Branch();
-        nodes.insert(nodes.end(), l2.begin(), l2.end());
-//      }
-    }
+    std::list<bb::NodeAA> nodes = bb::TessellateAA();
     std::cout << "# initial nodes: " << nodes.size() << std::endl;
 
     bb::LowerBoundAA lower_bound_AA(lower_bound_S3);
