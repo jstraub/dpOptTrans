@@ -466,6 +466,10 @@ int main(int argc, char** argv) {
   std::list<bb::NodeS3> nodesS3;
   Eigen::Quaterniond q_star;
   double lb_star = 1e99;
+  double eps = 1e-8;
+  //  double eps = 8e-7;
+  uint32_t max_lvl = 12;
+  uint32_t max_it = 5000;
   if (TpS_mode)  {
 
     std::cout << " Tessellate TpS3" << std::endl;
@@ -479,10 +483,6 @@ int main(int argc, char** argv) {
       WriteBounds<bb::NodeTpS3>(lower_bound_TpS3, upper_bound_TpS3,
           upper_bound_convex_TpS3, nodes);
     }
-    double eps = 1e-6;
-  //  double eps = 8e-7;
-    uint32_t max_lvl = 22;
-    uint32_t max_it = 5000;
     std::cout << " BB on S3 eps=" << eps << " max_it=" << max_it << std::endl;
     bb::BranchAndBound<bb::NodeTpS3> bb(lower_bound_TpS3, upper_bound_convex_TpS3);
     bb::NodeTpS3 node_star = bb.Compute(nodes, eps, max_lvl, max_it);
@@ -505,10 +505,6 @@ int main(int argc, char** argv) {
       WriteBounds<bb::NodeAA>(lower_bound_AA, upper_bound_AA,
           upper_bound_convex_AA, nodes);
     }
-    double eps = 1e-6;
-  //  double eps = 8e-7;
-    uint32_t max_lvl = 22;
-    uint32_t max_it = 5000;
     std::cout << " BB on S3 eps=" << eps << " max_it=" << max_it << std::endl;
     bb::BranchAndBound<bb::NodeAA> bb(lower_bound_AA, upper_bound_convex_AA);
     bb::NodeAA node_star = bb.Compute(nodes, eps, max_lvl, max_it);
@@ -527,10 +523,6 @@ int main(int argc, char** argv) {
       WriteBounds<bb::NodeS3>(lower_bound_S3, upper_bound_S3,
           upper_bound_convex_S3, nodesS3);
     }
-    double eps = 1e-6;
-  //  double eps = 8e-7;
-    uint32_t max_lvl = 22;
-    uint32_t max_it = 5000;
     std::cout << " BB on S3 eps=" << eps << " max_it=" << max_it << std::endl;
     bb::BranchAndBound<bb::NodeS3> bb(lower_bound_S3, upper_bound_convex_S3);
     bb::NodeS3 node_star = bb.Compute(nodesS3, eps, max_lvl, max_it);

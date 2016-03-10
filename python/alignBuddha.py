@@ -36,8 +36,8 @@ applyMM = False
 applyICP = False
 runGoICP = False
 
-useS3tessellation = True
-useTpStessellation = not useS3tessellation and False
+useS3tessellation = False
+useTpStessellation = not useS3tessellation and True
 useAAtessellation = not useS3tessellation and not useTpStessellation
 
 outputBoundsAt0 = True

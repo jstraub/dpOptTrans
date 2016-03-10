@@ -135,7 +135,7 @@ for i, path in enumerate(paths):
 #  plt.plot(np.arange(1,Ys[i]),s[1,1:Ys[i]]-s[0,1:Ys[i]],color=cs[i])
 #ax4.set_yscale("log", nonposy='clip')
 ax4.grid(True)
-ax1.yaxis.set_label_coords(labelx, 0.5)
+ax4.yaxis.set_label_coords(labelx, 0.5)
 plt.ylabel("time [s]")
 plt.xlabel("iterations of BB")
 #plt.xlim([0, s[4,Y-1]])
