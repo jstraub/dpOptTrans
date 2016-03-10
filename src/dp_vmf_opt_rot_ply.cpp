@@ -479,7 +479,7 @@ int main(int argc, char** argv) {
       WriteBounds<bb::NodeTpS3>(lower_bound_TpS3, upper_bound_TpS3,
           upper_bound_convex_TpS3, nodes);
     }
-    double eps = 1e-9;
+    double eps = 1e-6;
   //  double eps = 8e-7;
     uint32_t max_lvl = 22;
     uint32_t max_it = 5000;
@@ -505,7 +505,7 @@ int main(int argc, char** argv) {
       WriteBounds<bb::NodeAA>(lower_bound_AA, upper_bound_AA,
           upper_bound_convex_AA, nodes);
     }
-    double eps = 1e-9;
+    double eps = 1e-6;
   //  double eps = 8e-7;
     uint32_t max_lvl = 22;
     uint32_t max_it = 5000;
@@ -527,7 +527,7 @@ int main(int argc, char** argv) {
       WriteBounds<bb::NodeS3>(lower_bound_S3, upper_bound_S3,
           upper_bound_convex_S3, nodesS3);
     }
-    double eps = 1e-9;
+    double eps = 1e-6;
   //  double eps = 8e-7;
     uint32_t max_lvl = 22;
     uint32_t max_it = 5000;

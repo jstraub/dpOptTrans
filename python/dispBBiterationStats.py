@@ -79,51 +79,69 @@ for i, path in enumerate(paths):
 Y = np.max(np.array(Ys))
 
 labelx = -0.09
-ax1 = plt.subplot(311)
+ax1 = plt.subplot(211)
 ax1.locator_params(axis="x", nbins=7, tight=True)
 ax1.locator_params(axis="y", nbins=10, tight=True)
 for i, path in enumerate(paths):
   s = np.loadtxt(path).T
-#  s[:2,:] = np.log(s[:2,:])/np.log(10)
-#  plt.plot(s[0,:Ys[i]],label=space[i],color=cs[i])
-#  plt.plot(s[1,:Ys[i]],color=cs[i])
+#  plt.plot(np.cumsum(s[4,1:Ys[i]]),s[1,1:Ys[i]]-s[0,1:Ys[i]],color=cs[i])
   plt.plot(np.arange(1,Ys[i]),s[1,1:Ys[i]]-s[0,1:Ys[i]],color=cs[i])
-#  plt.fill_between(np.arange(Ys[i]), s[0,:], s[1,:], color=cs[i])
 ax1.set_yscale("log", nonposy='clip')
 ax1.grid(True)
 plt.ylabel("bound gap")
 ax1.yaxis.set_label_coords(labelx, 0.5)
-plt.xlim([0, Y-1])
+#plt.xlim([0, s[4,Y-1]])
 plt.setp(ax1.get_xticklabels(), visible=False)
   
-ax2 = plt.subplot(312, sharex=ax1)
+ax2 = plt.subplot(212, sharex=ax1)
 #ax2.yaxis.get_major_formatter().set_powerlimits((0, 1))
 ax2.ticklabel_format(axis='y', style='sci', scilimits=(0,1))
 ax2.locator_params(axis="y", nbins=5, tight=True)
 for i, path in enumerate(paths):
   s = np.loadtxt(path).T
   plt.plot(s[2,:Ys[i]],label=space[i], color=cs[i])
+#  plt.plot(np.cumsum(s[4,:Ys[i]]),s[2,:Ys[i]],label=space[i], color=cs[i])
 ax2.set_ylabel("# nodes")
 ax2.yaxis.set_label_coords(labelx, 0.5)
 ax2.grid(True)
+plt.xlabel("iterations of BB")
 #plt.legend(loc="best")
-plt.setp(ax2.get_xticklabels(), visible=False)
+#plt.setp(ax2.get_xticklabels(), visible=False)
+plt.savefig("./bb_iteration_stats_S3_bound_nodes.png", figure=fig)
 
-ax3 = plt.subplot(313, sharex=ax1)
+fig2 = plt.figure(figsize = figSize[0], dpi = 80, facecolor="w", edgecolor="k")
+ax3 = plt.subplot(211, sharex=ax1)
 ax3.locator_params(axis="y", nbins=5, tight=True)
 for i, path in enumerate(paths):
   s = np.loadtxt(path).T
-  plt.plot(100.*s[3,:Ys[i]]/VS3, label=space[i], color=cs[i])
+#  plt.plot(np.cumsum(s[4,:Ys[i]]),100.*s[3,:Ys[i]]/VS3, label=space[i], color=cs[i])
+  plt.plot(100.*np.nan_to_num(s[3,:Ys[i]])/VS3, label=space[i], color=cs[i])
 #  plt.plot(100.*(VS3-s[3,:Ys[i]])/VS3, label=space[i], color=cs[i])
-  plt.xlim([0, Y-1])
+#plt.xlim([0, s[4,Y-1]])
+#ax3.set_yscale("log", nonposy='clip')
 ax3.set_ylabel("% unexplored")
 ax3.yaxis.set_label_coords(labelx, 0.5)
-plt.xlabel("iterations of BB")
 ax3.set_ylim([0,150])
 ax3.grid(True)
+plt.setp(ax3.get_xticklabels(), visible=False)
 plt.legend(loc="best")
-plt.savefig("./bb_iteration_stats_S3_and_TpS3.png", figure=fig)
-print "saving result to ./bb_iteration_stats_S3_and_TpS3.png"
+
+ax4 = plt.subplot(212)
+ax4.ticklabel_format(axis='y', style='sci', scilimits=(0,1))
+ax4.locator_params(axis="y", nbins=5, tight=True)
+for i, path in enumerate(paths):
+  s = np.loadtxt(path).T
+  plt.plot(np.cumsum(s[4,1:Ys[i]])*1e-3,color=cs[i])
+#  plt.plot(np.arange(1,Ys[i]),s[1,1:Ys[i]]-s[0,1:Ys[i]],color=cs[i])
+#ax4.set_yscale("log", nonposy='clip')
+ax4.grid(True)
+ax1.yaxis.set_label_coords(labelx, 0.5)
+plt.ylabel("time [s]")
+plt.xlabel("iterations of BB")
+#plt.xlim([0, s[4,Y-1]])
+
+plt.savefig("./bb_iteration_stats_S3_area_time.png", figure=fig2)
+print "saving result to ./bb_iteration_stats_S3_bound_nodes.png and ./bb_iteration_stats_S3_area_time.png"
 
 
 fig = plt.figure(figsize = figSize[0], dpi = 80, facecolor="w", edgecolor="k")
@@ -134,8 +152,8 @@ ax1.locator_params(axis="y", nbins=10, tight=True)
 for i, path in enumerate(paths):
   s = np.loadtxt(path).T
 #  s[:2,:] = np.log(s[:2,:])/np.log(10)
-  plt.plot(s[4,:Ys[i]],label=space[i],color=cs[i])
-  plt.plot(s[5,:Ys[i]],color=cs[i])
+  plt.plot(s[5,:Ys[i]],label=space[i],color=cs[i])
+  plt.plot(s[6,:Ys[i]],color=cs[i])
 #  plt.fill_between(np.arange(Ys[i]), s[0,:], s[1,:], color=cs[i])
 ax1.set_yscale("log", nonposy='clip')
 ax1.grid(True)
@@ -150,7 +168,7 @@ ax2.locator_params(axis="y", nbins=10, tight=True)
 for i, path in enumerate(paths):
   s = np.loadtxt(path).T
 #  s[:2,:] = np.log(s[:2,:])/np.log(10)
-  lvl = s[6,:Ys[i]]
+  lvl = s[7,:Ys[i]]
   lvl[lvl>50] = 0
   plt.plot(lvl,color=cs[i])
 #  plt.fill_between(np.arange(Ys[i]), s[0,:], s[1,:], color=cs[i])
