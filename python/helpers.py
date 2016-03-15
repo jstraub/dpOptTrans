@@ -214,6 +214,7 @@ def LoadTransformation(transformationPath):
       for i in range(qt.shape[0]):
         q.append(Quaternion(w=qt[i,0], x=qt[i,1], y=qt[i,2], z=qt[i,3]))
         t.append(qt[i,4:7])
+    print "from path: ", transformationPath
     print 'q', q
     print 't', t
   return q,t

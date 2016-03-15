@@ -33,11 +33,11 @@ applyBB = True
 applyBBEGI = False
 applyFFT = False
 applyMM = False
-applyICP = False
+applyICP = True
 runGoICP = False
 
-useS3tessellation = False
-useTpStessellation = not useS3tessellation and True
+useS3tessellation = True
+useTpStessellation = not useS3tessellation and False
 useAAtessellation = not useS3tessellation and not useTpStessellation
 
 outputBoundsAt0 = True
@@ -99,8 +99,10 @@ if cfg["name"] == "bun_zipper":
 if cfg["name"] == "bunnyAB":
   scans = ['../data/bunny_rnd/bun000_angle_90_translation_0.3.ply',
       '../data/bunny_rnd/bun045_angle_90_translation_0.3.ply']
-  gt = ['../data/bunny_rnd/bun000_angle_90_translation_0.3.ply_TrueTransformation_angle_90_translation_0.3.csv',
-  '../data/bunny_rnd/bun045_angle_90_translation_0.3.ply_TrueTransformation_angle_90_translation_0.3.csv']
+  gt = ['../data/bunny_rnd/bun000_angle_90_translation_0.3_TrueTransformation.csv',
+  '../data/bunny_rnd/bun045_angle_90_translation_0.3_TrueTransformation.csv']
+  qOffset = Quaternion(w=np.cos(0.5*np.pi/4.), x=0, y=0,
+      z=-np.sin(0.5**np.pi/4.)/(np.pi/4.))
 if cfg["name"] == "enschede":
   scans = ['../data/enschede_rnd/0021770_2_inv_depth_map_gray.ply',
     '../data/enschede_rnd/0021771_2_inv_depth_map_gray_angle_50_translation_10.ply',
@@ -203,9 +205,18 @@ for i in range(1,len(scans)):
   A_T_B[:3,3] = -R.T.dot(t)
   W_T_B = W_T_B.dot(A_T_B)
   if i-1 < len(gt):
-    q_gt,t_gt = LoadTransformation(gt[i-1])
-    print "Angle to GT: {} deg".format(q.angleTo(q_gt)*180./np.pi)
-    print "Translation deviation to GT: {} m".format(np.sqrt(((t-t_gt)**2).sum()))
+    # loaded transformation is randomX_T_X, x\in\{A,B\}
+    q_gtA,t_gtA = LoadTransformation(gt[i-1])
+    q_gtB,t_gtB = LoadTransformation(gt[i])
+    dq_gt = q_gtB.dot(qOffset.dot(q_gtA.inverse()))
+#    q_gt = q_gt.dot(qOffset)
+    print 'q_offset', qOffset
+    print 'q_gtA', q_gtA
+    print 'q_gtB', q_gtB
+    print 'dq_gt', dq_gt
+    print 'q', q
+    print "Angle to GT: {} deg".format(q.angleTo(dq_gt)*180./np.pi)
+    print "Translation deviation to GT: {} m".format(np.sqrt(((t-t_gtA)**2).sum()))
 
   plyB = PlyParse();
   plyB.parse(scanBpath)

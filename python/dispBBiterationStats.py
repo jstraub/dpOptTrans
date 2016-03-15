@@ -16,6 +16,7 @@ cs = [colorScheme("labelMap")["turquoise"],
     colorScheme("labelMap")["orange"],
     colorScheme("labelMap")["green"] ]
 
+
 space = ["$Tp\mathbb{S}^{3}$", "AA", "$\mathbb{S}^{3}$", "$\mathbb{R}^3$"]
 #space = ["$Tp\mathbb{S}^{3}$", "$\mathbb{S}^{3}$", "$\mathbb{R}^3$"]
 disp = [1,1,1,0.7]
@@ -33,12 +34,14 @@ for i, path in enumerate(['./bb_iteration_stats_TpS3.csv', './bb_iteration_stats
       edgecolor="k")
   ax1 = plt.subplot(2,1,1)
   
-  plt.plot(s[0,:Y],label="LB",color=c1)
-  plt.plot(s[1,:Y],label="convex UB",color=c2)
-  if i == 0:
-    plt.legend(loc="best")
+#  plt.plot(s[0,:Y],label="LB",color=c1)
+#  plt.plot(s[1,:Y],label="convex UB",color=c2)
+  plt.plot(s[1,:Y]-s[0,:Y],label="bound gap",color=c1)
+  ax1.set_yscale("log", nonposy='clip')
+#  if i == 0:
+#    plt.legend(loc="best")
 #  plt.xlabel("iterations of B&B")
-  plt.ylabel("log$_{10}$(bound)")
+  plt.ylabel("bound gap")
 #  plt.ylim([s[:2,:].min(), s[:2,:].max()])
   plt.xlim([0, Y-1])
   plt.tight_layout()
@@ -71,6 +74,12 @@ for i, path in enumerate(['./bb_iteration_stats_TpS3.csv', './bb_iteration_stats
   plt.close(fig)
 
 paths = ['./bb_iteration_stats_TpS3.csv', './bb_iteration_stats_AA.csv', './bb_iteration_stats_S3.csv']
+paths = ['./bb_iteration_stats_AA.csv', './bb_iteration_stats_S3.csv']
+space = ["AA", "$\mathbb{S}^{3}$", "$\mathbb{R}^3$"]
+cs = [#(0.1,0.1,0.1),
+    colorScheme("labelMap")["red"],
+    colorScheme("labelMap")["green"],
+    colorScheme("labelMap")["green"] ]
 Ys = []
 fig = plt.figure(figsize = figSize[0], dpi = 80, facecolor="w", edgecolor="k")
 for i, path in enumerate(paths):
@@ -88,6 +97,7 @@ for i, path in enumerate(paths):
   plt.plot(np.arange(1,Ys[i]),s[1,1:Ys[i]]-s[0,1:Ys[i]],color=cs[i])
 ax1.set_yscale("log", nonposy='clip')
 ax1.grid(True)
+plt.xlim([-Y/300., Y-1])
 plt.ylabel("bound gap")
 ax1.yaxis.set_label_coords(labelx, 0.5)
 #plt.xlim([0, s[4,Y-1]])
@@ -102,6 +112,7 @@ for i, path in enumerate(paths):
   plt.plot(s[2,:Ys[i]],label=space[i], color=cs[i])
 #  plt.plot(np.cumsum(s[4,:Ys[i]]),s[2,:Ys[i]],label=space[i], color=cs[i])
 ax2.set_ylabel("# nodes")
+plt.xlim([-Y/300., Y-1])
 ax2.yaxis.set_label_coords(labelx, 0.5)
 ax2.grid(True)
 plt.xlabel("iterations of BB")
@@ -117,11 +128,11 @@ for i, path in enumerate(paths):
 #  plt.plot(np.cumsum(s[4,:Ys[i]]),100.*s[3,:Ys[i]]/VS3, label=space[i], color=cs[i])
   plt.plot(100.*np.nan_to_num(s[3,:Ys[i]])/VS3, label=space[i], color=cs[i])
 #  plt.plot(100.*(VS3-s[3,:Ys[i]])/VS3, label=space[i], color=cs[i])
-#plt.xlim([0, s[4,Y-1]])
+plt.xlim([-Y/300., Y-1])
 #ax3.set_yscale("log", nonposy='clip')
 ax3.set_ylabel("% unexplored")
 ax3.yaxis.set_label_coords(labelx, 0.5)
-ax3.set_ylim([0,150])
+ax3.set_ylim([-1,150])
 ax3.grid(True)
 plt.setp(ax3.get_xticklabels(), visible=False)
 plt.legend(loc="best")
@@ -135,6 +146,7 @@ for i, path in enumerate(paths):
 #  plt.plot(np.arange(1,Ys[i]),s[1,1:Ys[i]]-s[0,1:Ys[i]],color=cs[i])
 #ax4.set_yscale("log", nonposy='clip')
 ax4.grid(True)
+plt.xlim([-Y/300., Y-1])
 ax4.yaxis.set_label_coords(labelx, 0.5)
 plt.ylabel("time [s]")
 plt.xlabel("iterations of BB")
@@ -178,4 +190,4 @@ ax2.yaxis.set_label_coords(labelx, 0.5)
 plt.xlim([0, Y-1])
 plt.setp(ax2.get_xticklabels(), visible=False)
 
-plt.show()
+#plt.show()

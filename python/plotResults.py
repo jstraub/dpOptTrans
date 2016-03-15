@@ -5,7 +5,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 from js.utils.plot.colors import colorScheme
 
-mpl.rc('font',size=25) 
+mpl.rc('font',size=30) 
 mpl.rc('lines',linewidth=3.)
 figSize = (14, 5.5)
 figSize = (14, 10)
@@ -88,6 +88,8 @@ for result in results:
           else:
             errors[typ][algKey] = [val[typ]]
     counter += 1 
+#    if counter > 100:
+#      break
 totalRejected = 0
 for key,val in numRejected.iteritems():
   totalRejected += val
@@ -142,7 +144,7 @@ def PlotErrBoxPlot(x, y, delta, ax, showXTicks):
   for median in bp["medians"]:
     median.set(color=c2)
   for flier in bp["fliers"]:
-    flier.set(color=c3, marker=".", alpha=0.15,s=6)
+    flier.set(color=c3, marker=".", alpha=0.15) #,s=6)
 
 def PlotScatter(x, y, delta, ax, showXTicks):
   if x.size < 1:
@@ -212,6 +214,7 @@ errTypeMax = {"err_a": 300., "err_t": 10., "dt": 120.,
 yMetricLabel={"overlap":"overlap [%]", "dangle":" $\Delta\\theta_{GT}$ [deg]",
   "dtranslation":"$\|\|\Delta t_{GT}\|\|_2$ [m]"}
 yMetricResolution={"overlap":9, "dangle":8, "dtranslation":0.4}
+yMetricResolution={"overlap":15, "dangle":12, "dtranslation":0.4}
 #yMetricResolution={"overlap":15, "dangle":12, "dtranslation":0.4}
 
 evalKs = False
@@ -322,7 +325,7 @@ else:
 if not "DISPLAY" in os.environ:
   sys.exit(0)
 
-algDesc = {"BB_45.0_0.5":"BB45"}
+algDesc = {"BB_45.0_0.5":"BB45", "MM":"MoM"}
 errTypeResolution = {"err_a": 5., "err_t": 0.2, "dt": 3.}
 
 print algTypes
@@ -354,7 +357,7 @@ for yMetric in ["overlap", "dangle", "dtranslation"]:
           yMetricResolution[yMetric], axs[-1], j==len(errTypes)-1)
 #      PlotScatter(np.array(errors[yMetric])[ids], errs[ids],
 #          yMetricResolution[yMetric], axs[-1], j==len(errTypes)-1)
-      if j == 0:
+      if j == 0 and yMetric=="overlap":
         if algType in algDesc:
           plt.title(algDesc[algType])
         else:
