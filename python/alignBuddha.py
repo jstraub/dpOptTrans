@@ -27,14 +27,14 @@ cfg = cfgBunnyAB
 
 loadCached = False
 stopToShow = False
-showTransformed = False
-showUntransformed = False
-applyBB = True
+showTransformed =  True 
+showUntransformed =True 
+applyBB = False
 applyBBEGI = False
 applyFFT = False
 applyMM = False
-applyICP = True
-runGoICP = False
+applyICP = False
+runGoICP = True
 
 useS3tessellation = True
 useTpStessellation = not useS3tessellation and False
