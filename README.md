@@ -8,14 +8,14 @@ on my github as well:
 [dpMMlowVar](https://github.com/jstraub/dpMMlowVar)
 [bbTrans](https://github.com/jstraub/bbTrans).
 The approach and the algorithm is described in more detail on our
-[project page](http://www.jstraub.de/) and the [CVPR 2016 paper](http://www.jstraub.de/). The algorithms are described in more detail in the [supplement](http://www.jstraub.de/download/).
+[project page](http://www.jstraub.de/) and the [paper](http://arxiv.org/abs/1603.04868). The algorithms are described in more detail in the [supplement]().
 See below for install instructions.
 
 If you use it please cite:
 ```
 Julian Straub, Trevor Campbell, Jonathan P. How, John W. Fisher III. 
-"Optimal Point Cloud Alignment", In CVPR,
-2016.
+"Efficient Globally Optimal Point Cloud Alignment using Bayesian
+Nonparametric Mixtures".
 ```
 
 ### Dependencies
