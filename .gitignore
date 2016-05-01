@@ -21,6 +21,7 @@ rtDDPvMF
 cudaPcl
 jsCore
 dpMMlowVar
+manifold
 optimalRotationEstimation
 bbTrans
 .directory

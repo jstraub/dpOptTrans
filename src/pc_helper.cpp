@@ -2,7 +2,7 @@
  * under the MIT license. See the license file LICENSE.
  */
 
-#include "dpvMFoptRot/pc_helper.h"
+#include "dpOptTrans/pc_helper.h"
 
 void ComputeAreaWeightsPc(pcl::PointCloud<pcl::PointXYZRGBNormal>& pcIn) {
   pcl::PointCloud<pcl::PointXYZ>::Ptr pcXYZ(new
