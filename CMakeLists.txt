@@ -49,7 +49,8 @@ link_directories(
 )
 
 cuda_add_executable(dpOptTransPly ./src/dp_vmf_opt_rot_ply.cpp
-  ./src/pc_helper.cpp)
+#  ./src/pc_helper.cpp
+  ./src/pcHelpers.cpp)
 target_link_libraries(dpOptTransPly bbTrans
     jsCore dpMMlowVar #cudaPcl
     boost_system boost_thread boost_program_options
@@ -71,7 +72,7 @@ target_link_libraries(dpOptTransPly bbTrans
 #  )
 
 cuda_add_executable(moment_matched_T3 ./src/moment_matched_T3.cpp
-  ./src/pc_helper.cpp)
+  ./src/pcHelpers.cpp)
 target_link_libraries(moment_matched_T3 bbTrans
     jsCore dpMMlowVar 
     boost_system boost_thread boost_program_options
@@ -82,7 +83,7 @@ target_link_libraries(moment_matched_T3 bbTrans
   )
 
 cuda_add_executable(icp_T3 ./src/icp_T3.cpp
-  ./src/pc_helper.cpp)
+  ./src/pcHelpers.cpp)
 target_link_libraries(icp_T3 bbTrans
     jsCore dpMMlowVar 
     boost_system boost_thread boost_program_options
@@ -97,5 +98,6 @@ pods_install_executables(dpOptTransPly moment_matched_T3
 #pods_install_libraries(bbTrans)
 pods_install_headers(
   ./include/dpOptTrans/dp_vmf_opt_rot.h
-  ./include/dpOptTrans/pc_helper.h
+#  ./include/dpOptTrans/pc_helper.h
+  ./include/dpOptTrans/pcHelpers.h
   DESTINATION dpOptTrans)

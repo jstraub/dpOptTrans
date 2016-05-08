@@ -16,9 +16,5 @@ void DisplayPcs(const pcl::PointCloud<pcl::PointXYZRGBNormal>& pcA,
   const Eigen::Quaterniond& q_star, const Eigen::Vector3d& t_star,
   float scale);
 
-double ComputeClosestPointEucledianCost(
-    pcl::PointCloud<pcl::PointXYZRGBNormal>& pcA,
-    pcl::PointCloud<pcl::PointXYZRGBNormal>& pcB,
-    const Eigen::Matrix3d* R, const Eigen::Vector3d* t);
 
 void ShufflePc(pcl::PointCloud<pcl::PointXYZRGBNormal>& pc);

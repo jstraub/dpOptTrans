@@ -9,7 +9,7 @@
 #include <pcl/io/ply_io.h>
 #include <pcl/common/transforms.h>
 
-#include "dpOptTrans/pc_helper.h"
+#include "dpOptTrans/pcHelpers.h"
 
 #include <boost/program_options.hpp>
 namespace po = boost::program_options;

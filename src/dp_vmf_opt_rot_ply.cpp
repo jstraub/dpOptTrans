@@ -11,6 +11,10 @@
 #include <pcl/visualization/point_cloud_color_handlers.h>
 #include <pcl/common/transforms.h>
 
+#include <cuda_runtime.h>
+#include <nvidia/helper_cuda.h> 
+#include <jsCore/global.hpp>
+
 //#include "rtDDPvMF/rtDDPvMF.hpp"
 //#include "rtDDPvMF/realtimeDDPvMF_openni.hpp"
 #include "bbTrans/lower_bound_R3.h"
@@ -29,47 +33,203 @@
 #include "bbTrans/normal.h"
 #include "dpOptTrans/dp_vmf_opt_rot.h"
 #include "dpOptTrans/pc_helper.h"
+#include "dpOptTrans/pcHelpers.h"
 #include "dpMMlowVar/ddpmeansCUDA.hpp"
+#include "dpMMlowVar/dpmeans.hpp"
 
 #include <boost/program_options.hpp>
 namespace po = boost::program_options;
 
-struct CfgRtDDPvMF
-{
+//struct CfgRtDDPvMF
+//{
+//
+//  CfgRtDDPvMF() : f_d(540.0), lambda(-1.), beta(1e5), Q(-2.),
+//      nSkipFramesSave(30), nFramesSurvive_(0),lambdaDeg_(90.)
+//  {};
+//  CfgRtDDPvMF(const CfgRtDDPvMF& cfg)
+//    : f_d(cfg.f_d), lambda(cfg.lambda), beta(cfg.beta), Q(cfg.Q),
+//      nSkipFramesSave(cfg.nSkipFramesSave), nFramesSurvive_(cfg.nFramesSurvive_),
+//      lambdaDeg_(cfg.lambdaDeg_)
+//  {
+//    pathOut = cfg.pathOut;
+//  };
+//
+//  double f_d;
+//  double lambda;
+//  double beta;
+//  double Q;
+//
+//  int32_t nSkipFramesSave;
+//  std::string pathOut;
+//
+//  int32_t nFramesSurvive_;
+//  double lambdaDeg_;
+//
+//  void lambdaFromDeg(double lambdaDeg)
+//  {
+//    lambdaDeg_ = lambdaDeg;
+//    lambda = cos(lambdaDeg*M_PI/180.0)-1.;
+//  };
+//  void QfromFrames2Survive(int32_t nFramesSurvive)
+//  {
+//    nFramesSurvive_ = nFramesSurvive;
+//    Q = nFramesSurvive == 0? -2. : lambda/double(nFramesSurvive);
+//  };
+//};
 
-  CfgRtDDPvMF() : f_d(540.0), lambda(-1.), beta(1e5), Q(-2.),
-      nSkipFramesSave(30), nFramesSurvive_(0),lambdaDeg_(90.)
-  {};
-  CfgRtDDPvMF(const CfgRtDDPvMF& cfg)
-    : f_d(cfg.f_d), lambda(cfg.lambda), beta(cfg.beta), Q(cfg.Q),
-      nSkipFramesSave(cfg.nSkipFramesSave), nFramesSurvive_(cfg.nFramesSurvive_),
-      lambdaDeg_(cfg.lambdaDeg_)
+
+bool ComputevMFMMfromPC(const pcl::PointCloud<pcl::PointXYZRGBNormal>&
+    pc, const CfgRtDDPvMF& cfg, std::vector<vMF<3>>& vmfs) {
+  // take 3 values (x,y,z of normal) with an offset of 4 values (x,y,z
+  // and one float which is undefined) and the step is 12 (4 for xyz, 4
+  // for normal xyz and 4 for curvature and rgb).
+  auto n_map = pc.getMatrixXfMap(3, 12, 4); // this works for PointXYZRGBNormal
+  boost::shared_ptr<Eigen::MatrixXf> n(new Eigen::MatrixXf(n_map));
+//  std::cout << "normals: " << std::endl << n->rows() 
+//    << "x" << n->cols() << std::endl;
+  // Setup the DPvMF clusterer.
+  shared_ptr<jsc::ClDataGpuf> cld(new jsc::ClDataGpuf(n,0));
+  dplv::DDPMeansCUDA<float,dplv::Spherical<float>> pddpvmf(cld,
+      cfg.lambda, cfg.Q, cfg.beta);
+  // Run the clustering algorithm.
+  pddpvmf.nextTimeStep(n);
+  for(uint32_t i=0; i<10; ++i)
   {
-    pathOut = cfg.pathOut;
-  };
+//    cout<<"@"<<i<<" :"<<endl;
+    pddpvmf.updateLabels();
+    pddpvmf.updateCenters();
+    if(pddpvmf.convergedCounts(n->cols()/100)) break;
+  }
+  pddpvmf.getZfromGpu(); // cache z_ back from gpu
+  const VectorXu& z = pddpvmf.z();
+  // Output results.
+  MatrixXf centroids = pddpvmf.centroids();
+  VectorXf counts = pddpvmf.counts().cast<float>();
+//  std::cout << counts.transpose() << std::endl;
+//  std::cout << centroids << std::endl;
+  uint32_t K = counts.rows();
+//  std::cout << "K: " << K << std::endl;
+  // Compute vMF statistics: area-weighted sum over surface normals
+  // associated with respective cluster. 
+  MatrixXd xSum = MatrixXd::Zero(3,K);
+  VectorXf ws = Eigen::VectorXf::Zero(K);
+  for (uint32_t i=0; i<n->cols(); ++i) 
+    if(z(i) < K) {
+      float w = pc.at(i).curvature; // curvature is used to store the weights.
+      xSum.col(z(i)) += n->col(i).cast<double>()*w;
+      ws(z(i)) += w;
+    }
+  // Fractions belonging to each cluster.
+  Eigen::VectorXd pis = (ws.array() / ws.sum()).matrix().cast<double>();
+  Eigen::VectorXf taus(K);
+  for(uint32_t k=0; k<K; ++k)
+    if (counts(k) > 5) {
+      taus(k) = bb::vMF<3>::MLEstimateTau(xSum.col(k),
+          xSum.col(k).cast<double>()/xSum.col(k).norm(), ws(k));
+    }
+  
+  for(uint32_t k=0; k<K; ++k)
+    if (counts(k) > 5) {
+      vmfs.push_back(bb::vMF<3>(xSum.col(k).cast<double>()/xSum.col(k).norm(),
+            taus(k), pis(k)));
+    }
+  return true;
+}
 
-  double f_d;
-  double lambda;
-  double beta;
-  double Q;
+bool ComputeGMMfromPC(pcl::PointCloud<pcl::PointXYZRGBNormal>&
+    pc, const CfgRtDDPvMF& cfg, std::vector<Normal<3>>& gmm,
+    bool colorLables) {
+  // take 3 values (x,y,z of normal) with an offset of 4 values (x,y,z
+  // and one float which is undefined) and the step is 12 (4 for xyz, 4
+  // for normal xyz and 4 for curvature and rgb).
+  auto xyz_map = pc.getMatrixXfMap(3, 12, 0); // this works for PointXYZRGBNormal
+  boost::shared_ptr<Eigen::MatrixXf> xyz(new Eigen::MatrixXf(xyz_map));
+//  std::cout << "xyz: " << std::endl << xyz->rows() 
+//    << "x" << xyz->cols() << std::endl;
 
-  int32_t nSkipFramesSave;
-  std::string pathOut;
-
-  int32_t nFramesSurvive_;
-  double lambdaDeg_;
-
-  void lambdaFromDeg(double lambdaDeg)
+  // Setup the DPvMF clusterer.
+  shared_ptr<jsc::ClDataGpuf> cld(new jsc::ClDataGpuf(xyz,0));
+  dplv::DDPMeansCUDA<float,dplv::Euclidean<float> > dpmeans(cld,
+      cfg.lambda, cfg.Q, cfg.beta);
+  // Run the clustering algorithm.
+  dpmeans.nextTimeStep(xyz);
+  for(uint32_t i=0; i<10; ++i)
   {
-    lambdaDeg_ = lambdaDeg;
-    lambda = cos(lambdaDeg*M_PI/180.0)-1.;
-  };
-  void QfromFrames2Survive(int32_t nFramesSurvive)
-  {
-    nFramesSurvive_ = nFramesSurvive;
-    Q = nFramesSurvive == 0? -2. : lambda/double(nFramesSurvive);
-  };
-};
+//    cout<<"@"<<i<<" :"<<endl;
+    dpmeans.updateLabels();
+    dpmeans.updateCenters();
+    if(dpmeans.convergedCounts(xyz->cols()/100)) break;
+  }
+  dpmeans.getZfromGpu(); // cache z_ back from gpu
+  const VectorXu& z = dpmeans.z();
+  // Output results.
+  MatrixXf centroids = dpmeans.centroids();
+  VectorXf counts = dpmeans.counts().cast<float>();
+//  std::cout << counts.transpose() << std::endl;
+//  std::cout << centroids << std::endl;
+  uint32_t K = counts.rows();
+  std::cout << "lambda=" << cfg.lambda << " K=" << K << std::endl;
+  // Compute Gaussian statistics: 
+  std::vector<MatrixXd> Ss(K,Matrix3d::Zero());
+  Eigen::MatrixXd xSum = Eigen::MatrixXd::Zero(3,K);
+  Eigen::VectorXf ws = Eigen::VectorXf::Zero(K);
+  for (uint32_t i=0; i<xyz->cols(); ++i) 
+    if(z(i) < K) {
+      float w = pc.at(i).curvature; // curvature is used to store the weights.
+      ws(z(i)) += w;
+      xSum.col(z(i)) += xyz->col(i).cast<double>()*w;
+    }
+  for(uint32_t k=0; k<K; ++k)
+    centroids.col(k) = xSum.col(k).cast<float>()/ws(k);
+
+  for (uint32_t i=0; i<xyz->cols(); ++i) 
+    if(z(i) < K) {
+      float w = pc.at(i).curvature; // curvature is used to store the weights.
+      Ss[z(i)] += w*(xyz->col(i) - centroids.col(z(i))).cast<double>()
+        * (xyz->col(i) - centroids.col(z(i))).cast<double>().transpose();
+    }
+  if (colorLables) {
+    for (uint32_t i=0; i<xyz->cols(); ++i) 
+      if(z(i) < K) {
+        uint8_t r = floor(float(z(i))/float(K-1)*255.);
+        uint8_t g = floor(float(K-1-z(i))/float(K-1)*255.);
+        uint8_t b = floor(float(z(i)<=(K-1)/2? z(i)+(K-1)/2 :
+              z(i)-(K-1)/2-1)/float(K-1)*255.);
+        pc.at(i).rgb = ((int)r) << 16 | ((int)g) << 8 | ((int)b);
+      }
+  }
+  // Fractions belonging to each cluster.
+  Eigen::VectorXd pis = (ws.array() / ws.sum()).matrix().cast<double>();
+  
+  const double maxEvFactor = 1e-2;
+  for(uint32_t k=0; k<K; ++k)
+//    if (pis(k) > 0.) {
+    if (counts(k) > 5) {
+      Matrix3d cov = Ss[k]/float(ws(k));
+      Eigen::SelfAdjointEigenSolver<Matrix3d> eig(cov);
+      Eigen::Vector3d e = eig.eigenvalues();
+      uint32_t iMax = 0;
+      double eMax = e.maxCoeff(&iMax);
+//      std::cout << cov << std::endl;
+      bool regularized = false;
+      for (uint32_t i=0; i<3; ++i)
+        if (i!=iMax && eMax*maxEvFactor > e(i)) {
+          std::cout << "small eigenvalue: " << e(i) << " replaced by " 
+            << eMax*maxEvFactor << std::endl;
+          e(i) = eMax*maxEvFactor;
+          regularized = true;
+        }
+      if (regularized) {
+        Eigen::Matrix3d V = eig.eigenvectors();
+        cov = V*e.asDiagonal()*V.inverse();
+      }
+//      std::cout << cov << std::endl;
+      gmm.push_back(bb::Normal<3>(centroids.col(k).cast<double>(),
+            cov, pis(k)));
+//        Ss[k]/float(ws(k)), pis(k)));
+    }
+  return true;
+}
 
 void DisplayPcs(const pcl::PointCloud<pcl::PointXYZRGBNormal>& pcA, 
   const pcl::PointCloud<pcl::PointXYZRGBNormal>& pcB, 
@@ -193,139 +353,139 @@ void DisplayPcs(const pcl::PointCloud<pcl::PointXYZRGBNormal>& pcA,
       boost::this_thread::sleep (boost::posix_time::microseconds (100000));
     }
 }
-
-bool ComputevMFMMfromPC(const pcl::PointCloud<pcl::PointXYZRGBNormal>&
-    pc, const CfgRtDDPvMF& cfg, std::vector<bb::vMF<3>>& vmfs) {
-  // take 3 values (x,y,z of normal) with an offset of 4 values (x,y,z
-  // and one float which is undefined) and the step is 12 (4 for xyz, 4
-  // for normal xyz and 4 for curvature and rgb).
-  auto n_map = pc.getMatrixXfMap(3, 12, 4); // this works for PointXYZRGBNormal
-  boost::shared_ptr<Eigen::MatrixXf> n(new Eigen::MatrixXf(n_map));
-//  std::cout << "normals: " << std::endl << n->rows() 
-//    << "x" << n->cols() << std::endl;
-  // Setup the DPvMF clusterer.
-  shared_ptr<jsc::ClDataGpuf> cld(new jsc::ClDataGpuf(n,0));
-  dplv::DDPMeansCUDA<float,dplv::Spherical<float> > pddpvmf(cld,
-      cfg.lambda, cfg.Q, cfg.beta);
-  // Run the clustering algorithm.
-  pddpvmf.nextTimeStep(n);
-  for(uint32_t i=0; i<10; ++i)
-  {
-//    cout<<"@"<<i<<" :"<<endl;
-    pddpvmf.updateLabels();
-    pddpvmf.updateCenters();
-    if(pddpvmf.convergedCounts(n->cols()/100)) break;
-  }
-  pddpvmf.getZfromGpu(); // cache z_ back from gpu
-  const VectorXu& z = pddpvmf.z();
-  // Output results.
-  MatrixXf centroids = pddpvmf.centroids();
-  VectorXf counts = pddpvmf.counts().cast<float>();
-//  std::cout << counts.transpose() << std::endl;
-//  std::cout << centroids << std::endl;
-  uint32_t K = counts.rows();
-//  std::cout << "K: " << K << std::endl;
-  // Compute vMF statistics: area-weighted sum over surface normals
-  // associated with respective cluster. 
-  MatrixXd xSum = MatrixXd::Zero(3,K);
-  VectorXf ws = Eigen::VectorXf::Zero(K);
-  for (uint32_t i=0; i<n->cols(); ++i) 
-    if(z(i) < K) {
-      float w = pc.at(i).curvature; // curvature is used to store the weights.
-      xSum.col(z(i)) += n->col(i).cast<double>()*w;
-      ws(z(i)) += w;
-    }
-  // Fractions belonging to each cluster.
-  Eigen::VectorXd pis = (ws.array() / ws.sum()).matrix().cast<double>();
-  Eigen::VectorXf taus(K);
-  for(uint32_t k=0; k<K; ++k)
-    if (counts(k) > 100) {
-      taus(k) = bb::vMF<3>::MLEstimateTau(xSum.col(k),
-          xSum.col(k).cast<double>()/xSum.col(k).norm(), ws(k));
-    }
-  
-  for(uint32_t k=0; k<K; ++k)
-    if (counts(k) > 100) {
-      vmfs.push_back(bb::vMF<3>(xSum.col(k).cast<double>()/xSum.col(k).norm(),
-            taus(k), pis(k)));
-    }
-  return true;
-}
-
-bool ComputeGMMfromPC(pcl::PointCloud<pcl::PointXYZRGBNormal>&
-    pc, const CfgRtDDPvMF& cfg, std::vector<bb::Normal<3>>& gmm,
-    bool colorLables) {
-  // take 3 values (x,y,z of normal) with an offset of 4 values (x,y,z
-  // and one float which is undefined) and the step is 12 (4 for xyz, 4
-  // for normal xyz and 4 for curvature and rgb).
-  auto xyz_map = pc.getMatrixXfMap(3, 12, 0); // this works for PointXYZRGBNormal
-  boost::shared_ptr<Eigen::MatrixXf> xyz(new Eigen::MatrixXf(xyz_map));
-//  std::cout << "xyz: " << std::endl << xyz->rows() 
-//    << "x" << xyz->cols() << std::endl;
-
-  // Setup the DPvMF clusterer.
-  shared_ptr<jsc::ClDataGpuf> cld(new jsc::ClDataGpuf(xyz,0));
-  dplv::DDPMeansCUDA<float,dplv::Euclidean<float> > dpmeans(cld,
-      cfg.lambda, cfg.Q, cfg.beta);
-  // Run the clustering algorithm.
-  dpmeans.nextTimeStep(xyz);
-  for(uint32_t i=0; i<10; ++i)
-  {
-//    cout<<"@"<<i<<" :"<<endl;
-    dpmeans.updateLabels();
-    dpmeans.updateCenters();
-    if(dpmeans.convergedCounts(xyz->cols()/100)) break;
-  }
-  dpmeans.getZfromGpu(); // cache z_ back from gpu
-  const VectorXu& z = dpmeans.z();
-  // Output results.
-  MatrixXf centroids = dpmeans.centroids();
-  VectorXf counts = dpmeans.counts().cast<float>();
-//  std::cout << counts.transpose() << std::endl;
-//  std::cout << centroids << std::endl;
-  uint32_t K = counts.rows();
-//  std::cout << "K: " << K << std::endl;
-  // Compute Gaussian statistics: 
-  std::vector<MatrixXd> Ss(K,Matrix3d::Zero());
-  Eigen::MatrixXd xSum = Eigen::MatrixXd::Zero(3,K);
-  Eigen::VectorXf ws = Eigen::VectorXf::Zero(K);
-  for (uint32_t i=0; i<xyz->cols(); ++i) 
-    if(z(i) < K) {
-      float w = pc.at(i).curvature; // curvature is used to store the weights.
-      ws(z(i)) += w;
-      xSum.col(z(i)) += xyz->col(i).cast<double>()*w;
-    }
-  for(uint32_t k=0; k<K; ++k)
-    centroids.col(k) = xSum.col(k).cast<float>()/ws(k);
-
-  for (uint32_t i=0; i<xyz->cols(); ++i) 
-    if(z(i) < K) {
-      float w = pc.at(i).curvature; // curvature is used to store the weights.
-      Ss[z(i)] += w*(xyz->col(i) - centroids.col(z(i))).cast<double>()
-        * (xyz->col(i) - centroids.col(z(i))).cast<double>().transpose();
-    }
-  if (colorLables) {
-    for (uint32_t i=0; i<xyz->cols(); ++i) 
-      if(z(i) < K) {
-        uint8_t r = floor(float(z(i))/float(K-1)*255.);
-        uint8_t g = floor(float(K-1-z(i))/float(K-1)*255.);
-        uint8_t b = floor(float(z(i)<=(K-1)/2? z(i)+(K-1)/2 :
-              z(i)-(K-1)/2-1)/float(K-1)*255.);
-        pc.at(i).rgb = ((int)r) << 16 | ((int)g) << 8 | ((int)b);
-      }
-  }
-  // Fractions belonging to each cluster.
-  Eigen::VectorXd pis = (ws.array() / ws.sum()).matrix().cast<double>();
-  
-  for(uint32_t k=0; k<K; ++k)
-//    if (pis(k) > 0.) {
-    if (counts(k) > 100) {
-      gmm.push_back(bb::Normal<3>(centroids.col(k).cast<double>(),
-            Ss[k]/float(ws(k))+0.001*Eigen::Matrix3d::Identity(), pis(k)));
-//        Ss[k]/float(ws(k)), pis(k)));
-    }
-  return true;
-}
+//
+//bool ComputevMFMMfromPC(const pcl::PointCloud<pcl::PointXYZRGBNormal>&
+//    pc, const CfgRtDDPvMF& cfg, std::vector<bb::vMF<3>>& vmfs) {
+//  // take 3 values (x,y,z of normal) with an offset of 4 values (x,y,z
+//  // and one float which is undefined) and the step is 12 (4 for xyz, 4
+//  // for normal xyz and 4 for curvature and rgb).
+//  auto n_map = pc.getMatrixXfMap(3, 12, 4); // this works for PointXYZRGBNormal
+//  boost::shared_ptr<Eigen::MatrixXf> n(new Eigen::MatrixXf(n_map));
+////  std::cout << "normals: " << std::endl << n->rows() 
+////    << "x" << n->cols() << std::endl;
+//  // Setup the DPvMF clusterer.
+//  shared_ptr<jsc::ClDataGpuf> cld(new jsc::ClDataGpuf(n,0));
+//  dplv::DDPMeansCUDA<float,dplv::Spherical<float> > pddpvmf(cld,
+//      cfg.lambda, cfg.Q, cfg.beta);
+//  // Run the clustering algorithm.
+//  pddpvmf.nextTimeStep(n);
+//  for(uint32_t i=0; i<10; ++i)
+//  {
+////    cout<<"@"<<i<<" :"<<endl;
+//    pddpvmf.updateLabels();
+//    pddpvmf.updateCenters();
+//    if(pddpvmf.convergedCounts(n->cols()/100)) break;
+//  }
+//  pddpvmf.getZfromGpu(); // cache z_ back from gpu
+//  const VectorXu& z = pddpvmf.z();
+//  // Output results.
+//  MatrixXf centroids = pddpvmf.centroids();
+//  VectorXf counts = pddpvmf.counts().cast<float>();
+////  std::cout << counts.transpose() << std::endl;
+////  std::cout << centroids << std::endl;
+//  uint32_t K = counts.rows();
+////  std::cout << "K: " << K << std::endl;
+//  // Compute vMF statistics: area-weighted sum over surface normals
+//  // associated with respective cluster. 
+//  MatrixXd xSum = MatrixXd::Zero(3,K);
+//  VectorXf ws = Eigen::VectorXf::Zero(K);
+//  for (uint32_t i=0; i<n->cols(); ++i) 
+//    if(z(i) < K) {
+//      float w = pc.at(i).curvature; // curvature is used to store the weights.
+//      xSum.col(z(i)) += n->col(i).cast<double>()*w;
+//      ws(z(i)) += w;
+//    }
+//  // Fractions belonging to each cluster.
+//  Eigen::VectorXd pis = (ws.array() / ws.sum()).matrix().cast<double>();
+//  Eigen::VectorXf taus(K);
+//  for(uint32_t k=0; k<K; ++k)
+//    if (counts(k) > 100) {
+//      taus(k) = bb::vMF<3>::MLEstimateTau(xSum.col(k),
+//          xSum.col(k).cast<double>()/xSum.col(k).norm(), ws(k));
+//    }
+//  
+//  for(uint32_t k=0; k<K; ++k)
+//    if (counts(k) > 100) {
+//      vmfs.push_back(bb::vMF<3>(xSum.col(k).cast<double>()/xSum.col(k).norm(),
+//            taus(k), pis(k)));
+//    }
+//  return true;
+//}
+//
+//bool ComputeGMMfromPC(pcl::PointCloud<pcl::PointXYZRGBNormal>&
+//    pc, const CfgRtDDPvMF& cfg, std::vector<bb::Normal<3>>& gmm,
+//    bool colorLables) {
+//  // take 3 values (x,y,z of normal) with an offset of 4 values (x,y,z
+//  // and one float which is undefined) and the step is 12 (4 for xyz, 4
+//  // for normal xyz and 4 for curvature and rgb).
+//  auto xyz_map = pc.getMatrixXfMap(3, 12, 0); // this works for PointXYZRGBNormal
+//  boost::shared_ptr<Eigen::MatrixXf> xyz(new Eigen::MatrixXf(xyz_map));
+////  std::cout << "xyz: " << std::endl << xyz->rows() 
+////    << "x" << xyz->cols() << std::endl;
+//
+//  // Setup the DPvMF clusterer.
+//  shared_ptr<jsc::ClDataGpuf> cld(new jsc::ClDataGpuf(xyz,0));
+//  dplv::DDPMeansCUDA<float,dplv::Euclidean<float> > dpmeans(cld,
+//      cfg.lambda, cfg.Q, cfg.beta);
+//  // Run the clustering algorithm.
+//  dpmeans.nextTimeStep(xyz);
+//  for(uint32_t i=0; i<10; ++i)
+//  {
+////    cout<<"@"<<i<<" :"<<endl;
+//    dpmeans.updateLabels();
+//    dpmeans.updateCenters();
+//    if(dpmeans.convergedCounts(xyz->cols()/100)) break;
+//  }
+//  dpmeans.getZfromGpu(); // cache z_ back from gpu
+//  const VectorXu& z = dpmeans.z();
+//  // Output results.
+//  MatrixXf centroids = dpmeans.centroids();
+//  VectorXf counts = dpmeans.counts().cast<float>();
+////  std::cout << counts.transpose() << std::endl;
+////  std::cout << centroids << std::endl;
+//  uint32_t K = counts.rows();
+////  std::cout << "K: " << K << std::endl;
+//  // Compute Gaussian statistics: 
+//  std::vector<MatrixXd> Ss(K,Matrix3d::Zero());
+//  Eigen::MatrixXd xSum = Eigen::MatrixXd::Zero(3,K);
+//  Eigen::VectorXf ws = Eigen::VectorXf::Zero(K);
+//  for (uint32_t i=0; i<xyz->cols(); ++i) 
+//    if(z(i) < K) {
+//      float w = pc.at(i).curvature; // curvature is used to store the weights.
+//      ws(z(i)) += w;
+//      xSum.col(z(i)) += xyz->col(i).cast<double>()*w;
+//    }
+//  for(uint32_t k=0; k<K; ++k)
+//    centroids.col(k) = xSum.col(k).cast<float>()/ws(k);
+//
+//  for (uint32_t i=0; i<xyz->cols(); ++i) 
+//    if(z(i) < K) {
+//      float w = pc.at(i).curvature; // curvature is used to store the weights.
+//      Ss[z(i)] += w*(xyz->col(i) - centroids.col(z(i))).cast<double>()
+//        * (xyz->col(i) - centroids.col(z(i))).cast<double>().transpose();
+//    }
+//  if (colorLables) {
+//    for (uint32_t i=0; i<xyz->cols(); ++i) 
+//      if(z(i) < K) {
+//        uint8_t r = floor(float(z(i))/float(K-1)*255.);
+//        uint8_t g = floor(float(K-1-z(i))/float(K-1)*255.);
+//        uint8_t b = floor(float(z(i)<=(K-1)/2? z(i)+(K-1)/2 :
+//              z(i)-(K-1)/2-1)/float(K-1)*255.);
+//        pc.at(i).rgb = ((int)r) << 16 | ((int)g) << 8 | ((int)b);
+//      }
+//  }
+//  // Fractions belonging to each cluster.
+//  Eigen::VectorXd pis = (ws.array() / ws.sum()).matrix().cast<double>();
+//  
+//  for(uint32_t k=0; k<K; ++k)
+////    if (pis(k) > 0.) {
+//    if (counts(k) > 100) {
+//      gmm.push_back(bb::Normal<3>(centroids.col(k).cast<double>(),
+//            Ss[k]/float(ws(k))+0.001*Eigen::Matrix3d::Identity(), pis(k)));
+////        Ss[k]/float(ws(k)), pis(k)));
+//    }
+//  return true;
+//}
 
 bool ComputePcBoundaries(const pcl::PointCloud<pcl::PointXYZRGBNormal>&
     pc, Eigen::Vector3d& min, Eigen::Vector3d& max) {
@@ -435,11 +595,11 @@ int main(int argc, char** argv) {
 
   std::vector<bb::vMF<3>> vmfsA;
   ComputevMFMMfromPC(pcA, cfg, vmfsA);
-//  for(uint32_t k=0; k<vmfsA.size(); ++k) vmfsA[k].Print(); 
+  if(vm.count("verbose")) for(uint32_t k=0; k<vmfsA.size(); ++k) vmfsA[k].Print(); 
 
   std::vector<bb::vMF<3>> vmfsB;
   ComputevMFMMfromPC(pcB, cfg, vmfsB);
-//  for(uint32_t k=0; k<vmfsB.size(); ++k) vmfsB[k].Print(); 
+  if(vm.count("verbose")) for(uint32_t k=0; k<vmfsB.size(); ++k) vmfsB[k].Print(); 
 
   if (egi_mode) {
     for(uint32_t k=0; k<vmfsA.size(); ++k) 
@@ -451,11 +611,11 @@ int main(int argc, char** argv) {
   cfg.lambda = lambdaT;
   std::vector<bb::Normal<3>> gmmA;
   ComputeGMMfromPC(pcA, cfg, gmmA, false);
-//  for(uint32_t k=0; k<gmmA.size(); ++k) gmmA[k].Print(); 
+  if(vm.count("verbose")) for(uint32_t k=0; k<gmmA.size(); ++k) gmmA[k].Print(); 
 
   std::vector<bb::Normal<3>> gmmB;
   ComputeGMMfromPC(pcB, cfg, gmmB, false);
-//  for(uint32_t k=0; k<gmmB.size(); ++k) gmmB[k].Print(); 
+  if(vm.count("verbose")) for(uint32_t k=0; k<gmmB.size(); ++k) gmmB[k].Print(); 
 
   bb::vMFMM<3> vmfmmA(vmfsA);
   bb::vMFMM<3> vmfmmB(vmfsB);
