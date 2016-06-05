@@ -148,7 +148,7 @@ def RunICP(scanApath, scanBpath, transformationPathICP,
   q,t = LoadTransformation(transformationPathICP)
   return q,t,dt,True
 def RunGoICP(scanApath, scanBpath, transformationPathGoICP,
-    NdDownsampled=1000):
+    NdDownsampled=3000):
   scale = PreparePcForGoICP(scanApath, scanBpath)
 
   args = ['../goIcp/src/build/GoICP', 

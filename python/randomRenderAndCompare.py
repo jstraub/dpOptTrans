@@ -130,6 +130,7 @@ version = "2.6" # fixed sampling of point clouds. Gigantic eval - currently in f
 version = "2.7" # implementing and testing multi cluster tracking...
 version = "2.8" # evaluating multi rotation cluster optimization
 version = "2.9" # only temporary for GoICP
+version = "2.91" # GoICP with trim=0.2 
 
 args = ['../build/bin/renderPcFromPc',
     '-i ' + cmdArgs.input,
@@ -182,12 +183,12 @@ if subp.call(" ".join(args), shell=True) == 0:
     results["GoICP"] = {"err_a":err_a, "err_t":err_t, "q":q.q.tolist(),
         "t":t.tolist(), "dt":dt}
 
-    q0 = Quaternion(1.,0.,0.,0.)
-    DisplayPcs(scanApath, scanBpath, q0, np.zeros(3), False, False, False)
-    DisplayPcs(scanApath, scanBpath, q,t, False,False,False)
-#    print "displaying"
-    DisplayPcs(scanApath, scanBpath, q.inverse(),-q.toRot().R.T.dot(t),
-        True,True,False)
+#    q0 = Quaternion(1.,0.,0.,0.)
+#    DisplayPcs(scanApath, scanBpath, q0, np.zeros(3), False, False, False)
+#    DisplayPcs(scanApath, scanBpath, q,t, False,False,False)
+##    print "displaying"
+#    DisplayPcs(scanApath, scanBpath, q.inverse(),-q.toRot().R.T.dot(t),
+#        True,True,False)
 
   if runFFT:
     q,t,dt,success = RunFFT(scanApath, scanBpath, transformationPathFFT)
