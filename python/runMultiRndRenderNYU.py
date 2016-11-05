@@ -16,11 +16,12 @@ cmdArgs = parser.parse_args()
 
 prefix = cmdArgs.prefix
 
-#nyuPath = "/data/vision/fisher/data1/nyu_depth_v2/extracted/"
-#resultsPath = "/data/vision/fisher/expres1/jstraub/optRotTrans/"
 
-nyuPath = "/media/jstraub/research/nyu_depth_v2/extracted/"
-resultsPath = "/media/jstraub/research/dpOptTrans/"
+#nyuPath = "/media/jstraub/research/nyu_depth_v2/extracted/"
+#resultsPath = "/media/jstraub/research/dpOptTrans/"
+
+nyuPath = "/data/vision/fisher/data1/nyu_depth_v2/extracted/"
+resultsPath = "/data/vision/fisher/expres1/jstraub/optRotTransCVPR2017/"
 name = "[a-z_]+_[0-9]+_[0-9]+.ply"
 
 paths = []

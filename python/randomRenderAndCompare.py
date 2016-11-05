@@ -106,13 +106,13 @@ paramEvalLambdaR3 = [0.5, 0.75, 1.0]
 paramEvalLambdaS3 = [45. ] #, 90.]
 paramEvalLambdaR3 = [0.5]
 
-runFFT = False
-runFFTICP = False
+runFFT = True
+runFFTICP = True
 runMM = False
 runMMICP = False
-runICP = False
-runBB = False
-runBBICP = False
+runICP = True 
+runBB = True
+runBBICP = True
 runBBEGI = False
 runBBEGIICP = False
 runBBeval = False
@@ -131,6 +131,7 @@ version = "2.7" # implementing and testing multi cluster tracking...
 version = "2.8" # evaluating multi rotation cluster optimization
 version = "2.9" # only temporary for GoICP
 version = "2.91" # GoICP with trim=0.2 
+version = "2.92" # GoICP with trim=0.2 and timeout at 10min
 
 args = ['../build/bin/renderPcFromPc',
     '-i ' + cmdArgs.input,
