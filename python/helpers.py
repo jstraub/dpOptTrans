@@ -4,6 +4,25 @@ import re, os.path, time
 import subprocess as subp
 from js.data.plyParse import PlyParse
 
+import subprocess, shlex
+from threading import Timer
+
+def kill_proc(p):
+  print "killing proc"
+  p.kill()
+
+def run(cmd, timeout_sec):
+  proc = subprocess.Popen(shlex.split(cmd), stdout=subprocess.PIPE, 
+    stderr=subprocess.PIPE)
+#  kill_proc = lambda p: p.kill()
+  timer = Timer(timeout_sec, kill_proc, [proc])
+  try:
+    timer.start()
+    stdout,stderr = proc.communicate()
+  finally:
+    timer.cancel()
+  return proc.returncode
+
 def RunFFT(scanApath, scanBpath, transformationPathFFT, q_gt=None,
     t_gt=None, returnBoth=False):
   scanApathAbs = os.path.abspath(scanApath)
@@ -148,7 +167,7 @@ def RunICP(scanApath, scanBpath, transformationPathICP,
   q,t = LoadTransformation(transformationPathICP)
   return q,t,dt,True
 def RunGoICP(scanApath, scanBpath, transformationPathGoICP,
-    NdDownsampled=3000):
+    NdDownsampled=3000, timeout_sec = 600):
   scale = PreparePcForGoICP(scanApath, scanBpath)
 
   args = ['../goIcp/src/build/GoICP', 
@@ -159,10 +178,15 @@ def RunGoICP(scanApath, scanBpath, transformationPathGoICP,
       re.sub(".csv",".txt",transformationPathGoICP)
       ]
   print " ".join(args)
-  err = subp.call(" ".join(args), shell=True)
+  err = run(" ".join(args), timeout_sec)
+  print "error ", err
+#  err = subp.call(" ".join(args), shell=True)
   q,t,dt = LoadTransformationGoICP(re.sub(".csv",".txt",transformationPathGoICP))
   t*= scale
-  return q,t,dt,True
+  if err == 0:
+    return q,t,dt,True
+  else:
+    return q,t,dt,False
 
 def PreparePcForGoICP(scanApath, scanBpath):
   plyA = PlyParse()

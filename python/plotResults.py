@@ -162,10 +162,11 @@ def TableErr(x, y, delta):
     dSort = np.sort(d)
     median = dSort[dSort.size/2]
     if dSort.size % 2 == 0:
-      median = 0.5*(dSort[dSort.size/2]+dSort[dSort.size/2+1])
+      median = 0.5*(dSort[dSort.size/2-1]+dSort[dSort.size/2])
+    perc75 = dSort[int(np.floor(dSort.size*0.75))]
     perc90 = dSort[int(np.floor(dSort.size*0.9))]
-    print "[{} {}]\t #: {}\t 50%: {:.2f}\t 90%: {:.2f}".format(
-        ticks[i],ticks[i+1],dSort.size,median, perc90)
+    print "[{} {}]\t #: {}\t 50%: {:.2f}\t 75%: {:.2f}\t 90%: {:.2f}".format(
+        ticks[i],ticks[i+1],dSort.size,median,perc75,perc90)
 
 def PlotScatter(x, y, delta, ax, showXTicks):
   if x.size < 1:
@@ -230,7 +231,7 @@ def WriteErrStats(x, y, delta):
 errDesc = {"err_a":"$\Delta \\theta$ [deg]", 
     "err_t": "$\|\|\Delta t\|\|_2$ [m]", "dt":"dt [s]",
     "Ks1":"Ks", "Ks2":"Ks", "Ks3":"Ks", "Ks4":"Ks"}
-errTypeMax = {"err_a": 12., "err_t": 2., "dt": 120.,
+errTypeMax = {"err_a": 360., "err_t": 10., "dt": 120.,
     "Ks1":30, "Ks2":30, "Ks3":30, "Ks4":30}
 yMetricLabel={"overlap":"overlap [%]", "dangle":" $\Delta\\theta_{GT}$ [deg]",
   "dtranslation":"$\|\|\Delta t_{GT}\|\|_2$ [m]"}

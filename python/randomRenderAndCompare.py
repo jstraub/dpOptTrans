@@ -321,7 +321,7 @@ if subp.call(" ".join(args), shell=True) == 0:
         "t":t.tolist(), "dt":dt}
 
   if cmdArgs.display:
-    DisplayPcs(scanApath, scanBpath, q,t)
+    DisplayPcs(scanApath, scanBpath, q,t, True, True, False)
 
   import json, time
 #  print results
