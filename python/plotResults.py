@@ -343,8 +343,8 @@ else:
       "FFT", "FFT+ICP", "ICP", "MM", "MM+ICP"]
   algTypes = ["BB","BB_45.0_0.5", "FFT",  "MM", "ICP"]
   algTypes = ["BB_45.0_0.5"]
-  algTypes = ["BB", "FFT",  "MM", "ICP"]
   algTypes = ["GoICP"]
+  algTypes = ["BB", "FFT",  "GoICP", "ICP"]
 
 
 if not "DISPLAY" in os.environ:
