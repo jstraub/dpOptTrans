@@ -106,17 +106,19 @@ paramEvalLambdaR3 = [0.5, 0.75, 1.0]
 paramEvalLambdaS3 = [45. ] #, 90.]
 paramEvalLambdaR3 = [0.5]
 
-runFFT = True
-runFFTICP = True
+runFFT    =True
+runFFTICP =True
+runICP    =True
+runBB     =True
+runBBICP  =True
+runGoICP  =True
+
 runMM = False
 runMMICP = False
-runICP = True 
-runBB = True
-runBBICP = True
 runBBEGI = False
 runBBEGIICP = False
 runBBeval = False
-runGoICP = True
+
 version = "1.4" # large scale eval of all algos and RunBB
 version = "1.5" # eval of BB vor different parameters
 version = "1.51" # eval of more different BB parameters as well as the best of approach
