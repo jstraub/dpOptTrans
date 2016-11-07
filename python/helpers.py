@@ -52,6 +52,7 @@ def RunFFT(scanApath, scanBpath, transformationPathFFT, q_gt=None,
     return qs[id_best], ts[id_best], qs[0], ts[0], dt, True
   else:
     return qs[id_best], ts[id_best], dt, True
+
 def RunBBsimple(scanApath, scanBpath, transformationPathBB, lambdaS3,
     lambdaR3, EGImode=False):
   args = ['../pod-build/bin/dpOptTransPly', 
@@ -77,8 +78,10 @@ def RunBBsimple(scanApath, scanBpath, transformationPathBB, lambdaS3,
   if np.logical_or(np.isinf([lbR3]), np.isnan([lbR3])).all():
     return q, np.array([np.nan, np.nan, np.nan]), Ks,dt,False
   return q,t, Ks, dt,True
+
 def RunBB(cfg, scanApath, scanBpath, transformationPathBB,\
-    EGImode=False, TpSmode=False, AAmode=False, outputBoundsAt0=False):
+    EGImode=False, TpSmode=False, AAmode=False, outputBoundsAt0=False,
+    simpleTranslation=False):
   lbsS3 = np.zeros(len(cfg["lambdaS3"]))
   lbsR3 = np.zeros(len(cfg["lambdaS3"]))
   Ks = np.zeros((len(cfg["lambdaS3"]), 4))
@@ -100,6 +103,8 @@ def RunBB(cfg, scanApath, scanBpath, transformationPathBB,\
       args.append('--AA')
     if outputBoundsAt0:
       args.append('--oB0')
+    if simpleTranslation:
+      args.append('--simpleTrans')
     print " ".join(args)
     t0 = time.time()
     err = subp.call(" ".join(args), shell=True)
@@ -129,6 +134,7 @@ def RunBB(cfg, scanApath, scanBpath, transformationPathBB,\
       q.q[0],q.q[1],q.q[2],q.q[3],t[0],t[1],t[2],lbS3,lbR3,KvmfA,\
       KvmfB, KgmmA, KgmmB))
   return q,t, Ks[idMax,:], dt,True
+
 def RunMM(scanApath, scanBpath, transformationPathMM):
   args = ['../pod-build/bin/moment_matched_T3', 
       '-a {}'.format(scanApath), 
@@ -145,6 +151,7 @@ def RunMM(scanApath, scanBpath, transformationPathMM):
     return Quaternion(), np.zeros(3), dt, False
   q,t = LoadTransformation(transformationPathMM)
   return q,t, dt,True
+
 def RunICP(scanApath, scanBpath, transformationPathICP,
     useNormals=True, transformationPathGlobal=None):
   args = ['../pod-build/bin/icp_T3', 

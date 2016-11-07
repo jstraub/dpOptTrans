@@ -51,6 +51,7 @@ version = "2.8" #
 version = "2.6" # monster final eval for CVPR 2016
 version = "2.91" # GoICP with trim=0.2 
 version = "2.92" # GoICP with trim=0.2 and timeout at 10min
+version = "2.93"
 
 errors = {"err_a":{}, "err_t":{}, "dt":{}, "Ks":{}, "overlap":[], "dangle":[],
   "dtranslation":[]}

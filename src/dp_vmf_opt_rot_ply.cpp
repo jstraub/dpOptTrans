@@ -77,6 +77,19 @@ namespace po = boost::program_options;
 //  };
 //};
 
+Eigen::Vector3d ComputePcMean(pcl::PointCloud<pcl::PointXYZRGBNormal>&
+    pc) {
+  // take 3 values (x,y,z of normal) with an offset of 4 values (x,y,z
+  // and one float which is undefined) and the step is 12 (4 for xyz, 4
+  // for normal xyz and 4 for curvature and rgb).
+  auto xyz = pc.getMatrixXfMap(3, 12, 0); // this works for PointXYZRGBNormal
+  Eigen::Vector3d mean =  Eigen::Vector3d::Zero();
+
+  for (size_t i=0; i<xyz.cols(); ++i) {
+    mean += xyz.col(i).cast<double>();
+  }
+  return  mean /= xyz.cols();
+}
 
 bool ComputevMFMMfromPC(const pcl::PointCloud<pcl::PointXYZRGBNormal>&
     pc, const CfgRtDDPvMF& cfg, std::vector<vMF<3>>& vmfs) {
@@ -510,6 +523,7 @@ int main(int argc, char** argv) {
     ("out,o", po::value<string>(), "path to output file")
     ("scale,s", po::value<float>(),"scale for point-cloud")
     ("egi,e", "make the vMF MM pis uniform - like a EGI")
+    ("simpleTrans", "use means of PCs to compute translation")
     ("oB0", "output bounds at level 0")
     ("TpS", "use TpS-based tessellation instead of 600-cell based (not recommended)")
     ("AA", "use axis-angle-based tessellation instead of 600-cell based (not recommended)")
@@ -543,6 +557,7 @@ int main(int argc, char** argv) {
   bool egi_mode = false;
   bool TpS_mode = false;
   bool AA_mode = false;
+  bool simpleTrans = false;
   string pathA = "";
   string pathB = "";
   std::string pathOut = "";
@@ -557,6 +572,7 @@ int main(int argc, char** argv) {
   if(vm.count("TpS")) TpS_mode = true;
   if(vm.count("AA")) AA_mode = true;
   if(vm.count("oB0")) output_init_bounds = true;
+  if(vm.count("simpleTrans")) simpleTrans = true;
   if (egi_mode)
     std::cout << "Using EGI mode - making pis of vMF MM uniform." << std::endl;
 
@@ -610,12 +626,16 @@ int main(int argc, char** argv) {
 
   cfg.lambda = lambdaT;
   std::vector<bb::Normal<3>> gmmA;
-  ComputeGMMfromPC(pcA, cfg, gmmA, false);
-  if(vm.count("verbose")) for(uint32_t k=0; k<gmmA.size(); ++k) gmmA[k].Print(); 
+  if (!simpleTrans) {
+    ComputeGMMfromPC(pcA, cfg, gmmA, false);
+    if(vm.count("verbose")) for(uint32_t k=0; k<gmmA.size(); ++k) gmmA[k].Print(); 
+  }
 
   std::vector<bb::Normal<3>> gmmB;
-  ComputeGMMfromPC(pcB, cfg, gmmB, false);
-  if(vm.count("verbose")) for(uint32_t k=0; k<gmmB.size(); ++k) gmmB[k].Print(); 
+  if (!simpleTrans) {
+    ComputeGMMfromPC(pcB, cfg, gmmB, false);
+    if(vm.count("verbose")) for(uint32_t k=0; k<gmmB.size(); ++k) gmmB[k].Print(); 
+  }
 
   bb::vMFMM<3> vmfmmA(vmfsA);
   bb::vMFMM<3> vmfmmB(vmfsB);
@@ -766,56 +786,71 @@ int main(int argc, char** argv) {
   }
   for (uint32_t k=0; k<qs.size(); ++k) {
     Eigen::Quaterniond q = qs[k]; 
-    // To get all corners of the bounding box.j
-    bb::Box box(minA, maxA);
-    // Update the boundaries of the the rotated point cloud A to get
-    // the full translation space later on.
-    for (uint32_t i=0; i<8; ++i) {
-      Eigen::Vector3d c;
-      box.GetCorner(i,c);
-      c = q.inverse()._transformVector(c);
-      for (uint32_t d=0; d<3; ++d) {
-        minA(d) = std::min(minA(d), c(d));
-        maxA(d) = std::max(maxA(d), c(d));
+    if (simpleTrans) {
+      std::cout << "Simple transformation " << std::endl;
+      Eigen::Vector3d meanA = ComputePcMean(pcA);
+      Eigen::Vector3d meanB = ComputePcMean(pcB);
+      std::cout << meanA.transpose() << std::endl << meanB.transpose() << std::endl;
+      Eigen::Vector3d t = meanB - q._transformVector(meanA);
+      std::cout << t.transpose() << std::endl;
+//      std::cout << q._transformVector(meanB) - meanA << std::endl;
+//      std::cout << q._transformVector(meanA) - meanB << std::endl;
+      
+      ts.push_back(t);
+      lbsR3(k) = 0.;
+      lbs(k) = lbsS3(k);
+    } else {
+      // To get all corners of the bounding box.j
+      bb::Box box(minA, maxA);
+      // Update the boundaries of the the rotated point cloud A to get
+      // the full translation space later on.
+      for (uint32_t i=0; i<8; ++i) {
+        Eigen::Vector3d c;
+        box.GetCorner(i,c);
+        c = q.inverse()._transformVector(c);
+        for (uint32_t d=0; d<3; ++d) {
+          minA(d) = std::min(minA(d), c(d));
+          maxA(d) = std::max(maxA(d), c(d));
+        }
       }
-    }
-    for (uint32_t d=0; d<3; ++d) {
-      Eigen::Matrix<double,4,1> dt;
-      dt(0) = -minA(d) + minB(d);
-      dt(1) = -minA(d) + maxB(d);
-      dt(2) = -maxA(d) + minB(d);
-      dt(3) = -maxA(d) + maxB(d);
-      min(d) = dt.minCoeff();
-      max(d) = dt.maxCoeff();
-    }
-    std::cout << "min t: " << min.transpose() 
-      << " max t: " << max.transpose() << std::endl;
+      for (uint32_t d=0; d<3; ++d) {
+        Eigen::Matrix<double,4,1> dt;
+        dt(0) = -minA(d) + minB(d);
+        dt(1) = -minA(d) + maxB(d);
+        dt(2) = -maxA(d) + minB(d);
+        dt(3) = -maxA(d) + maxB(d);
+        min(d) = dt.minCoeff();
+        max(d) = dt.maxCoeff();
+      }
+      std::cout << "min t: " << min.transpose() 
+        << " max t: " << max.transpose() << std::endl;
 
-    std::list<bb::NodeR3> nodesR3 =
-      bb::GenerateNotesThatTessellateR3(min, max, (max-min).norm());
-    bb::LowerBoundR3 lower_bound_R3(gmmA, gmmB, q);
-    bb::UpperBoundIndepR3 upper_bound_R3(gmmA, gmmB, q);
-    bb::UpperBoundConvexR3 upper_bound_convex_R3(gmmA, gmmB, q);
+      std::list<bb::NodeR3> nodesR3 =
+        bb::GenerateNotesThatTessellateR3(min, max, (max-min).norm());
+      bb::LowerBoundR3 lower_bound_R3(gmmA, gmmB, q);
+      bb::UpperBoundIndepR3 upper_bound_R3(gmmA, gmmB, q);
+      bb::UpperBoundConvexR3 upper_bound_convex_R3(gmmA, gmmB, q);
 
-    if (output_init_bounds) {
-      WriteBounds<bb::NodeR3>(lower_bound_R3, upper_bound_R3,
-          upper_bound_convex_R3, nodesR3);
+      if (output_init_bounds) {
+        WriteBounds<bb::NodeR3>(lower_bound_R3, upper_bound_R3,
+            upper_bound_convex_R3, nodesR3);
+      }
+
+      std::cout << "# initial nodes: " << nodesR3.size() << std::endl;
+      double eps = 1e-10;
+      uint32_t max_it = 5000;
+      uint32_t max_lvl = 22;
+      bb::BranchAndBound<bb::NodeR3> bbR3(lower_bound_R3, upper_bound_convex_R3);
+      std::cout << " BB on R3 eps=" << eps << " max_it=" << max_it << std::endl;
+      bb::NodeR3 nodeR3_star = bbR3.Compute(nodesR3, eps, max_lvl, max_it);
+      Eigen::Vector3d t =  nodeR3_star.GetLbArgument();
+      //    bb::CountBranchesInTree<bb::NodeR3>(nodesR3);
+      std::cout << "with LB " << nodeR3_star.GetLB() << " optimum translation: " 
+        << t.transpose() << std::endl;
+      ts.push_back(t);
+      lbsR3(k) = nodeR3_star.GetLB();
+      lbs(k) = lbsS3(k) * lbsR3(k);
     }
-
-    std::cout << "# initial nodes: " << nodesR3.size() << std::endl;
-    double eps = 1e-9;
-    uint32_t max_it = 5000;
-    uint32_t max_lvl = 22;
-    bb::BranchAndBound<bb::NodeR3> bbR3(lower_bound_R3, upper_bound_convex_R3);
-    std::cout << " BB on R3 eps=" << eps << " max_it=" << max_it << std::endl;
-    bb::NodeR3 nodeR3_star = bbR3.Compute(nodesR3, eps, max_lvl, max_it);
-    Eigen::Vector3d t =  nodeR3_star.GetLbArgument();
-    //    bb::CountBranchesInTree<bb::NodeR3>(nodesR3);
-    std::cout << "with LB " << nodeR3_star.GetLB() << " optimum translation: " 
-      << t.transpose() << std::endl;
-    ts.push_back(t);
-    lbsR3(k) = nodeR3_star.GetLB();
-    lbs(k) = lbsS3(k) * lbsR3(k);
 
 //    for (auto& node: nodesR3) {
 //      std::cout << node.GetLbArgument().transpose() << std::endl;

@@ -61,6 +61,7 @@ def DisplayPcs(scanApath, scanBpath, q,t, plotCosies, stopToDisplay,
 #cfgNYU = {"name":"nyu", "lambdaS3": [30., 45.,60., 75, 90.], "lambdaR3": 1.}
 cfgNYU = {"name":"nyu", "lambdaS3": [45.], "lambdaR3": 0.5}
 cfgNYU = {"name":"nyu", "lambdaS3": [45., 65, 80], "lambdaR3": 0.5}
+cfgNYU = {"name":"nyu", "lambdaS3": [45., 65, 80], "lambdaR3": 0.3}
 
 cfg = cfgNYU
 
@@ -113,6 +114,13 @@ runBB     =True
 runBBICP  =True
 runGoICP  =True
 
+#runFFT    =False
+#runFFTICP =False
+#runICP    =False
+#runBB     =True
+#runBBICP  =False
+#runGoICP  =False
+
 runMM = False
 runMMICP = False
 runBBEGI = False
@@ -134,7 +142,9 @@ version = "2.8" # evaluating multi rotation cluster optimization
 version = "2.9" # only temporary for GoICP
 version = "2.91" # GoICP with trim=0.2 
 version = "2.92" # GoICP with trim=0.2 and timeout at 10min
-
+version = "2.93" # trying to improve translation accuracy for BB (lambdaT smaller; eps smaller in BB)
+version = "2.94" # simple translation
+ 
 args = ['../build/bin/renderPcFromPc',
     '-i ' + cmdArgs.input,
     '-o ' + outputPath,
@@ -243,7 +253,8 @@ if subp.call(" ".join(args), shell=True) == 0:
             "dt":dt, "lambdaS3":lambdaS3, "lambdaR3":lambdaR3}
 
   if runBB:
-    q,t,Ks, dt,success = RunBB(cfg, scanApath, scanBpath, transformationPathBB)
+    q,t,Ks, dt,success = RunBB(cfg, scanApath, scanBpath,
+        transformationPathBB, simpleTranslation=True)
     if not success:
       err_a, err_t = np.nan, np.nan
       if np.isnan(t).all(): # only translation is messed up -> err_a
