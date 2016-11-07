@@ -510,7 +510,6 @@ bool ComputePcBoundaries(const pcl::PointCloud<pcl::PointXYZRGBNormal>&
   return true;
 }
 
-
 int main(int argc, char** argv) {
   // Declare the supported options.
   po::options_description desc("Allowed options");
@@ -648,7 +647,7 @@ int main(int argc, char** argv) {
   double lb_star = 1e99;
   double eps = 1e-8;
   //  double eps = 8e-7;
-  uint32_t max_lvl = 12;
+  uint32_t max_lvl = 20;
   uint32_t max_it = 5000;
   if (TpS_mode)  {
 

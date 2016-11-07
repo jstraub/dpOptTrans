@@ -7,35 +7,36 @@ from js.geometry.rotations import Quaternion
 from js.utils.plot.colors import colorScheme
 from helpers import *
 
-cfgBuddha = {"name":"buddha", "lambdaS3": [80], "lambdaR3": 0.0008}
 cfgEnschede = {"name":"enschede", "lambdaS3": [60, 70, 80], "lambdaR3":0.3}
 cfgBunnyZipper = {"name":"bun_zipper", "lambdaS3": [60], "lambdaR3": 0.001}
 #cfgBunnyAB = {"name":"bunnyAB", "lambdaS3": [45, 60, 70, 80], "lambdaR3": 0.003}
 cfgBunnyAB = {"name":"bunnyAB", "lambdaS3": [60], "lambdaR3": 0.001}
 cfgBunny = {"name":"bunny", "lambdaS3": [60, 70, 80], "lambdaR3": 0.003}
-cfgBuddhaRnd = {"name":"buddhaRnd", "lambdaS3": [60, 70, 80],
-  "lambdaR3": 0.002}
 cfgLymph = {"name":"lymph", "lambdaS3": [80], "lambdaR3": 1.}
+cfgBuddha = {"name":"buddha", "lambdaS3": [60,70,80], "lambdaR3": 0.0008}
+cfgBuddhaRnd = {"name":"buddhaRnd", "lambdaS3": [50, 60, 70, 80],
+  "lambdaR3": 0.002}
 
 cfg = cfgBunny
 cfg = cfgEnschede
-cfg = cfgBuddhaRnd
-cfg = cfgBuddha
 cfg = cfgLymph
 cfg = cfgBunnyZipper
 cfg = cfgBunnyAB
+cfg = cfgBuddha
+cfg = cfgBuddhaRnd
 
 loadCached = False
 stopToShow = False
 showTransformed =  True 
-showUntransformed =True 
-applyBB = False
+showUntransformed =False
+applyBB = True
 applyBBEGI = False
 applyFFT = False
 applyMM = False
 applyICP = False
-runGoICP = True
+runGoICP = False
 
+simpleTranslation = True
 useS3tessellation = True
 useTpStessellation = not useS3tessellation and False
 useAAtessellation = not useS3tessellation and not useTpStessellation
@@ -83,6 +84,7 @@ if cfg["name"] == "buddhaRnd":
 #    if id in [264, 288]:
 #      scans2.append(scan)
 #  scans = scans2
+#  scans = scans[:5]
 if cfg["name"] == "bunny":
   pattern = "bun[0-9]+_angle_90_translation_0.3.ply$"
   scans = []
@@ -159,7 +161,8 @@ for i in range(1,len(scans)):
       q,t,Ks,dt,_ = RunBB(cfg, scanApath, scanBpath,
           transformationPathBB, TpSmode=useTpStessellation,
           outputBoundsAt0=outputBoundsAt0,
-          AAmode=useAAtessellation)
+          AAmode=useAAtessellation,
+          simpleTranslation=simpleTranslation)
     transformationPath = transformationPathBB
 
   if applyBBEGI:
