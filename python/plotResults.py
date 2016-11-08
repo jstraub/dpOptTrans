@@ -52,6 +52,7 @@ version = "2.6" # monster final eval for CVPR 2016
 version = "2.91" # GoICP with trim=0.2 
 version = "2.92" # GoICP with trim=0.2 and timeout at 10min
 version = "2.93"
+version = "3.0"
 
 errors = {"err_a":{}, "err_t":{}, "dt":{}, "Ks":{}, "overlap":[], "dangle":[],
   "dtranslation":[]}
@@ -346,6 +347,7 @@ else:
   algTypes = ["BB_45.0_0.5"]
   algTypes = ["GoICP"]
   algTypes = ["BB", "FFT",  "GoICP", "ICP"]
+  algTypes = ["BB", "Map", "FFT",  "GoICP", "ICP"]
 
 
 if not "DISPLAY" in os.environ:

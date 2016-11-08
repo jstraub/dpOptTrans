@@ -113,6 +113,8 @@ runICP    =True
 runBB     =True
 runBBICP  =True
 runGoICP  =True
+runMap    =True
+runMapICP =True
 
 #runFFT    =False
 #runFFTICP =False
@@ -143,7 +145,7 @@ version = "2.9" # only temporary for GoICP
 version = "2.91" # GoICP with trim=0.2 
 version = "2.92" # GoICP with trim=0.2 and timeout at 10min
 version = "2.93" # trying to improve translation accuracy for BB (lambdaT smaller; eps smaller in BB)
-version = "2.94" # simple translation
+version = "3.0" # simple rotation
  
 args = ['../build/bin/renderPcFromPc',
     '-i ' + cmdArgs.input,
@@ -299,6 +301,32 @@ if subp.call(" ".join(args), shell=True) == 0:
       err_a, err_t = EvalError(q_gt, t_gt, q, t)
     print "BBEGI+ICP: {} deg {} m".format(err_a, err_t)
     results["BBEGI+ICP"] = {"err_a":err_a, "err_t":err_t,
+        "q":q.q.tolist(), "t":t.tolist(), "dt":dt+dt2}
+
+  if runMap:
+    q,t,Ks, dt,success = RunBB(cfg, scanApath, scanBpath,
+        transformationPathBB, simpleTranslation=True,
+        simpleRotation=True)
+    if not success:
+      err_a, err_t = np.nan, np.nan
+      if np.isnan(t).all(): # only translation is messed up -> err_a
+        err_a, _ = EvalError(q_gt, t_gt, q, t)
+      runBBICP = False
+    else:
+      err_a, err_t = EvalError(q_gt, t_gt, q, t)
+    print "Map: {} deg {} m".format(err_a, err_t)
+    results["Map"] = {"err_a":err_a, "err_t":err_t, "q":q.q.tolist(),
+        "t":t.tolist(), "Ks":Ks.tolist(), "dt":dt}
+
+  if runMapICP:
+    q,t,dt2,success = RunICP(scanApath, scanBpath, transformationPathBBICP,
+        useSurfaceNormalsInICP, transformationPathBB)
+    if not success:
+      err_a, err_t = np.nan, np.nan
+    else:
+      err_a, err_t = EvalError(q_gt, t_gt, q, t)
+    print "Map+ICP: {} deg {} m".format(err_a, err_t)
+    results["Map+ICP"] = {"err_a":err_a, "err_t":err_t,
         "q":q.q.tolist(), "t":t.tolist(), "dt":dt+dt2}
 
   if runMM:
