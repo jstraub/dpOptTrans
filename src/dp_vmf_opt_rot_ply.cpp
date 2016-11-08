@@ -647,7 +647,7 @@ int main(int argc, char** argv) {
   double lb_star = 1e99;
   double eps = 1e-8;
   //  double eps = 8e-7;
-  uint32_t max_lvl = 20;
+  uint32_t max_lvl = 14;
   uint32_t max_it = 5000;
   if (TpS_mode)  {
 

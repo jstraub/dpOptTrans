@@ -123,7 +123,10 @@ def RunBB(cfg, scanApath, scanBpath, transformationPathBB,\
   if np.logical_or(np.isinf(lbsR3), np.isnan(lbsR3)).all():
     idMax = np.argmax(lbsS3)
     return qs[idMax], np.array([np.nan, np.nan, np.nan]), Ks[idMax,:],dt,False
-  idMax = np.argmax(lbsS3*lbsR3)
+  if simpleTranslation:
+    idMax = np.argmax(lbsS3)
+  else:
+    idMax = np.argmax(lbsS3*lbsR3)
   print "choosing scale {} of run {}".format(cfg["lambdaS3"][idMax],idMax)
   q,t = qs[idMax], ts[idMax]
   lbS3, lbR3 = lbsS3[idMax], lbsR3[idMax]

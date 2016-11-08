@@ -14,7 +14,7 @@ cfgBunnyAB = {"name":"bunnyAB", "lambdaS3": [60], "lambdaR3": 0.001}
 cfgBunny = {"name":"bunny", "lambdaS3": [60, 70, 80], "lambdaR3": 0.003}
 cfgLymph = {"name":"lymph", "lambdaS3": [80], "lambdaR3": 1.}
 cfgBuddha = {"name":"buddha", "lambdaS3": [60,70,80], "lambdaR3": 0.0008}
-cfgBuddhaRnd = {"name":"buddhaRnd", "lambdaS3": [50, 60, 70, 80],
+cfgBuddhaRnd = {"name":"buddhaRnd", "lambdaS3": [60, 70, 80],
   "lambdaR3": 0.002}
 
 cfg = cfgBunny
@@ -33,8 +33,8 @@ applyBB = True
 applyBBEGI = False
 applyFFT = False
 applyMM = False
-applyICP = False
 runGoICP = False
+applyICP = True
 
 simpleTranslation = True
 useS3tessellation = True
@@ -73,7 +73,8 @@ if cfg["name"] == "buddhaRnd":
       if re.search(pattern, f):
         scans.append(os.path.join(root, f))
   scans = sorted(scans, key=lambda f: 
-    int(re.sub("_angle_90_translation_0.3.ply","",re.sub("happyStandRight_","",os.path.split(f)[1]))))
+    int(re.sub("_angle_90_translation_0.3.ply","",
+      re.sub("happyStandRight_","",os.path.split(f)[1]))))
   gt = []
   scans = np.roll(scans, 7)
   print scans
