@@ -10,19 +10,20 @@ from helpers import *
 cfgEnschede = {"name":"enschede", "lambdaS3": [60, 70, 80], "lambdaR3":0.3}
 cfgBunnyZipper = {"name":"bun_zipper", "lambdaS3": [60], "lambdaR3": 0.001}
 #cfgBunnyAB = {"name":"bunnyAB", "lambdaS3": [45, 60, 70, 80], "lambdaR3": 0.003}
-cfgBunnyAB = {"name":"bunnyAB", "lambdaS3": [60], "lambdaR3": 0.001}
+cfgBunnyAB = {"name":"bunnyAB", "lambdaS3":
+    [60,70,80,90,100,110,120], "lambdaR3": 0.001}
 cfgBunny = {"name":"bunny", "lambdaS3": [60, 70, 80], "lambdaR3": 0.003}
 cfgLymph = {"name":"lymph", "lambdaS3": [80], "lambdaR3": 1.}
 cfgBuddha = {"name":"buddha", "lambdaS3": [60,70,80], "lambdaR3": 0.0008}
-cfgBuddhaRnd = {"name":"buddhaRnd", "lambdaS3": [60, 70, 80],
+cfgBuddhaRnd = {"name":"buddhaRnd", "lambdaS3": [50,60,70,80],
   "lambdaR3": 0.002}
 
 cfg = cfgBunny
 cfg = cfgEnschede
 cfg = cfgLymph
+cfg = cfgBuddha
 cfg = cfgBunnyZipper
 cfg = cfgBunnyAB
-cfg = cfgBuddha
 cfg = cfgBuddhaRnd
 
 loadCached = False
@@ -34,9 +35,10 @@ applyBBEGI = False
 applyFFT = False
 applyMM = False
 runGoICP = False
-applyICP = True
+applyICP = False
 
 simpleTranslation = True
+simpleRotation = True
 useS3tessellation = True
 useTpStessellation = not useS3tessellation and False
 useAAtessellation = not useS3tessellation and not useTpStessellation
@@ -163,7 +165,8 @@ for i in range(1,len(scans)):
           transformationPathBB, TpSmode=useTpStessellation,
           outputBoundsAt0=outputBoundsAt0,
           AAmode=useAAtessellation,
-          simpleTranslation=simpleTranslation)
+          simpleTranslation=simpleTranslation,
+          simpleRotation=simpleRotation)
     transformationPath = transformationPathBB
 
   if applyBBEGI:
@@ -233,7 +236,7 @@ for i in range(1,len(scans)):
   if showTransformed:
     mlab.points3d(pcB[:,0], pcB[:,1], pcB[:,2], mode="point",
           color=colors[i%len(colors)])
-    if stopToShow:
+    if stopToShow and i%4 == 0:
       mlab.show(stop=True)
 print "Done!"
 if showTransformed or showUntransformed:

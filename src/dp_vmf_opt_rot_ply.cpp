@@ -145,6 +145,7 @@ bool ComputevMFMMfromPC(const pcl::PointCloud<pcl::PointXYZRGBNormal>&
     if (counts(k) > 5) {
       vmfs.push_back(bb::vMF<3>(xSum.col(k).cast<double>()/xSum.col(k).norm(),
             taus(k), pis(k)));
+      vmfs.back().GetXSum() = xSum.col(k);
     }
   return true;
 }
@@ -523,6 +524,7 @@ int main(int argc, char** argv) {
     ("scale,s", po::value<float>(),"scale for point-cloud")
     ("egi,e", "make the vMF MM pis uniform - like a EGI")
     ("simpleTrans", "use means of PCs to compute translation")
+    ("simpleRot", "use 2-vMF-mixture to compute rotation")
     ("oB0", "output bounds at level 0")
     ("TpS", "use TpS-based tessellation instead of 600-cell based (not recommended)")
     ("AA", "use axis-angle-based tessellation instead of 600-cell based (not recommended)")
@@ -557,6 +559,7 @@ int main(int argc, char** argv) {
   bool TpS_mode = false;
   bool AA_mode = false;
   bool simpleTrans = false;
+  bool simpleRot = false;
   string pathA = "";
   string pathB = "";
   std::string pathOut = "";
@@ -572,6 +575,7 @@ int main(int argc, char** argv) {
   if(vm.count("AA")) AA_mode = true;
   if(vm.count("oB0")) output_init_bounds = true;
   if(vm.count("simpleTrans")) simpleTrans = true;
+  if(vm.count("simpleRot")) simpleRot = true;
   if (egi_mode)
     std::cout << "Using EGI mode - making pis of vMF MM uniform." << std::endl;
 
@@ -610,11 +614,11 @@ int main(int argc, char** argv) {
 
   std::vector<bb::vMF<3>> vmfsA;
   ComputevMFMMfromPC(pcA, cfg, vmfsA);
-  if(vm.count("verbose")) for(uint32_t k=0; k<vmfsA.size(); ++k) vmfsA[k].Print(); 
+  if(true || vm.count("verbose")) for(uint32_t k=0; k<vmfsA.size(); ++k) vmfsA[k].Print(); 
 
   std::vector<bb::vMF<3>> vmfsB;
   ComputevMFMMfromPC(pcB, cfg, vmfsB);
-  if(vm.count("verbose")) for(uint32_t k=0; k<vmfsB.size(); ++k) vmfsB[k].Print(); 
+  if(true || vm.count("verbose")) for(uint32_t k=0; k<vmfsB.size(); ++k) vmfsB[k].Print(); 
 
   if (egi_mode) {
     for(uint32_t k=0; k<vmfsA.size(); ++k) 
@@ -694,6 +698,53 @@ int main(int argc, char** argv) {
     // interior Node for this.
     for (const auto& node : nodes)
       nodesS3.push_back(node.GetNodeS3());
+  } else if (simpleRot) {
+    std::cout << "simple rotation computation" << std::endl; 
+    if (vmfmmA.GetK() > 1 && vmfmmB.GetK() > 1) {
+      // q is q_ba
+      bb::Combinations combA(vmfmmA.GetK(), 3); 
+      bb::Combinations combB(vmfmmB.GetK(), 3); 
+      std::vector<std::vector<uint32_t>> perm;
+      perm.push_back({0,1,2});
+      perm.push_back({0,2,1});
+      perm.push_back({1,0,2});
+      perm.push_back({1,2,0});
+      perm.push_back({2,1,0});
+      perm.push_back({2,0,1});
+      lb_star = std::numeric_limits<double>::lowest();
+      for (const auto& idsA : combA.Get()) 
+        for (const auto& idsB : combB.Get()) {
+          for (const auto& p : perm) {
+            Eigen::Matrix3d N = Eigen::Matrix3d::Zero();
+            for (size_t i=0; i<p.size(); ++i) {
+//              N += vmfmmB.Get(idsB[p[i]]).GetTau()*vmfmmA.Get(idsA[i]).GetTau()*
+//                vmfmmB.Get(idsB[p[i]]).GetMu()*vmfmmA.Get(idsA[i]).GetMu().transpose();
+              N += vmfmmA.Get(idsA[i]).GetTau()*
+                vmfmmB.Get(idsB[p[i]]).GetXSum()*vmfmmA.Get(idsA[i]).GetMu().transpose();
+            }
+            Eigen::JacobiSVD<Eigen::Matrix3d> svd(N, Eigen::ComputeFullU|
+                Eigen::ComputeFullV);
+            Eigen::Vector3d diag(1,1,
+                (svd.matrixU()*svd.matrixV().transpose()).determinant());
+            Eigen::Matrix3d R_ba = svd.matrixU()*diag.asDiagonal()*svd.matrixV().transpose();
+            if (R_ba.determinant() < 0) {
+              std::cout << " negative determinant for R " << R_ba.determinant() << std::endl;
+              return -2;
+            }
+            Eigen::Quaterniond q(R_ba);
+            double lb;
+            lower_bound_S3.EvaluateRotation(q,lb);
+            if (lb > lb_star) {
+              lb_star = lb;
+              q_star = q;
+              std::cout << "updating lb: " << lb_star << std::endl;
+            }
+          }
+        }
+    } else {
+      std::cout << "not enough vmf clusters for simple rotation computation" 
+        << std::endl;
+    }
   } else {
     std::cout << " Tessellate S3" << std::endl;
     nodesS3 = bb::GenerateNotesThatTessellateS3();
@@ -715,74 +766,83 @@ int main(int argc, char** argv) {
       << std::endl;
   Eigen::Vector3d t_star; 
 
-  shared_ptr<Eigen::MatrixXd> qAll(new MatrixXd(4, nodesS3.size()));
-  auto it=nodesS3.begin();
-  for (uint32_t i=0; i < nodesS3.size(); ++i, it++) {
-    qAll->col(i) = it->GetTetrahedron().GetCenter();
-  }
-  double lambda_q = cos(2.*10.*M_PI/180.) - 1.; // TODO
-  dplv::DPMeans<double, dplv::Spherical<double>> dpvMF(qAll, 0, lambda_q);
-  for (uint32_t t=0; t<20; ++t) {
-    dpvMF.updateLabels(); 
-    dpvMF.updateCenters(); 
-  }
-  std::cout << dpvMF.centroids() << std::endl; 
-
-  std::vector<Eigen::Quaterniond> qsPrelim;
-  std::vector<double> lbsS3prelim;
-  if (dpvMF.K() == 1) {
-    qsPrelim.push_back(q_star);
-    lbsS3prelim.push_back(lb_star);
-  } else {
-    std::cout << "======== K > 1: " << dpvMF.K() << std::endl;
-    for (uint32_t k=0; k<dpvMF.K(); ++k) {
-      auto it = nodesS3.begin();
-      auto z = dpvMF.z();
-      // Find the node whith maximum LB in each cluster.
-      double lb_max = -1.e20;
-      Eigen::Quaterniond q_k; 
-      for (uint32_t i=0; i<nodesS3.size(); ++i, it++) 
-        if (z(i) == k && lb_max < it->GetLB()) {
-          lb_max = it->GetLB();
-          q_k = it->GetTetrahedron().GetCenterQuaternion();
-        }
-      qsPrelim.push_back(q_k);
-      lbsS3prelim.push_back(lb_max);
-      //  Eigen::Quaterniond q = node_star.GetTetrahedron().GetCenterQuaternion();
-      std::cout << "in cluster " << k << ": center = "  
-        << dpvMF.centroids().col(k).transpose() << std::endl;
-      std::cout << " max LB quaternion: "  << q_k.coeffs().transpose()
-        << " angle: " << 2.*acos(q_k.w()) * 180. / M_PI << std::endl;
-    }
-  }
-
-  // TODO could be foldet into above.
-  std::vector<bool> toDelete(dpvMF.K(), false);
-  uint32_t n_delete = 0;
-  for (uint32_t k=0; k<dpvMF.K(); ++k) 
-    for (uint32_t j=k+1; j<dpvMF.K(); ++j) { 
-      double dAng = qsPrelim[k].angularDistance(qsPrelim[j]);
-      std::cout << " dang " << k << ";" << j << ": " << dAng*180./M_PI << std::endl;
-      toDelete[k] = dAng < 0.1/180.*M_PI;
-      if (toDelete[k]) ++n_delete;
-    }
-  Eigen::VectorXd lbsS3(qsPrelim.size()-n_delete);
+  Eigen::VectorXd lbsS3;
   std::vector<Eigen::Quaterniond> qs;
-  uint32_t j=0;
-  for (uint32_t k=0; k<dpvMF.K(); ++k) 
-    if (!toDelete[k]) {
-      qs.push_back(qsPrelim[k]);
-      lbsS3(j++) = lbsS3prelim[k];
+  if (simpleRot) {
+    qs.push_back(q_star.inverse());
+    qs[0].normalize();
+    lbsS3 = Eigen::VectorXd(1);
+    lbsS3(0) = lb_star;
+  } else {
+
+    shared_ptr<Eigen::MatrixXd> qAll(new MatrixXd(4, nodesS3.size()));
+    auto it=nodesS3.begin();
+    for (uint32_t i=0; i < nodesS3.size(); ++i, it++) {
+      qAll->col(i) = it->GetTetrahedron().GetCenter();
     }
+    double lambda_q = cos(2.*10.*M_PI/180.) - 1.; // TODO
+    dplv::DPMeans<double, dplv::Spherical<double>> dpvMF(qAll, 0, lambda_q);
+    for (uint32_t t=0; t<20; ++t) {
+      dpvMF.updateLabels(); 
+      dpvMF.updateCenters(); 
+    }
+    std::cout << dpvMF.centroids() << std::endl; 
+
+    std::vector<Eigen::Quaterniond> qsPrelim;
+    std::vector<double> lbsS3prelim;
+    if (dpvMF.K() == 1) {
+      qsPrelim.push_back(q_star);
+      lbsS3prelim.push_back(lb_star);
+    } else {
+      std::cout << "======== K > 1: " << dpvMF.K() << std::endl;
+      for (uint32_t k=0; k<dpvMF.K(); ++k) {
+        auto it = nodesS3.begin();
+        auto z = dpvMF.z();
+        // Find the node whith maximum LB in each cluster.
+        double lb_max = -1.e20;
+        Eigen::Quaterniond q_k; 
+        for (uint32_t i=0; i<nodesS3.size(); ++i, it++) 
+          if (z(i) == k && lb_max < it->GetLB()) {
+            lb_max = it->GetLB();
+            q_k = it->GetTetrahedron().GetCenterQuaternion();
+          }
+        qsPrelim.push_back(q_k);
+        lbsS3prelim.push_back(lb_max);
+        //  Eigen::Quaterniond q = node_star.GetTetrahedron().GetCenterQuaternion();
+        std::cout << "in cluster " << k << ": center = "  
+          << dpvMF.centroids().col(k).transpose() << std::endl;
+        std::cout << " max LB quaternion: "  << q_k.coeffs().transpose()
+          << " angle: " << 2.*acos(q_k.w()) * 180. / M_PI << std::endl;
+      }
+    }
+
+    // TODO could be foldet into above.
+    std::vector<bool> toDelete(dpvMF.K(), false);
+    uint32_t n_delete = 0;
+    for (uint32_t k=0; k<dpvMF.K(); ++k) 
+      for (uint32_t j=k+1; j<dpvMF.K(); ++j) { 
+        double dAng = qsPrelim[k].angularDistance(qsPrelim[j]);
+        std::cout << " dang " << k << ";" << j << ": " << dAng*180./M_PI << std::endl;
+        toDelete[k] = dAng < 0.1/180.*M_PI;
+        if (toDelete[k]) ++n_delete;
+      }
+    lbsS3 = Eigen::VectorXd(qsPrelim.size()-n_delete);
+    uint32_t j=0;
+    for (uint32_t k=0; k<dpvMF.K(); ++k) 
+      if (!toDelete[k]) {
+        qs.push_back(qsPrelim[k]);
+        lbsS3(j++) = lbsS3prelim[k];
+      }
+
+    std::cout << "===filtered==== K: " << qs.size() << std::endl;
+    for (uint32_t k=0; k<qs.size(); ++k) {
+      // This q is the inverse of the rotation that brings B to A.
+      qs[k] = qs[k].inverse(); // A little ugly but this is because of the way we setup the problem...
+    }
+  }
+  std::vector<Eigen::Vector3d> ts;
   Eigen::VectorXd lbsR3(qs.size());
   Eigen::VectorXd lbs(qs.size());
-
-  std::cout << "===filtered==== K: " << qs.size() << std::endl;
-  std::vector<Eigen::Vector3d> ts;
-  for (uint32_t k=0; k<qs.size(); ++k) {
-    // This q is the inverse of the rotation that brings B to A.
-    qs[k] = qs[k].inverse(); // A little ugly but this is because of the way we setup the problem...
-  }
   for (uint32_t k=0; k<qs.size(); ++k) {
     Eigen::Quaterniond q = qs[k]; 
     if (simpleTrans) {
@@ -791,6 +851,7 @@ int main(int argc, char** argv) {
       Eigen::Vector3d meanB = ComputePcMean(pcB);
       std::cout << meanA.transpose() << std::endl << meanB.transpose() << std::endl;
       Eigen::Vector3d t = meanB - q._transformVector(meanA);
+      std::cout << q.coeffs().transpose() << std::endl;
       std::cout << t.transpose() << std::endl;
 //      std::cout << q._transformVector(meanB) - meanA << std::endl;
 //      std::cout << q._transformVector(meanA) - meanB << std::endl;
@@ -868,7 +929,7 @@ int main(int argc, char** argv) {
   double lbS3 = lbsS3(id_max);
   double lbR3 = lbsR3(id_max);
   t_star = ts[id_max];
-  q_star = qs[id_max];
+  q_star = qs[id_max].normalized();
   std::cout << "Updating overall optimum transformation to: " << std::endl;
   std::cout << "q: " << q_star.coeffs().transpose() 
     << " t: " << t_star.transpose() <<  std::endl;

@@ -81,7 +81,8 @@ def RunBBsimple(scanApath, scanBpath, transformationPathBB, lambdaS3,
 
 def RunBB(cfg, scanApath, scanBpath, transformationPathBB,\
     EGImode=False, TpSmode=False, AAmode=False, outputBoundsAt0=False,
-    simpleTranslation=False):
+    simpleTranslation=False,
+    simpleRotation=False):
   lbsS3 = np.zeros(len(cfg["lambdaS3"]))
   lbsR3 = np.zeros(len(cfg["lambdaS3"]))
   Ks = np.zeros((len(cfg["lambdaS3"]), 4))
@@ -105,6 +106,8 @@ def RunBB(cfg, scanApath, scanBpath, transformationPathBB,\
       args.append('--oB0')
     if simpleTranslation:
       args.append('--simpleTrans')
+    if simpleRotation:
+      args.append('--simpleRot')
     print " ".join(args)
     t0 = time.time()
     err = subp.call(" ".join(args), shell=True)
