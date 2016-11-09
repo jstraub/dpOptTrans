@@ -179,6 +179,7 @@ def RunICP(scanApath, scanBpath, transformationPathICP,
     return Quaternion(), np.zeros(3), dt,False
   q,t = LoadTransformation(transformationPathICP)
   return q,t,dt,True
+
 def RunGoICP(scanApath, scanBpath, transformationPathGoICP,
     NdDownsampled=3000, timeout_sec = 600):
   scale = PreparePcForGoICP(scanApath, scanBpath)

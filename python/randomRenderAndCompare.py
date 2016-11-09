@@ -119,9 +119,12 @@ runMapICP =True
 #runFFT    =False
 #runFFTICP =False
 #runICP    =False
-#runBB     =True
+#runBB     =False
 #runBBICP  =False
 #runGoICP  =False
+#runMap    =True
+#runMapICP =True
+
 
 runMM = False
 runMMICP = False
@@ -146,6 +149,7 @@ version = "2.91" # GoICP with trim=0.2
 version = "2.92" # GoICP with trim=0.2 and timeout at 10min
 version = "2.93" # trying to improve translation accuracy for BB (lambdaT smaller; eps smaller in BB)
 version = "3.0" # simple rotation
+version = "3.01" # back to simple rotation from two clusters; improved ICP
  
 args = ['../build/bin/renderPcFromPc',
     '-i ' + cmdArgs.input,
@@ -187,6 +191,87 @@ if subp.call(" ".join(args), shell=True) == 0:
     q0 = Quaternion(1.,0.,0.,0.)
     DisplayPcs(scanApath, scanBpath, q0, np.zeros(3), False, False)
     DisplayPcs(scanApath, scanBpath, q_gt,t_gt, True, True)
+
+  if runBB:
+    q,t,Ks, dt,success = RunBB(cfg, scanApath, scanBpath,
+        transformationPathBB, simpleTranslation=True)
+    if not success:
+      err_a, err_t = np.nan, np.nan
+      if np.isnan(t).all(): # only translation is messed up -> err_a
+        err_a, _ = EvalError(q_gt, t_gt, q, t)
+      runBBICP = False
+    else:
+      err_a, err_t = EvalError(q_gt, t_gt, q, t)
+    print "BB: {} deg {} m".format(err_a, err_t)
+    results["BB"] = {"err_a":err_a, "err_t":err_t, "q":q.q.tolist(),
+        "t":t.tolist(), "Ks":Ks.tolist(), "dt":dt}
+    
+  if cmdArgs.display:
+    DisplayPcs(scanApath, scanBpath, q,t, True, True, False)
+
+  if runBBICP:
+    q,t,dt2,success = RunICP(scanApath, scanBpath, transformationPathBBICP,
+        useSurfaceNormalsInICP, transformationPathBB)
+    if not success:
+      err_a, err_t = np.nan, np.nan
+    else:
+      err_a, err_t = EvalError(q_gt, t_gt, q, t)
+    print "BB+ICP: {} deg {} m".format(err_a, err_t)
+    results["BB+ICP"] = {"err_a":err_a, "err_t":err_t,
+        "q":q.q.tolist(), "t":t.tolist(), "dt":dt+dt2}
+
+  if cmdArgs.display:
+    DisplayPcs(scanApath, scanBpath, q,t, True, True, False)
+
+  if runBBEGI:
+    q,t,Ks,dt,success = RunBB(cfg, scanApath, scanBpath,transformationPathBBEGI,True)
+    if not success:
+      err_a, err_t = np.nan, np.nan
+      if np.isnan(t).all(): # only translation is messed up -> err_a
+        err_a, _ = EvalError(q_gt, t_gt, q, t)
+      runBBEGIICP = False
+    else:
+      err_a, err_t = EvalError(q_gt, t_gt, q, t)
+    print "BBEGI: {} deg {} m".format(err_a, err_t)
+    results["BBEGI"] = {"err_a":err_a, "err_t":err_t, "q":q.q.tolist(),
+        "t":t.tolist(), "Ks":Ks.tolist(), "dt":dt}
+
+  if runBBEGIICP:
+    q,t,dt2,success = RunICP(scanApath, scanBpath, transformationPathBBEGIICP,
+        useSurfaceNormalsInICP, transformationPathBBEGI)
+    if not success:
+      err_a, err_t = np.nan, np.nan
+    else:
+      err_a, err_t = EvalError(q_gt, t_gt, q, t)
+    print "BBEGI+ICP: {} deg {} m".format(err_a, err_t)
+    results["BBEGI+ICP"] = {"err_a":err_a, "err_t":err_t,
+        "q":q.q.tolist(), "t":t.tolist(), "dt":dt+dt2}
+
+  if runMap:
+    q,t,Ks, dt,success = RunBB(cfg, scanApath, scanBpath,
+        transformationPathBB, simpleTranslation=True,
+        simpleRotation=True)
+    if not success:
+      err_a, err_t = np.nan, np.nan
+      if np.isnan(t).all(): # only translation is messed up -> err_a
+        err_a, _ = EvalError(q_gt, t_gt, q, t)
+      runBBICP = False
+    else:
+      err_a, err_t = EvalError(q_gt, t_gt, q, t)
+    print "Map: {} deg {} m".format(err_a, err_t)
+    results["Map"] = {"err_a":err_a, "err_t":err_t, "q":q.q.tolist(),
+        "t":t.tolist(), "Ks":Ks.tolist(), "dt":dt}
+
+  if runMapICP:
+    q,t,dt2,success = RunICP(scanApath, scanBpath, transformationPathBBICP,
+        useSurfaceNormalsInICP, transformationPathBB)
+    if not success:
+      err_a, err_t = np.nan, np.nan
+    else:
+      err_a, err_t = EvalError(q_gt, t_gt, q, t)
+    print "Map+ICP: {} deg {} m".format(err_a, err_t)
+    results["Map+ICP"] = {"err_a":err_a, "err_t":err_t,
+        "q":q.q.tolist(), "t":t.tolist(), "dt":dt+dt2}
 
   if runGoICP:
     q,t,dt,success = RunGoICP(scanApath, scanBpath, transformationPathGoICP)
@@ -253,81 +338,6 @@ if subp.call(" ".join(args), shell=True) == 0:
         results[key] = {"err_a":err_a, "err_t":err_t,
             "q":q.q.tolist(), "t":t.tolist(), "Ks":Ks.tolist(),
             "dt":dt, "lambdaS3":lambdaS3, "lambdaR3":lambdaR3}
-
-  if runBB:
-    q,t,Ks, dt,success = RunBB(cfg, scanApath, scanBpath,
-        transformationPathBB, simpleTranslation=True)
-    if not success:
-      err_a, err_t = np.nan, np.nan
-      if np.isnan(t).all(): # only translation is messed up -> err_a
-        err_a, _ = EvalError(q_gt, t_gt, q, t)
-      runBBICP = False
-    else:
-      err_a, err_t = EvalError(q_gt, t_gt, q, t)
-    print "BB: {} deg {} m".format(err_a, err_t)
-    results["BB"] = {"err_a":err_a, "err_t":err_t, "q":q.q.tolist(),
-        "t":t.tolist(), "Ks":Ks.tolist(), "dt":dt}
-
-  if runBBICP:
-    q,t,dt2,success = RunICP(scanApath, scanBpath, transformationPathBBICP,
-        useSurfaceNormalsInICP, transformationPathBB)
-    if not success:
-      err_a, err_t = np.nan, np.nan
-    else:
-      err_a, err_t = EvalError(q_gt, t_gt, q, t)
-    print "BB+ICP: {} deg {} m".format(err_a, err_t)
-    results["BB+ICP"] = {"err_a":err_a, "err_t":err_t,
-        "q":q.q.tolist(), "t":t.tolist(), "dt":dt+dt2}
-
-  if runBBEGI:
-    q,t,Ks,dt,success = RunBB(cfg, scanApath, scanBpath,transformationPathBBEGI,True)
-    if not success:
-      err_a, err_t = np.nan, np.nan
-      if np.isnan(t).all(): # only translation is messed up -> err_a
-        err_a, _ = EvalError(q_gt, t_gt, q, t)
-      runBBEGIICP = False
-    else:
-      err_a, err_t = EvalError(q_gt, t_gt, q, t)
-    print "BBEGI: {} deg {} m".format(err_a, err_t)
-    results["BBEGI"] = {"err_a":err_a, "err_t":err_t, "q":q.q.tolist(),
-        "t":t.tolist(), "Ks":Ks.tolist(), "dt":dt}
-
-  if runBBEGIICP:
-    q,t,dt2,success = RunICP(scanApath, scanBpath, transformationPathBBEGIICP,
-        useSurfaceNormalsInICP, transformationPathBBEGI)
-    if not success:
-      err_a, err_t = np.nan, np.nan
-    else:
-      err_a, err_t = EvalError(q_gt, t_gt, q, t)
-    print "BBEGI+ICP: {} deg {} m".format(err_a, err_t)
-    results["BBEGI+ICP"] = {"err_a":err_a, "err_t":err_t,
-        "q":q.q.tolist(), "t":t.tolist(), "dt":dt+dt2}
-
-  if runMap:
-    q,t,Ks, dt,success = RunBB(cfg, scanApath, scanBpath,
-        transformationPathBB, simpleTranslation=True,
-        simpleRotation=True)
-    if not success:
-      err_a, err_t = np.nan, np.nan
-      if np.isnan(t).all(): # only translation is messed up -> err_a
-        err_a, _ = EvalError(q_gt, t_gt, q, t)
-      runBBICP = False
-    else:
-      err_a, err_t = EvalError(q_gt, t_gt, q, t)
-    print "Map: {} deg {} m".format(err_a, err_t)
-    results["Map"] = {"err_a":err_a, "err_t":err_t, "q":q.q.tolist(),
-        "t":t.tolist(), "Ks":Ks.tolist(), "dt":dt}
-
-  if runMapICP:
-    q,t,dt2,success = RunICP(scanApath, scanBpath, transformationPathBBICP,
-        useSurfaceNormalsInICP, transformationPathBB)
-    if not success:
-      err_a, err_t = np.nan, np.nan
-    else:
-      err_a, err_t = EvalError(q_gt, t_gt, q, t)
-    print "Map+ICP: {} deg {} m".format(err_a, err_t)
-    results["Map+ICP"] = {"err_a":err_a, "err_t":err_t,
-        "q":q.q.tolist(), "t":t.tolist(), "dt":dt+dt2}
 
   if runMM:
     q,t,dt,success = RunMM(scanApath, scanBpath, transformationPathMM)

@@ -20,23 +20,24 @@ cfgBuddhaRnd = {"name":"buddhaRnd", "lambdaS3": [50,60,70,80],
 cfgBuddhaRnd = {"name":"buddhaRnd", "lambdaS3": [60,70,80],
   "lambdaR3": 0.002}
 
-cfg = cfgBunny
 cfg = cfgEnschede
 cfg = cfgLymph
-cfg = cfgBuddha
 cfg = cfgBunnyZipper
 cfg = cfgBunnyAB
 cfg = cfgBuddhaRnd
+cfg = cfgBunny
+cfg = cfgBuddha
 
 loadCached = False
 stopToShow = False
 showTransformed =  True 
 showUntransformed =False
-applyBB = True
+
+applyBB = False
 applyBBEGI = False
 applyFFT = False
 applyMM = False
-runGoICP = False
+runGoICP = True
 applyICP = False
 
 simpleTranslation = True

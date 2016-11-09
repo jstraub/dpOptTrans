@@ -702,15 +702,17 @@ int main(int argc, char** argv) {
     std::cout << "simple rotation computation" << std::endl; 
     if (vmfmmA.GetK() > 1 && vmfmmB.GetK() > 1) {
       // q is q_ba
-      bb::Combinations combA(vmfmmA.GetK(), 3); 
-      bb::Combinations combB(vmfmmB.GetK(), 3); 
+      bb::Combinations combA(vmfmmA.GetK(), 2); 
+      bb::Combinations combB(vmfmmB.GetK(), 2); 
       std::vector<std::vector<uint32_t>> perm;
-      perm.push_back({0,1,2});
-      perm.push_back({0,2,1});
-      perm.push_back({1,0,2});
-      perm.push_back({1,2,0});
-      perm.push_back({2,1,0});
-      perm.push_back({2,0,1});
+      perm.push_back({0,1});
+      perm.push_back({1,0});
+//      perm.push_back({0,1,2});
+//      perm.push_back({0,2,1});
+//      perm.push_back({1,0,2});
+//      perm.push_back({1,2,0});
+//      perm.push_back({2,1,0});
+//      perm.push_back({2,0,1});
       lb_star = std::numeric_limits<double>::lowest();
       for (const auto& idsA : combA.Get()) 
         for (const auto& idsB : combB.Get()) {

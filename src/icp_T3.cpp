@@ -99,6 +99,9 @@ int main(int argc, char** argv) {
     std::cout << "Using only points in ICP" << std::endl;
   }
   icp->setMaximumIterations(100);
+  icp->setMaxCorrespondenceDistance (0.2);
+  icp->setTransformationEpsilon (1e-8);
+  icp->setEuclideanFitnessEpsilon(0.01);
   icp->setInputSource(pcA_ptr);
   icp->setInputTarget(pcB_ptr);
   if (have_guess)
@@ -106,6 +109,7 @@ int main(int argc, char** argv) {
   else
     icp->align(pcB_T); 
 
+  bool success = icp->hasConverged();
   std::cout << "has converged:" << icp->hasConverged() << " score: " <<
     icp->getFitnessScore() << std::endl;
   std::cout << icp->getFinalTransformation() << std::endl;
@@ -126,6 +130,8 @@ int main(int argc, char** argv) {
     DisplayPcs(pcA, pcB, q, t, 1.0);
   }
   delete icp;
+
+  return success ? 0 : 1;
 }
 
 

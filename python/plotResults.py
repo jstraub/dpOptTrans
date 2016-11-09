@@ -53,6 +53,7 @@ version = "2.91" # GoICP with trim=0.2
 version = "2.92" # GoICP with trim=0.2 and timeout at 10min
 version = "2.93"
 version = "3.0"
+version = "3.01"
 
 errors = {"err_a":{}, "err_t":{}, "dt":{}, "Ks":{}, "overlap":[], "dangle":[],
   "dtranslation":[]}
@@ -72,7 +73,7 @@ for result in results:
     # enforce that all values of one scene be non nan
     isnotnan = True
     for algKey, val in r.iteritems():
-      if not algKey in ["GT", "version"]:
+      if not algKey in ["GT", "version","ICP"]:
         for i,typ in enumerate(errTypes):
           if not typ in val:
             continue
@@ -235,7 +236,7 @@ def WriteErrStats(x, y, delta):
 errDesc = {"err_a":"$\Delta \\theta$ [deg]", 
     "err_t": "$\|\|\Delta t\|\|_2$ [m]", "dt":"dt [s]",
     "Ks1":"Ks", "Ks2":"Ks", "Ks3":"Ks", "Ks4":"Ks"}
-errTypeMax = {"err_a": 360., "err_t": 10., "dt": 120.,
+errTypeMax = {"err_a": 180., "err_t": 6., "dt": 120.,
     "Ks1":30, "Ks2":30, "Ks3":30, "Ks4":30}
 yMetricLabel={"overlap":"overlap [%]", "dangle":" $\Delta\\theta_{GT}$ [deg]",
   "dtranslation":"$\|\|\Delta t_{GT}\|\|_2$ [m]"}
@@ -348,6 +349,8 @@ else:
   algTypes = ["GoICP"]
   algTypes = ["BB", "FFT",  "GoICP", "ICP"]
   algTypes = ["BB", "Map", "FFT",  "GoICP", "ICP"]
+  algTypes = ["BB", "BB+ICP", "Map", "Map+ICP", "FFT", "FFT+ICP",  "GoICP", "ICP"]
+  algTypes = ["BB", "BB+ICP", "Map", "Map+ICP", "FFT", "FFT+ICP", "GoICP"]
 
 
 if not "DISPLAY" in os.environ:
