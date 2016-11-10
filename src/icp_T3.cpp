@@ -99,7 +99,7 @@ int main(int argc, char** argv) {
     std::cout << "Using only points in ICP" << std::endl;
   }
   icp->setMaximumIterations(100);
-  icp->setMaxCorrespondenceDistance (0.2);
+  icp->setMaxCorrespondenceDistance (0.3);
   icp->setTransformationEpsilon (1e-8);
   icp->setEuclideanFitnessEpsilon(0.01);
   icp->setInputSource(pcA_ptr);

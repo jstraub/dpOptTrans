@@ -73,7 +73,7 @@ for result in results:
     # enforce that all values of one scene be non nan
     isnotnan = True
     for algKey, val in r.iteritems():
-      if not algKey in ["GT", "version","ICP"]:
+      if not algKey in ["GT", "version", "ICP"]:
         for i,typ in enumerate(errTypes):
           if not typ in val:
             continue

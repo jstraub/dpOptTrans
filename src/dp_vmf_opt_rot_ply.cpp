@@ -76,7 +76,7 @@ namespace po = boost::program_options;
 //    Q = nFramesSurvive == 0? -2. : lambda/double(nFramesSurvive);
 //  };
 //};
-
+//
 Eigen::Vector3d ComputePcMean(pcl::PointCloud<pcl::PointXYZRGBNormal>&
     pc) {
   // take 3 values (x,y,z of normal) with an offset of 4 values (x,y,z
@@ -90,6 +90,22 @@ Eigen::Vector3d ComputePcMean(pcl::PointCloud<pcl::PointXYZRGBNormal>&
   }
   return  mean /= xyz.cols();
 }
+
+Eigen::Matrix3d ComputePcCov(pcl::PointCloud<pcl::PointXYZRGBNormal>&
+    pc) {
+
+  // take 3 values (x,y,z of normal) with an offset of 4 values (x,y,z
+  // and one float which is undefined) and the step is 12 (4 for xyz, 4
+  // for normal xyz and 4 for curvature and rgb).
+  auto xyz = pc.getMatrixXfMap(3, 12, 0); // this works for PointXYZRGBNormal
+  Eigen::Vector3d mean = ComputePcMean(pc);
+  Eigen::Matrix3d S = Eigen::Matrix3d::Zero();
+  for (size_t i=0; i<xyz.cols(); ++i) {
+    S += (xyz.col(i).cast<double>()-mean)*(xyz.col(i).cast<double>()-mean).transpose();
+  }
+  return  S /= (xyz.cols()-1);
+}
+
 
 bool ComputevMFMMfromPC(const pcl::PointCloud<pcl::PointXYZRGBNormal>&
     pc, const CfgRtDDPvMF& cfg, std::vector<vMF<3>>& vmfs) {
@@ -649,9 +665,9 @@ int main(int argc, char** argv) {
   std::list<bb::NodeS3> nodesS3;
   Eigen::Quaterniond q_star;
   double lb_star = 1e99;
-  double eps = 1e-8;
+  double eps = 1e-10;
   //  double eps = 8e-7;
-  uint32_t max_lvl = 14;
+  uint32_t max_lvl = 15;
   uint32_t max_it = 5000;
   if (TpS_mode)  {
 

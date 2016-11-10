@@ -4,6 +4,35 @@
 
 #include "dpOptTrans/pc_helper.h"
 
+Eigen::Vector3d ComputePcMean(pcl::PointCloud<pcl::PointXYZRGBNormal>&
+    pc) {
+  // take 3 values (x,y,z of normal) with an offset of 4 values (x,y,z
+  // and one float which is undefined) and the step is 12 (4 for xyz, 4
+  // for normal xyz and 4 for curvature and rgb).
+  auto xyz = pc.getMatrixXfMap(3, 12, 0); // this works for PointXYZRGBNormal
+  Eigen::Vector3d mean =  Eigen::Vector3d::Zero();
+
+  for (size_t i=0; i<xyz.cols(); ++i) {
+    mean += xyz.col(i).cast<double>();
+  }
+  return  mean / xyz.cols();
+}
+
+Eigen::Matrix3d ComputePcCov(pcl::PointCloud<pcl::PointXYZRGBNormal>&
+    pc) {
+
+  // take 3 values (x,y,z of normal) with an offset of 4 values (x,y,z
+  // and one float which is undefined) and the step is 12 (4 for xyz, 4
+  // for normal xyz and 4 for curvature and rgb).
+  auto xyz = pc.getMatrixXfMap(3, 12, 0); // this works for PointXYZRGBNormal
+  Eigen::Vector3d mean = ComputePcMean(pc);
+  Eigen::Matrix3d S = Eigen::Matrix3d::Zero();
+  for (size_t i=0; i<xyz.cols(); ++i) {
+    S += (xyz.col(i).cast<double>()-mean)*(xyz.col(i).cast<double>()-mean).transpose();
+  }
+  return  S / (xyz.cols()-1);
+}
+
 void ComputeAreaWeightsPc(pcl::PointCloud<pcl::PointXYZRGBNormal>& pcIn) {
   pcl::PointCloud<pcl::PointXYZ>::Ptr pcXYZ(new
       pcl::PointCloud<pcl::PointXYZ>(pcIn.size(),1));

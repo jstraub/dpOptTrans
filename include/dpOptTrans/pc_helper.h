@@ -16,5 +16,7 @@ void DisplayPcs(const pcl::PointCloud<pcl::PointXYZRGBNormal>& pcA,
   const Eigen::Quaterniond& q_star, const Eigen::Vector3d& t_star,
   float scale);
 
-
 void ShufflePc(pcl::PointCloud<pcl::PointXYZRGBNormal>& pc);
+
+//Eigen::Vector3d ComputePcMean(pcl::PointCloud<pcl::PointXYZRGBNormal>& pc);
+//Eigen::Matrix3d ComputePcCov(pcl::PointCloud<pcl::PointXYZRGBNormal>& pc);

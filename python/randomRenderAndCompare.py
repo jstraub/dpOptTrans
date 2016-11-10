@@ -107,24 +107,27 @@ paramEvalLambdaR3 = [0.5, 0.75, 1.0]
 paramEvalLambdaS3 = [45. ] #, 90.]
 paramEvalLambdaR3 = [0.5]
 
-runFFT    =True
-runFFTICP =True
-runICP    =True
-runBB     =True
-runBBICP  =True
-runGoICP  =True
-runMap    =True
-runMapICP =True
-
-#runFFT    =False
-#runFFTICP =False
-#runICP    =False
-#runBB     =False
-#runBBICP  =False
-#runGoICP  =False
+#runFFT    =True
+#runFFTICP =True
+#runICP    =True
+#runBB     =True
+#runBBICP  =True
+#runGoICP  =True
 #runMap    =True
 #runMapICP =True
 
+runFFT    =False
+runFFTICP =False
+runICP    =False
+runBB     =True
+runBBICP  =True
+runGoICP  =False
+runMap    =False
+runMapICP =False
+
+showOnLargeDeviation = True;
+err_a_thr = 2.
+err_t_thr = 0.3
 
 runMM = False
 runMMICP = False
@@ -206,7 +209,8 @@ if subp.call(" ".join(args), shell=True) == 0:
     results["BB"] = {"err_a":err_a, "err_t":err_t, "q":q.q.tolist(),
         "t":t.tolist(), "Ks":Ks.tolist(), "dt":dt}
     
-  if cmdArgs.display:
+  if cmdArgs.display or (showOnLargeDeviation and \
+      (err_a > err_a_thr or err_t > err_t_thr)):
     DisplayPcs(scanApath, scanBpath, q,t, True, True, False)
 
   if runBBICP:
@@ -220,7 +224,8 @@ if subp.call(" ".join(args), shell=True) == 0:
     results["BB+ICP"] = {"err_a":err_a, "err_t":err_t,
         "q":q.q.tolist(), "t":t.tolist(), "dt":dt+dt2}
 
-  if cmdArgs.display:
+  if cmdArgs.display or (showOnLargeDeviation and \
+      (err_a > err_a_thr or err_t > err_t_thr)):
     DisplayPcs(scanApath, scanBpath, q,t, True, True, False)
 
   if runBBEGI:
