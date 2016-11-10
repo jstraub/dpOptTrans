@@ -54,6 +54,8 @@ version = "2.92" # GoICP with trim=0.2 and timeout at 10min
 version = "2.93"
 version = "3.0"
 version = "3.01"
+version = "3.02"
+version = "3.03"
 
 errors = {"err_a":{}, "err_t":{}, "dt":{}, "Ks":{}, "overlap":[], "dangle":[],
   "dtranslation":[]}

@@ -107,25 +107,25 @@ paramEvalLambdaR3 = [0.5, 0.75, 1.0]
 paramEvalLambdaS3 = [45. ] #, 90.]
 paramEvalLambdaR3 = [0.5]
 
-#runFFT    =True
-#runFFTICP =True
-#runICP    =True
-#runBB     =True
-#runBBICP  =True
-#runGoICP  =True
-#runMap    =True
-#runMapICP =True
-
-runFFT    =False
-runFFTICP =False
-runICP    =False
+runFFT    =True
+runFFTICP =True
+runICP    =True
 runBB     =True
 runBBICP  =True
-runGoICP  =False
-runMap    =False
-runMapICP =False
+runGoICP  =True
+runMap    =True
+runMapICP =True
 
-showOnLargeDeviation = True;
+#runFFT    =False
+#runFFTICP =False
+#runICP    =False
+#runBB     =True
+#runBBICP  =True
+#runGoICP  =False
+#runMap    =False
+#runMapICP =False
+
+showOnLargeDeviation = False
 err_a_thr = 2.
 err_t_thr = 0.3
 
@@ -153,6 +153,8 @@ version = "2.92" # GoICP with trim=0.2 and timeout at 10min
 version = "2.93" # trying to improve translation accuracy for BB (lambdaT smaller; eps smaller in BB)
 version = "3.0" # simple rotation
 version = "3.01" # back to simple rotation from two clusters; improved ICP
+version = "3.02" # fixed a bunch of stuff but mainly the sampling of scenes
+version = "3.03" # going back to BB in rotation and translation
  
 args = ['../build/bin/renderPcFromPc',
     '-i ' + cmdArgs.input,
@@ -197,7 +199,7 @@ if subp.call(" ".join(args), shell=True) == 0:
 
   if runBB:
     q,t,Ks, dt,success = RunBB(cfg, scanApath, scanBpath,
-        transformationPathBB, simpleTranslation=True)
+        transformationPathBB, simpleTranslation=False)
     if not success:
       err_a, err_t = np.nan, np.nan
       if np.isnan(t).all(): # only translation is messed up -> err_a
