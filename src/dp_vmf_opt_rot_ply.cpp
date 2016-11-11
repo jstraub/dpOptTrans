@@ -898,7 +898,7 @@ int main(int argc, char** argv) {
   }
 
   std::vector<Eigen::Vector3d> ts;
-  Eigen::VectorXd lbsR3(qs.size());
+  Eigen::VectorXd lbsR3 = -1.*Eigen::VectorXd::Ones(qs.size());
   Eigen::VectorXd lbs(qs.size());
   for (uint32_t k=0; k<qs.size(); ++k) {
     Eigen::Quaterniond q = qs[k]; 
@@ -958,9 +958,11 @@ int main(int argc, char** argv) {
       std::cout << "# initial nodes: " << nodesR3.size() << std::endl;
       double eps = 1e-10;
       uint32_t max_it = 1000;
+      double lb = lbsR3.maxCoeff();
       bb::BranchAndBound<bb::NodeR3> bbR3(lower_bound_R3, upper_bound_convex_R3);
       std::cout << " BB on R3 eps=" << eps << " max_it=" << max_it << std::endl;
-      bb::NodeR3 nodeR3_star = bbR3.Compute(nodesR3, eps, maxLvlR3, max_it);
+      bb::NodeR3 nodeR3_star = bbR3.Compute(nodesR3, eps, maxLvlR3, max_it,
+          lb);
       Eigen::Vector3d t =  nodeR3_star.GetLbArgument();
       //    bb::CountBranchesInTree<bb::NodeR3>(nodesR3);
       std::cout << "with LB " << nodeR3_star.GetLB() << " optimum translation: " 
