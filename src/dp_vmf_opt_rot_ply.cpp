@@ -538,9 +538,12 @@ int main(int argc, char** argv) {
     ("in_b,b", po::value<string>(), "path to second input file")
     ("out,o", po::value<string>(), "path to output file")
     ("scale,s", po::value<float>(),"scale for point-cloud")
+    ("maxLvlR3", po::value<int>(),"max BB lvl for R3")
+    ("maxLvlS3", po::value<int>(),"max BB lvl for S3")
     ("egi,e", "make the vMF MM pis uniform - like a EGI")
     ("simpleTrans", "use means of PCs to compute translation")
     ("simpleRot", "use 2-vMF-mixture to compute rotation")
+    ("tryMfAmbig", "also try all mf rotation ambiguities")
     ("oB0", "output bounds at level 0")
     ("TpS", "use TpS-based tessellation instead of 600-cell based (not recommended)")
     ("AA", "use axis-angle-based tessellation instead of 600-cell based (not recommended)")
@@ -576,6 +579,9 @@ int main(int argc, char** argv) {
   bool AA_mode = false;
   bool simpleTrans = false;
   bool simpleRot = false;
+  bool tryMfAmbig= false;
+  uint32_t maxLvlS3 = 15;
+  uint32_t maxLvlR3 = 15;
   string pathA = "";
   string pathB = "";
   std::string pathOut = "";
@@ -586,12 +592,15 @@ int main(int argc, char** argv) {
   if(vm.count("in_b")) pathB = vm["in_b"].as<string>();
   float scale = 1.;
   if(vm.count("scale")) scale = vm["scale"].as<float>();
+  if(vm.count("maxLvlR3")) maxLvlR3 = vm["maxLvlR3"].as<int>();
+  if(vm.count("maxLvlS3")) maxLvlS3 = vm["maxLvlS3"].as<int>();
   if(vm.count("egi")) egi_mode = true;
   if(vm.count("TpS")) TpS_mode = true;
   if(vm.count("AA")) AA_mode = true;
   if(vm.count("oB0")) output_init_bounds = true;
   if(vm.count("simpleTrans")) simpleTrans = true;
   if(vm.count("simpleRot")) simpleRot = true;
+  if(vm.count("tryMfAmbig")) tryMfAmbig= true;
   if (egi_mode)
     std::cout << "Using EGI mode - making pis of vMF MM uniform." << std::endl;
 
@@ -618,9 +627,9 @@ int main(int argc, char** argv) {
   // Obtain the range for the translation.
   // TODO: this could be made more tight by getting min and max for the
   // rotated point-clouds.
-  Eigen::Vector3d minA, minB, maxA, maxB, min, max;
-  ComputePcBoundaries(pcA, minA, maxA);
-  ComputePcBoundaries(pcB, minB, maxB);
+  Eigen::Vector3d minA0, minB0, maxA0, maxB0, min, max;
+  ComputePcBoundaries(pcA, minA0, maxA0);
+  ComputePcBoundaries(pcB, minB0, maxB0);
 
   findCudaDevice(argc,(const char**)argv);
 
@@ -667,7 +676,6 @@ int main(int argc, char** argv) {
   double lb_star = 1e99;
   double eps = 1e-10;
   //  double eps = 8e-7;
-  uint32_t max_lvl = 15;
   uint32_t max_it = 5000;
   if (TpS_mode)  {
 
@@ -684,7 +692,7 @@ int main(int argc, char** argv) {
     }
     std::cout << " BB on S3 eps=" << eps << " max_it=" << max_it << std::endl;
     bb::BranchAndBound<bb::NodeTpS3> bb(lower_bound_TpS3, upper_bound_convex_TpS3);
-    bb::NodeTpS3 node_star = bb.Compute(nodes, eps, max_lvl, max_it);
+    bb::NodeTpS3 node_star = bb.Compute(nodes, eps, maxLvlS3, max_it);
 //  bb::CountBranchesInTree<bb::NodeS3>(nodes);
     q_star = node_star.GetLbArgument();
     lb_star = node_star.GetLB();
@@ -706,7 +714,7 @@ int main(int argc, char** argv) {
     }
     std::cout << " BB on S3 eps=" << eps << " max_it=" << max_it << std::endl;
     bb::BranchAndBound<bb::NodeAA> bb(lower_bound_AA, upper_bound_convex_AA);
-    bb::NodeAA node_star = bb.Compute(nodes, eps, max_lvl, max_it);
+    bb::NodeAA node_star = bb.Compute(nodes, eps, maxLvlS3, max_it);
 //  bb::CountBranchesInTree<bb::NodeS3>(nodes);
     q_star = node_star.GetLbArgument();
     lb_star = node_star.GetLB();
@@ -773,7 +781,7 @@ int main(int argc, char** argv) {
     }
     std::cout << " BB on S3 eps=" << eps << " max_it=" << max_it << std::endl;
     bb::BranchAndBound<bb::NodeS3> bb(lower_bound_S3, upper_bound_convex_S3);
-    bb::NodeS3 node_star = bb.Compute(nodesS3, eps, max_lvl, max_it);
+    bb::NodeS3 node_star = bb.Compute(nodesS3, eps, maxLvlS3, max_it);
 //  bb::CountBranchesInTree<bb::NodeS3>(nodesS3);
     q_star = node_star.GetLbArgument();
     lb_star = node_star.GetLB();
@@ -858,6 +866,37 @@ int main(int argc, char** argv) {
       qs[k] = qs[k].inverse(); // A little ugly but this is because of the way we setup the problem...
     }
   }
+
+  if (tryMfAmbig) {
+    size_t Nq = qs.size();
+    for (size_t i=0; i<Nq; ++i) {
+      Eigen::Matrix3d R0 = qs[i].toRotationMatrix();
+      Eigen::Matrix<double,3,6> M;
+      M << R0, -R0;
+      bb::Combinations comb(6, 3); 
+      std::vector<std::vector<uint32_t>> perm;
+      perm.push_back({0,1,2});
+      perm.push_back({0,2,1});
+      perm.push_back({1,0,2});
+      perm.push_back({1,2,0});
+      perm.push_back({2,1,0});
+      perm.push_back({2,0,1});
+      for (const auto& c : comb.Get()) {
+        for (const auto& p : perm) {
+          Eigen::Matrix3d R;
+          R << M.col(c[p[0]]), M.col(c[p[1]]), M.col(c[p[2]]);
+          std::cout << c[p[0]] << " " << c[p[1]] << " " << c[p[2]] << " " 
+            << R.determinant() << std::endl;
+          if (R.determinant() > 0) {
+            qs.emplace_back(R);
+          }
+        }
+      }
+    }
+    std::cout << "added " 
+      << qs.size()-Nq << " permutations of rotation matrices to try" << std::endl;
+  }
+
   std::vector<Eigen::Vector3d> ts;
   Eigen::VectorXd lbsR3(qs.size());
   Eigen::VectorXd lbs(qs.size());
@@ -878,14 +917,16 @@ int main(int argc, char** argv) {
       lbsR3(k) = 0.;
       lbs(k) = lbsS3(k);
     } else {
-      // To get all corners of the bounding box.j
-      bb::Box box(minA, maxA);
+      // To get all corners of the bounding box.
+      bb::Box box(minA0, maxA0);
+      Eigen::Vector3d minA = minA0;
+      Eigen::Vector3d maxA = maxA0;
       // Update the boundaries of the the rotated point cloud A to get
       // the full translation space later on.
       for (uint32_t i=0; i<8; ++i) {
         Eigen::Vector3d c;
         box.GetCorner(i,c);
-        c = q.inverse()._transformVector(c);
+        c = q._transformVector(c);
         for (uint32_t d=0; d<3; ++d) {
           minA(d) = std::min(minA(d), c(d));
           maxA(d) = std::max(maxA(d), c(d));
@@ -893,10 +934,10 @@ int main(int argc, char** argv) {
       }
       for (uint32_t d=0; d<3; ++d) {
         Eigen::Matrix<double,4,1> dt;
-        dt(0) = -minA(d) + minB(d);
-        dt(1) = -minA(d) + maxB(d);
-        dt(2) = -maxA(d) + minB(d);
-        dt(3) = -maxA(d) + maxB(d);
+        dt(0) = -minA(d) + minB0(d);
+        dt(1) = -minA(d) + maxB0(d);
+        dt(2) = -maxA(d) + minB0(d);
+        dt(3) = -maxA(d) + maxB0(d);
         min(d) = dt.minCoeff();
         max(d) = dt.maxCoeff();
       }
@@ -916,18 +957,18 @@ int main(int argc, char** argv) {
 
       std::cout << "# initial nodes: " << nodesR3.size() << std::endl;
       double eps = 1e-10;
-      uint32_t max_it = 5000;
-      uint32_t max_lvl = 22;
+      uint32_t max_it = 1000;
       bb::BranchAndBound<bb::NodeR3> bbR3(lower_bound_R3, upper_bound_convex_R3);
       std::cout << " BB on R3 eps=" << eps << " max_it=" << max_it << std::endl;
-      bb::NodeR3 nodeR3_star = bbR3.Compute(nodesR3, eps, max_lvl, max_it);
+      bb::NodeR3 nodeR3_star = bbR3.Compute(nodesR3, eps, maxLvlR3, max_it);
       Eigen::Vector3d t =  nodeR3_star.GetLbArgument();
       //    bb::CountBranchesInTree<bb::NodeR3>(nodesR3);
       std::cout << "with LB " << nodeR3_star.GetLB() << " optimum translation: " 
         << t.transpose() << std::endl;
       ts.push_back(t);
       lbsR3(k) = nodeR3_star.GetLB();
-      lbs(k) = lbsS3(k) * lbsR3(k);
+//      lbs(k) = lbsS3(k) * lbsR3(k);
+      lbs(k) = lbsR3(k);
     }
 
 //    for (auto& node: nodesR3) {

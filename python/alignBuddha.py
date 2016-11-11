@@ -8,25 +8,27 @@ from js.utils.plot.colors import colorScheme
 from helpers import *
 
 cfgEnschede = {"name":"enschede", "lambdaS3": [60, 70, 80], "lambdaR3":0.3}
-cfgBunnyZipper = {"name":"bun_zipper", "lambdaS3": [60], "lambdaR3": 0.001}
+cfgBunnyZipper = {"name":"bun_zipper", "lambdaS3": [60], "lambdaR3":
+    0.001, "maxLvlR3":15, "maxLvlS3":5 }
 #cfgBunnyAB = {"name":"bunnyAB", "lambdaS3": [45, 60, 70, 80], "lambdaR3": 0.003}
 cfgBunnyAB = {"name":"bunnyAB", "lambdaS3":
-    [60,70,80], "lambdaR3": 0.001}
-cfgBunny = {"name":"bunny", "lambdaS3": [60, 70, 80], "lambdaR3": 0.003}
+    [60,70,80], "lambdaR3": 0.001, "maxLvlR3":15, "maxLvlS3":15}
+cfgBunny = {"name":"bunny", "lambdaS3": [60, 70, 80], "lambdaR3": 0.001,
+    "maxLvlR3":15, "maxLvlS3":5}
 cfgLymph = {"name":"lymph", "lambdaS3": [80], "lambdaR3": 1.}
 cfgBuddha = {"name":"buddha", "lambdaS3": [60,70,80], "lambdaR3": 0.0008}
 cfgBuddhaRnd = {"name":"buddhaRnd", "lambdaS3": [50,60,70,80],
   "lambdaR3": 0.002}
-cfgBuddhaRnd = {"name":"buddhaRnd", "lambdaS3": [60,70,80],
-  "lambdaR3": 0.002}
+cfgBuddhaRnd = {"name":"buddhaRnd", "lambdaS3": [60,70,80], "lambdaR3": 0.002, 
+    "maxLvlR3":15, "maxLvlS3":5}
 
 cfg = cfgEnschede
 cfg = cfgLymph
+cfg = cfgBuddhaRnd
+cfg = cfgBuddha
+cfg = cfgBunny
 cfg = cfgBunnyZipper
 cfg = cfgBunnyAB
-cfg = cfgBuddhaRnd
-cfg = cfgBunny
-cfg = cfgBuddha
 
 loadCached = False
 stopToShow = False
@@ -37,11 +39,13 @@ applyBB = False
 applyBBEGI = False
 applyFFT = False
 applyMM = False
-runGoICP = True
+runGoICP = False
+runGogma = True
 applyICP = False
 
-simpleTranslation = True
+simpleTranslation = False
 simpleRotation = False
+tryMfAmbig = True
 useS3tessellation = True
 useTpStessellation = not useS3tessellation and False
 useAAtessellation = not useS3tessellation and not useTpStessellation
@@ -100,10 +104,12 @@ if cfg["name"] == "bunny":
         scans.append(os.path.join(root, f))
   scans = sorted(scans, key=lambda f: 
     int(re.sub("_angle_90_translation_0.3.ply","",re.sub("bun","",os.path.split(f)[1]))))
+  gt = []
 if cfg["name"] == "bun_zipper":
   scans = ['../data/bunny_rnd/bun_zipper.ply',
       '../data/bunny_rnd/bun_zipper_angle_90_translation_0.3.ply']
-  gt = ['../data/bunny_rnd/bun_zipper_angle_90_translation_0.3.ply_TrueTransformation_angle_90_translation_0.3.csv']
+  #gt = ['../data/bunny_rnd/bun_zipper_angle_90_translation_0.3.ply_TrueTransformation_angle_90_translation_0.3.csv']
+  gt = []
 if cfg["name"] == "bunnyAB":
   scans = ['../data/bunny_rnd/bun000_angle_90_translation_0.3.ply',
       '../data/bunny_rnd/bun045_angle_90_translation_0.3.ply']
@@ -147,6 +153,7 @@ for i in range(1,len(scans)):
   transformationPathFFT = '{}_{}_FFT.csv'.format(nameA, nameB)
   transformationPathMM = '{}_{}_MM.csv'.format(nameA, nameB)
   transformationPathGoICP = '{}_{}_GoICP.csv'.format(nameA, nameB)
+  transformationPathGogma = '{}_{}_Gogma.csv'.format(nameA, nameB)
 
   if i == 1:
     plyA = PlyParse();
@@ -156,6 +163,9 @@ for i in range(1,len(scans)):
       figm = mlab.figure(bgcolor=(1,1,1))
       mlab.points3d(pcA[:,0], pcA[:,1], pcA[:,2], mode="point",
           color=colors[0])
+
+  if runGogma:
+    q,t,dt,success = RunGogma(scanApath, scanBpath, transformationPathGogma)
 
   if runGoICP:
     q,t,dt,success = RunGoICP(scanApath, scanBpath, transformationPathGoICP)
@@ -169,7 +179,8 @@ for i in range(1,len(scans)):
           outputBoundsAt0=outputBoundsAt0,
           AAmode=useAAtessellation,
           simpleTranslation=simpleTranslation,
-          simpleRotation=simpleRotation)
+          simpleRotation=simpleRotation,
+          tryMfAmbig=tryMfAmbig)
     transformationPath = transformationPathBB
 
   if applyBBEGI:

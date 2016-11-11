@@ -82,7 +82,9 @@ def RunBBsimple(scanApath, scanBpath, transformationPathBB, lambdaS3,
 def RunBB(cfg, scanApath, scanBpath, transformationPathBB,\
     EGImode=False, TpSmode=False, AAmode=False, outputBoundsAt0=False,
     simpleTranslation=False,
-    simpleRotation=False):
+    simpleRotation=False,
+    tryMfAmbig=False
+    ):
   lbsS3 = np.zeros(len(cfg["lambdaS3"]))
   lbsR3 = np.zeros(len(cfg["lambdaS3"]))
   Ks = np.zeros((len(cfg["lambdaS3"]), 4))
@@ -94,6 +96,8 @@ def RunBB(cfg, scanApath, scanBpath, transformationPathBB,\
         '-b {}'.format(scanBpath), 
         '-l {}'.format(lambdaS3),
         '-t {}'.format(cfg["lambdaR3"]),
+        '--maxLvlR3 {}'.format(cfg["maxLvlR3"]),
+        '--maxLvlS3 {}'.format(cfg["maxLvlS3"]),
         '-o ' + re.sub(".csv","",transformationPathBB)
         ]
     if EGImode:
@@ -108,6 +112,8 @@ def RunBB(cfg, scanApath, scanBpath, transformationPathBB,\
       args.append('--simpleTrans')
     if simpleRotation:
       args.append('--simpleRot')
+    if tryMfAmbig:
+      args.append('--tryMfAmbig')
     print " ".join(args)
     t0 = time.time()
     err = subp.call(" ".join(args), shell=True)
@@ -129,7 +135,8 @@ def RunBB(cfg, scanApath, scanBpath, transformationPathBB,\
   if simpleTranslation:
     idMax = np.argmax(lbsS3)
   else:
-    idMax = np.argmax(lbsS3*lbsR3)
+#    idMax = np.argmax(lbsS3*lbsR3)
+    idMax = np.argmax(lbsR3)
   print "choosing scale {} of run {}".format(cfg["lambdaS3"][idMax],idMax)
   q,t = qs[idMax], ts[idMax]
   lbS3, lbR3 = lbsS3[idMax], lbsR3[idMax]
@@ -201,6 +208,43 @@ def RunGoICP(scanApath, scanBpath, transformationPathGoICP,
     return q,t,dt,True
   else:
     return q,t,dt,False
+
+def RunGogma(scanApath, scanBpath, transformationPathGogma, timeout_sec = 600):
+  PreparePcForGogma(scanApath, scanBpath)
+  args = ['/home/jstraub/workspace/research/3rdparty/gogma/build/gogma', 
+      os.path.abspath(re.sub(".ply",".txt",scanApath)),
+      os.path.abspath(re.sub(".ply",".txt",scanBpath)),
+      '/home/jstraub/workspace/research/3rdparty/gogma/build/config.txt',
+      os.path.abspath(re.sub(".csv",".txt",transformationPathGogma)),
+      "2>&1"
+      ]
+  print " ".join(args)
+  t0 = time.time()
+  err = run(" ".join(args), timeout_sec)
+  t1 = time.time()
+  dt = t1 - t0
+  print "error ", err
+#  err = subp.call(" ".join(args), shell=True)
+  q,t = LoadTransformationGogma(re.sub(".csv",".txt",transformationPathGogma))
+  if err == 0:
+    return q,t,dt,True
+  else:
+    return q,t,dt,False
+
+def PreparePcForGogma(scanApath, scanBpath):
+  plyA = PlyParse()
+  plyA.parse(scanApath)
+  pcA = plyA.getPc()
+  plyB = PlyParse()
+  plyB.parse(scanBpath)
+  pcB = plyB.getPc()
+  with open(re.sub(".ply",".txt",scanApath),'w') as f:
+    print pcA.shape
+    np.random.shuffle(pcA)
+    np.savetxt(f, pcA)
+  with open(re.sub(".ply",".txt",scanBpath),'w') as f:
+    np.random.shuffle(pcB)
+    np.savetxt(f, pcB)
 
 def PreparePcForGoICP(scanApath, scanBpath):
   plyA = PlyParse()
@@ -387,4 +431,18 @@ def LoadTransformationGoICP(transformationPathGoICP):
     q = Quaternion()
     q.fromRot3(R.T)
     return q, -R.T.dot(t), dt
+
+def LoadTransformationGogma(transformationPathGogma):
+  with open(transformationPathGogma) as f:
+    x = np.loadtxt(f)
+    print x
+    t_ab = x[:3]
+    R_ab = np.reshape(x[3:],(3,3))
+    print "R_ab",R_ab
+    print "t_ab",t_ab
+    q_ab = Quaternion()
+    q_ab.fromRot3(R_ab.T)
+    return q_ab, -R_ab.T.dot(t_ab)
+
+
 

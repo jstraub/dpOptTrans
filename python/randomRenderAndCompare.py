@@ -61,7 +61,9 @@ def DisplayPcs(scanApath, scanBpath, q,t, plotCosies, stopToDisplay,
 #cfgNYU = {"name":"nyu", "lambdaS3": [30., 45.,60., 75, 90.], "lambdaR3": 1.}
 cfgNYU = {"name":"nyu", "lambdaS3": [45.], "lambdaR3": 0.5}
 cfgNYU = {"name":"nyu", "lambdaS3": [45., 65, 80], "lambdaR3": 0.5}
-cfgNYU = {"name":"nyu", "lambdaS3": [45., 65, 80], "lambdaR3": 0.3}
+cfgNYU = {"name":"nyu", "lambdaS3": [45., 65, 80], "lambdaR3": 0.1}
+cfgNYU = {"name":"nyu", "lambdaS3": [45., 65, 80], "lambdaR3": 0.1,
+    "maxLvlR3":15, "maxLvlS3":15}
 
 cfg = cfgNYU
 
@@ -100,6 +102,7 @@ transformationPathMMICP = '{}_{}_MM_ICP.csv'.format(nameA, nameB)
 transformationPathFFT = '{}_{}_FFT.csv'.format(nameA, nameB)
 transformationPathFFTICP = '{}_{}_FFT_ICP.csv'.format(nameA, nameB)
 transformationPathGoICP = '{}_{}_GoICP.csv'.format(nameA, nameB)
+transformationPathGogma = '{}_{}_Gogma.csv'.format(nameA, nameB)
 
 paramEvalLambdaS3 = [45., 60., 80 ] #, 90.]
 paramEvalLambdaR3 = [0.5, 0.75, 1.0]
@@ -113,6 +116,7 @@ runICP    =True
 runBB     =True
 runBBICP  =True
 runGoICP  =True
+runGogma  =True
 runMap    =True
 runMapICP =True
 
@@ -122,6 +126,7 @@ runMapICP =True
 #runBB     =True
 #runBBICP  =True
 #runGoICP  =False
+#runGogma  =False
 #runMap    =False
 #runMapICP =False
 
@@ -134,6 +139,9 @@ runMMICP = False
 runBBEGI = False
 runBBEGIICP = False
 runBBeval = False
+
+tryMfAmbig = False
+cfg["maxLvlS3"] = 8
 
 version = "1.4" # large scale eval of all algos and RunBB
 version = "1.5" # eval of BB vor different parameters
@@ -155,6 +163,8 @@ version = "3.0" # simple rotation
 version = "3.01" # back to simple rotation from two clusters; improved ICP
 version = "3.02" # fixed a bunch of stuff but mainly the sampling of scenes
 version = "3.03" # going back to BB in rotation and translation
+version = "3.04" # more fine grained lambdaT
+version = "3.05" # early termination of rotations to get multiple peaks (lvl 8)
  
 args = ['../build/bin/renderPcFromPc',
     '-i ' + cmdArgs.input,
@@ -199,7 +209,8 @@ if subp.call(" ".join(args), shell=True) == 0:
 
   if runBB:
     q,t,Ks, dt,success = RunBB(cfg, scanApath, scanBpath,
-        transformationPathBB, simpleTranslation=False)
+        transformationPathBB, simpleTranslation=False,
+        tryMfAmbig=tryMfAmbig)
     if not success:
       err_a, err_t = np.nan, np.nan
       if np.isnan(t).all(): # only translation is messed up -> err_a
@@ -279,6 +290,16 @@ if subp.call(" ".join(args), shell=True) == 0:
     print "Map+ICP: {} deg {} m".format(err_a, err_t)
     results["Map+ICP"] = {"err_a":err_a, "err_t":err_t,
         "q":q.q.tolist(), "t":t.tolist(), "dt":dt+dt2}
+
+  if runGogma:
+    q,t,dt,success = RunGogma(scanApath, scanBpath, transformationPathGogma)
+    if not success:
+      err_a, err_t = np.nan, np.nan
+    else:
+      err_a, err_t = EvalError(q_gt, t_gt, q, t)
+    print "Gogma: {} deg {} m".format(err_a, err_t)
+    results["Gogma"] = {"err_a":err_a, "err_t":err_t, "q":q.q.tolist(),
+        "t":t.tolist(), "dt":dt}
 
   if runGoICP:
     q,t,dt,success = RunGoICP(scanApath, scanBpath, transformationPathGoICP)

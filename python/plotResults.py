@@ -56,6 +56,8 @@ version = "3.0"
 version = "3.01"
 version = "3.02"
 version = "3.03"
+version = "3.04"
+version = "3.05"
 
 errors = {"err_a":{}, "err_t":{}, "dt":{}, "Ks":{}, "overlap":[], "dangle":[],
   "dtranslation":[]}
@@ -391,10 +393,10 @@ for yMetric in ["overlap", "dangle", "dtranslation"]:
       print errType
       TableErr(np.array(errors[yMetric])[ids], errs[ids],
           yMetricResolution[yMetric])
-      PlotErrBoxPlot(np.array(errors[yMetric])[ids], errs[ids],
-          yMetricResolution[yMetric], axs[-1], j==len(errTypes)-1)
-#      PlotScatter(np.array(errors[yMetric])[ids], errs[ids],
+#      PlotErrBoxPlot(np.array(errors[yMetric])[ids], errs[ids],
 #          yMetricResolution[yMetric], axs[-1], j==len(errTypes)-1)
+      PlotScatter(np.array(errors[yMetric])[ids], errs[ids],
+          yMetricResolution[yMetric], axs[-1], j==len(errTypes)-1)
       if j == 0 and yMetric=="overlap":
         if algType in algDesc:
           plt.title(algDesc[algType])
