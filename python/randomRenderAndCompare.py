@@ -133,23 +133,25 @@ runGogma  =False
 runMap    =False
 runMapICP =False
 
-runFFT    =True
-runFFTICP =True
-runICP    =True
-runBB     =True
-runBBICP  =True
-runGoICP  =True
-runGogma  =True
-runMap    =True
-runMapICP =True
+#runFFT    =True
+#runFFTICP =True
+#runICP    =True
+#runBB     =True
+#runBBICP  =True
+#runGoICP  =True
+#runGogma  =True
+#runMap    =True
+#runMapICP =True
 
+runFFT    =True
+runGoICP =True
 #runGogma  =True
 #runMap    =True
 #runBB =True
 #runBBICP =True
 
 
-showOnLargeDeviation =False
+showOnLargeDeviation =True
 err_a_thr = 2.
 err_t_thr = 0.3
 
@@ -268,6 +270,34 @@ if validInput:
     results["GoICP"] = {"err_a":err_a, "err_t":err_t, "q":q.q.tolist(),
         "t":t.tolist(), "dt":dt}
 
+  if runFFT:
+    q,t,dt,success = RunFFT(scanApath, scanBpath, transformationPathFFT)
+    if not success:
+      err_a, err_t = np.nan, np.nan
+      runFFTICP = False
+    else:
+      err_a, err_t = EvalError(q_gt, t_gt, q, t)
+    print "FFT: {} deg {} m".format(err_a, err_t)
+    results["FFT"] = {"err_a":err_a, "err_t":err_t, "q":q.q.tolist(),
+        "t":t.tolist(), "dt":dt}
+    # write chosen transformation back to file for ICP
+    if runFFTICP:
+      with open(transformationPathFFT,'w') as f: 
+        f.write("qw qx qy qz tx ty tz\n")
+        f.write("{} {} {} {} {} {} {}\n".format(
+          q.q[0],q.q[1],q.q[2],q.q[3],t[0],t[1],t[2]))
+
+  if runFFTICP:
+    q,t,dt2,success = RunICP(scanApath, scanBpath, transformationPathFFTICP,
+        useSurfaceNormalsInICP, transformationPathFFT)
+    if not success:
+      err_a, err_t = np.nan, np.nan
+    else:
+      err_a, err_t = EvalError(q_gt, t_gt, q, t)
+    print "FFT+ICP: {} deg {} m".format(err_a, err_t)
+    results["FFT+ICP"] = {"err_a":err_a, "err_t":err_t,
+        "q":q.q.tolist(), "t":t.tolist(), "dt":dt+dt2}
+
   if runMap:
     q,t,Ks, dt,success = RunBB(cfg, scanApath, scanBpath,
         transformationPathBB, simpleTranslation=False,
@@ -360,33 +390,6 @@ if validInput:
 #    DisplayPcs(scanApath, scanBpath, q.inverse(),-q.toRot().R.T.dot(t),
 #        True,True,False)
 
-  if runFFT:
-    q,t,dt,success = RunFFT(scanApath, scanBpath, transformationPathFFT)
-    if not success:
-      err_a, err_t = np.nan, np.nan
-      runFFTICP = False
-    else:
-      err_a, err_t = EvalError(q_gt, t_gt, q, t)
-    print "FFT: {} deg {} m".format(err_a, err_t)
-    results["FFT"] = {"err_a":err_a, "err_t":err_t, "q":q.q.tolist(),
-        "t":t.tolist(), "dt":dt}
-    # write chosen transformation back to file for ICP
-    if runFFTICP:
-      with open(transformationPathFFT,'w') as f: 
-        f.write("qw qx qy qz tx ty tz\n")
-        f.write("{} {} {} {} {} {} {}\n".format(
-          q.q[0],q.q[1],q.q[2],q.q[3],t[0],t[1],t[2]))
-
-  if runFFTICP:
-    q,t,dt2,success = RunICP(scanApath, scanBpath, transformationPathFFTICP,
-        useSurfaceNormalsInICP, transformationPathFFT)
-    if not success:
-      err_a, err_t = np.nan, np.nan
-    else:
-      err_a, err_t = EvalError(q_gt, t_gt, q, t)
-    print "FFT+ICP: {} deg {} m".format(err_a, err_t)
-    results["FFT+ICP"] = {"err_a":err_a, "err_t":err_t,
-        "q":q.q.tolist(), "t":t.tolist(), "dt":dt+dt2}
 
   if runBBeval:
     for lambdaS3 in paramEvalLambdaS3:

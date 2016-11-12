@@ -14,17 +14,19 @@ def kill_proc(p):
 def run(cmd, timeout_sec):
   proc = subprocess.Popen(shlex.split(cmd), stdout=subprocess.PIPE, 
     stderr=subprocess.PIPE)
-#  kill_proc = lambda p: p.kill()
   timer = Timer(timeout_sec, kill_proc, [proc])
   try:
     timer.start()
     stdout,stderr = proc.communicate()
+    print stdout
   finally:
     timer.cancel()
   return proc.returncode
 
 def RunFFT(scanApath, scanBpath, transformationPathFFT, q_gt=None,
-    t_gt=None, returnBoth=False):
+    t_gt=None, returnBoth=False,
+    timeout_sec = 3600
+    ):
   scanApathAbs = os.path.abspath(scanApath)
   scanBpathAbs = os.path.abspath(scanBpath)
   transformationPathFFTAbs = os.path.abspath(transformationPathFFT)
@@ -34,10 +36,10 @@ def RunFFT(scanApath, scanBpath, transformationPathFFT, q_gt=None,
       '\'' + transformationPathFFTAbs+'\'']
   print " ".join(args)
   t0 = time.time()
-  err = subp.call(" ".join(args), shell=True)
+  err = run(" ".join(args), timeout_sec)
   dt = time.time() - t0
   print "dt: ", dt, "[s]"
-  if err > 0:
+  if not err == 0:
     print "ERROR in run FFT"
     return Quaternion(), np.zeros(3), dt, False
   qs,ts = LoadTransformation(transformationPathFFT)
@@ -83,7 +85,8 @@ def RunBB(cfg, scanApath, scanBpath, transformationPathBB,\
     EGImode=False, TpSmode=False, AAmode=False, outputBoundsAt0=False,
     simpleTranslation=False,
     simpleRotation=False,
-    tryMfAmbig=False
+    tryMfAmbig=False,
+    timeout_sec = 3600
     ):
   lbsS3 = np.zeros(len(cfg["lambdaS3"]))
   lbsR3 = np.zeros(len(cfg["lambdaS3"]))
@@ -116,7 +119,7 @@ def RunBB(cfg, scanApath, scanBpath, transformationPathBB,\
       args.append('--tryMfAmbig')
     print " ".join(args)
     t0 = time.time()
-    err = subp.call(" ".join(args), shell=True)
+    err = run(" ".join(args), timeout_sec)
     dt += time.time() - t0
     if err > 0:
       print "ERROR in RunBB"
@@ -147,7 +150,6 @@ def RunBB(cfg, scanApath, scanBpath, transformationPathBB,\
       q.q[0],q.q[1],q.q[2],q.q[3],t[0],t[1],t[2],lbS3,lbR3,KvmfA,\
       KvmfB, KgmmA, KgmmB))
   return q,t, Ks[idMax,:], dt,True
-
 def RunMM(scanApath, scanBpath, transformationPathMM):
   args = ['../pod-build/bin/moment_matched_T3', 
       '-a {}'.format(scanApath), 
@@ -202,12 +204,12 @@ def RunGoICP(scanApath, scanBpath, transformationPathGoICP,
   err = run(" ".join(args), timeout_sec)
   print "error ", err
 #  err = subp.call(" ".join(args), shell=True)
-  q,t,dt = LoadTransformationGoICP(re.sub(".csv",".txt",transformationPathGoICP))
-  t*= scale
   if err == 0:
+    q,t,dt = LoadTransformationGoICP(re.sub(".csv",".txt",transformationPathGoICP))
+    t*= scale
     return q,t,dt,True
   else:
-    return q,t,dt,False
+    return Quaternion(),np.array([0,0,0]),dt,False
 
 def RunGogma(scanApath, scanBpath, transformationPathGogma, timeout_sec = 3600):
   PreparePcForGogma(scanApath, scanBpath)
