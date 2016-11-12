@@ -73,7 +73,7 @@ useSurfaceNormalsInICP = True
 parser = argparse.ArgumentParser(description = 'randomly sample two renders and align them')
 parser.add_argument('-i','--input',
     default="../data/middle.ply", \
-    help='path to input pointcloud .ply file')
+    help='path to input pointcloud .ply file or to a config file pointing to existing ply files s')
 parser.add_argument('-o','--output',
     default="./", \
     help='path to output .json results file')
@@ -110,6 +110,10 @@ paramEvalLambdaR3 = [0.5, 0.75, 1.0]
 paramEvalLambdaS3 = [45. ] #, 90.]
 paramEvalLambdaR3 = [0.5]
 
+tryMfAmbig = False
+cfg["maxLvlS3"] = 11
+cfg["maxLvlR3"] = 11
+
 runMM = False
 runMMICP = False
 runBBEGI = False
@@ -135,15 +139,15 @@ runMapICP =False
 #runMap    =True
 #runMapICP =True
 
-runMap    =True
+#runMap    =True
+runBB =True
+runBBICP =True
+
 
 showOnLargeDeviation = True
 err_a_thr = 2.
 err_t_thr = 0.3
 
-
-tryMfAmbig = False
-cfg["maxLvlS3"] = 8
 
 version = "1.4" # large scale eval of all algos and RunBB
 version = "1.5" # eval of BB vor different parameters
@@ -168,15 +172,36 @@ version = "3.03" # going back to BB in rotation and translation
 version = "3.04" # more fine grained lambdaT
 version = "3.05" # early termination of rotations to get multiple peaks (lvl 8)
  
-args = ['../build/bin/renderPcFromPc',
-    '-i ' + cmdArgs.input,
-    '-o ' + outputPath,
-    '-a {}'.format(cmdArgs.angle), 
-    '-t {}'.format(cmdArgs.translation), 
-    '-m {}'.format(cmdArgs.minOverlap), 
-    ]
-print " ".join(args)
-if subp.call(" ".join(args), shell=True) == 0:
+validInput = False
+if re.search("config_[0-9]+.txt", cmdArgs.input):
+  with open(cmdArgs.input) as f:
+    scanApath = os.path.join(os.path.split(cmdArgs.input)[0],f.readline())
+    scanBpath = os.path.join(os.path.split(cmdArgs.input)[0],f.readline())
+    f.readline()
+    x = np.loadtxt(f)
+    q_gt = Quaternion(w=x[3],x=x[0],y=x[1],z=x[2])
+    t_gt = x[4:7]
+    data_gt = x[7:]
+
+  paramString = os.path.splitext(os.path.split(cmdArgs.input)[1])[0]
+  print paramString
+
+  q_A = Quaternion(1,0,0,0)
+  t_A = np.array([0,0,0])
+  q_B = Quaternion(1,0,0,0)
+  t_B = np.array([0,0,0])
+
+  validInput = True
+else:
+  args = ['../build/bin/renderPcFromPc',
+      '-i ' + cmdArgs.input,
+      '-o ' + outputPath,
+      '-a {}'.format(cmdArgs.angle), 
+      '-t {}'.format(cmdArgs.translation), 
+      '-m {}'.format(cmdArgs.minOverlap), 
+      ]
+  print " ".join(args)
+
   paramString = 'angle_{}_translation_{}'.format(int(cmdArgs.angle),
       int(cmdArgs.translation))
   scanApath = outputPath+"_A_"+paramString+".ply"
@@ -188,6 +213,9 @@ if subp.call(" ".join(args), shell=True) == 0:
   q_gt, t_gt, data_gt = LoadTransformationAndData(gtPath)
   q_A, t_A, data_A = LoadTransformationAndData(scanAtruePath)
   q_B, t_B, data_B = LoadTransformationAndData(scanBtruePath)
+
+  validInput = (subp.call(" ".join(args), shell=True) == 0)
+if validInput:
   R_A = q_A.toRot().R
   R_B = q_B.toRot().R
   R_BA = R_B.dot(R_A.T)

@@ -899,6 +899,7 @@ int main(int argc, char** argv) {
 
   std::vector<Eigen::Vector3d> ts;
   Eigen::VectorXd lbsR3 = -1.*Eigen::VectorXd::Ones(qs.size());
+  Eigen::VectorXd ubsR3 = -1.*Eigen::VectorXd::Ones(qs.size());
   Eigen::VectorXd lbs(qs.size());
   for (uint32_t k=0; k<qs.size(); ++k) {
     Eigen::Quaterniond q = qs[k]; 
@@ -957,8 +958,9 @@ int main(int argc, char** argv) {
 
       std::cout << "# initial nodes: " << nodesR3.size() << std::endl;
       double eps = 1e-10;
-      uint32_t max_it = 1000;
+      uint32_t max_it = 5000;
       double lb = lbsR3.maxCoeff();
+      double ub = ubsR3.maxCoeff();
       bb::BranchAndBound<bb::NodeR3> bbR3(lower_bound_R3, upper_bound_convex_R3);
       std::cout << " BB on R3 eps=" << eps << " max_it=" << max_it << std::endl;
       bb::NodeR3 nodeR3_star = bbR3.Compute(nodesR3, eps, maxLvlR3, max_it,
@@ -969,6 +971,7 @@ int main(int argc, char** argv) {
         << t.transpose() << std::endl;
       ts.push_back(t);
       lbsR3(k) = nodeR3_star.GetLB();
+      ubsR3(k) = nodeR3_star.GetUB();
 //      lbs(k) = lbsS3(k) * lbsR3(k);
       lbs(k) = lbsR3(k);
     }
