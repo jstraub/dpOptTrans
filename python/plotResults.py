@@ -58,6 +58,8 @@ version = "3.02"
 version = "3.03"
 version = "3.04"
 version = "3.05"
+version = "3.06"
+version = "3.07"
 
 errors = {"err_a":{}, "err_t":{}, "dt":{}, "Ks":{}, "overlap":[], "dangle":[],
   "dtranslation":[]}
@@ -108,6 +110,10 @@ for key,val in numRejected.iteritems():
 print "Found {} valid and {} invalid result files. Found the following breakdown of invalid files:".format(counter, totalRejected)
 for key,val in numRejected.iteritems():
   print "  {}: \t{}\t{}%".format(key, val, 100.*val/float(totalRejected+counter))
+
+print "have the following algorithms: "
+for key in errors["err_a"].iterkeys():
+  print "  ", key
 
 if counter == 0:
   print "No results found for version "+version

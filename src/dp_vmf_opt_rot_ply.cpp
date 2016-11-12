@@ -607,11 +607,13 @@ int main(int argc, char** argv) {
   // Load point clouds.
   pcl::PointCloud<pcl::PointXYZRGBNormal> pcA, pcB;
   pcl::PLYReader reader;
+  std::cout << "loading pc from " << pathA << std::endl;
   if (reader.read(pathA, pcA)) 
     std::cout << "error reading " << pathA << std::endl;
   else
     std::cout << "loaded pc from " << pathA << ": " << pcA.width << "x"
       << pcA.height << std::endl;
+  std::cout << "loading pc from " << pathB << std::endl;
   if (reader.read(pathB, pcB)) 
     std::cout << "error reading " << pathB << std::endl;
   else

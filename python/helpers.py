@@ -188,7 +188,7 @@ def RunICP(scanApath, scanBpath, transformationPathICP,
   return q,t,dt,True
 
 def RunGoICP(scanApath, scanBpath, transformationPathGoICP,
-    NdDownsampled=3000, timeout_sec = 600):
+    NdDownsampled=3000, timeout_sec = 3600):
   scale = PreparePcForGoICP(scanApath, scanBpath)
 
   args = ['../goIcp/src/build/GoICP', 
@@ -209,7 +209,7 @@ def RunGoICP(scanApath, scanBpath, transformationPathGoICP,
   else:
     return q,t,dt,False
 
-def RunGogma(scanApath, scanBpath, transformationPathGogma, timeout_sec = 600):
+def RunGogma(scanApath, scanBpath, transformationPathGogma, timeout_sec = 3600):
   PreparePcForGogma(scanApath, scanBpath)
   args = ['/home/jstraub/workspace/research/3rdparty/gogma/build/gogma', 
       os.path.abspath(re.sub(".ply",".txt",scanApath)),
@@ -224,14 +224,17 @@ def RunGogma(scanApath, scanBpath, transformationPathGogma, timeout_sec = 600):
   t1 = time.time()
   dt = t1 - t0
   print "error ", err
-#  err = subp.call(" ".join(args), shell=True)
-  q,t = LoadTransformationGogma(re.sub(".csv",".txt",transformationPathGogma))
   if err == 0:
+    #  err = subp.call(" ".join(args), shell=True)
+    q,t = LoadTransformationGogma(re.sub(".csv",".txt",transformationPathGogma))
     return q,t,dt,True
   else:
-    return q,t,dt,False
+    return Quaternion(),np.array([0,0,0]),dt,False
 
 def PreparePcForGogma(scanApath, scanBpath):
+  print "preparing for Gogma"
+  print scanApath
+  print scanBpath
   plyA = PlyParse()
   plyA.parse(scanApath)
   pcA = plyA.getPc()

@@ -9,6 +9,10 @@ from helpers import *
 def EvalError(q_gt, t_gt, q, t):
   if q is None or t is None:
     return np.nan, np.nan
+  print "gt  rotation:    ", q_gt.q
+  print "est rotation:    ", q.q
+  print "gt  translation: ", t_gt
+  print "est translation: ", t
   err_a = q_gt.angleTo(q)*180./np.pi
   err_t = np.sqrt(((t_gt-t)**2).sum())
   return err_a, err_t
@@ -129,22 +133,23 @@ runGogma  =False
 runMap    =False
 runMapICP =False
 
-#runFFT    =True
-#runFFTICP =True
-#runICP    =True
-#runBB     =True
-#runBBICP  =True
-#runGoICP  =True
+runFFT    =True
+runFFTICP =True
+runICP    =True
+runBB     =True
+runBBICP  =True
+runGoICP  =True
+runGogma  =True
+runMap    =True
+runMapICP =True
+
 #runGogma  =True
 #runMap    =True
-#runMapICP =True
-
-#runMap    =True
-runBB =True
-runBBICP =True
+#runBB =True
+#runBBICP =True
 
 
-showOnLargeDeviation = True
+showOnLargeDeviation =False
 err_a_thr = 2.
 err_t_thr = 0.3
 
@@ -171,16 +176,19 @@ version = "3.02" # fixed a bunch of stuff but mainly the sampling of scenes
 version = "3.03" # going back to BB in rotation and translation
 version = "3.04" # more fine grained lambdaT
 version = "3.05" # early termination of rotations to get multiple peaks (lvl 8)
+version = "3.06" # early termination of rotations to get multiple peaks (lvl 11)
+version = "3.07" # eval on 3Dsim data
  
 validInput = False
 if re.search("config_[0-9]+.txt", cmdArgs.input):
   with open(cmdArgs.input) as f:
-    scanApath = os.path.join(os.path.split(cmdArgs.input)[0],f.readline())
-    scanBpath = os.path.join(os.path.split(cmdArgs.input)[0],f.readline())
+    scanApath = os.path.join(os.path.split(cmdArgs.input)[0],f.readline()[:-1])
+    scanBpath = os.path.join(os.path.split(cmdArgs.input)[0],f.readline()[:-1])
     f.readline()
     x = np.loadtxt(f)
-    q_gt = Quaternion(w=x[3],x=x[0],y=x[1],z=x[2])
-    t_gt = x[4:7]
+    # T_gt is T_ba but the saved config is T_ab
+    q_gt = Quaternion(w=x[3],x=x[0],y=x[1],z=x[2]).inverse()
+    t_gt = -q_gt.rotate(x[4:7])
     data_gt = x[7:]
 
   paramString = os.path.splitext(os.path.split(cmdArgs.input)[1])[0]
@@ -191,7 +199,10 @@ if re.search("config_[0-9]+.txt", cmdArgs.input):
   q_B = Quaternion(1,0,0,0)
   t_B = np.array([0,0,0])
 
-  validInput = True
+  if os.path.isfile(scanApath) and os.path.isfile(scanBpath):
+    validInput = True
+  else:
+    validInput = False
 else:
   args = ['../build/bin/renderPcFromPc',
       '-i ' + cmdArgs.input,
@@ -201,6 +212,7 @@ else:
       '-m {}'.format(cmdArgs.minOverlap), 
       ]
   print " ".join(args)
+  validInput = (subp.call(" ".join(args), shell=True) == 0)
 
   paramString = 'angle_{}_translation_{}'.format(int(cmdArgs.angle),
       int(cmdArgs.translation))
@@ -214,7 +226,6 @@ else:
   q_A, t_A, data_A = LoadTransformationAndData(scanAtruePath)
   q_B, t_B, data_B = LoadTransformationAndData(scanBtruePath)
 
-  validInput = (subp.call(" ".join(args), shell=True) == 0)
 if validInput:
   R_A = q_A.toRot().R
   R_B = q_B.toRot().R
@@ -236,6 +247,26 @@ if validInput:
     q0 = Quaternion(1.,0.,0.,0.)
     DisplayPcs(scanApath, scanBpath, q0, np.zeros(3), False, False)
     DisplayPcs(scanApath, scanBpath, q_gt,t_gt, True, True)
+
+  if runGogma:
+    q,t,dt,success = RunGogma(scanApath, scanBpath, transformationPathGogma)
+    if not success:
+      err_a, err_t = np.nan, np.nan
+    else:
+      err_a, err_t = EvalError(q_gt, t_gt, q, t)
+    print "Gogma: {} deg {} m".format(err_a, err_t)
+    results["Gogma"] = {"err_a":err_a, "err_t":err_t, "q":q.q.tolist(),
+        "t":t.tolist(), "dt":dt}
+
+  if runGoICP:
+    q,t,dt,success = RunGoICP(scanApath, scanBpath, transformationPathGoICP)
+    if not success:
+      err_a, err_t = np.nan, np.nan
+    else:
+      err_a, err_t = EvalError(q_gt, t_gt, q, t)
+    print "GoICP: {} deg {} m".format(err_a, err_t)
+    results["GoICP"] = {"err_a":err_a, "err_t":err_t, "q":q.q.tolist(),
+        "t":t.tolist(), "dt":dt}
 
   if runMap:
     q,t,Ks, dt,success = RunBB(cfg, scanApath, scanBpath,
@@ -321,25 +352,6 @@ if validInput:
     results["BBEGI+ICP"] = {"err_a":err_a, "err_t":err_t,
         "q":q.q.tolist(), "t":t.tolist(), "dt":dt+dt2}
 
-  if runGogma:
-    q,t,dt,success = RunGogma(scanApath, scanBpath, transformationPathGogma)
-    if not success:
-      err_a, err_t = np.nan, np.nan
-    else:
-      err_a, err_t = EvalError(q_gt, t_gt, q, t)
-    print "Gogma: {} deg {} m".format(err_a, err_t)
-    results["Gogma"] = {"err_a":err_a, "err_t":err_t, "q":q.q.tolist(),
-        "t":t.tolist(), "dt":dt}
-
-  if runGoICP:
-    q,t,dt,success = RunGoICP(scanApath, scanBpath, transformationPathGoICP)
-    if not success:
-      err_a, err_t = np.nan, np.nan
-    else:
-      err_a, err_t = EvalError(q_gt, t_gt, q, t)
-    print "GoICP: {} deg {} m".format(err_a, err_t)
-    results["GoICP"] = {"err_a":err_a, "err_t":err_t, "q":q.q.tolist(),
-        "t":t.tolist(), "dt":dt}
 
 #    q0 = Quaternion(1.,0.,0.,0.)
 #    DisplayPcs(scanApath, scanBpath, q0, np.zeros(3), False, False, False)
