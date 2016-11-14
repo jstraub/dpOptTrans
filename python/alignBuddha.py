@@ -55,31 +55,33 @@ cfgD458fromDesk= {"name":"D458fromDesk", "lambdaS3": [45,65,85], "lambdaR3": 0.1
 
 cfg = cfgEnschede
 cfg = cfgLymph
-cfg = cfgBuddhaRnd
 cfg = cfgBuddha
 cfg = cfgBunny
 cfg = cfgBunnyZipper
-cfg = cfgDesk1
 cfg = cfgBunnyAB
 cfg = cfgWood
 
 cfg = cfgApartment
 cfg = cfgD458fromDesk
 cfg = cfgStairs
+cfg = cfgDesk1
+
+cfg = cfgBuddhaRnd
+cfg = cfgApartment
 
 loadCached = False
-stopToShow = False
+stopToShow = True
 stopEveryI = 4
 showTransformed =  True 
 showUntransformed =False
 
-applyBB = True
+applyBB = False
 applyBBEGI = False
 applyFFT = False
 applyMM = False
 runGoICP = False
-runGogma = False
-applyICP = True
+runGogma = True
+applyICP = False
 
 tryMfAmbig = True
 
@@ -401,6 +403,7 @@ for i in range(1,len(scans)):
     if stopToShow and i%stopEveryI == 0:
       mlab.show(stop=True)
 print "Done!"
-fRes.close()
+if len(gt) > 0:
+  fRes.close()
 if showTransformed or showUntransformed:
   mlab.show(stop=True)
