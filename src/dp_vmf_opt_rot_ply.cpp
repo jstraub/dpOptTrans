@@ -957,7 +957,7 @@ int main(int argc, char** argv) {
 
 //      std::list<bb::NodeR3> nodesR3 =
 //        bb::GenerateNotesThatTessellateR3(min, max, (max-min).norm());
-      NodeR3 node0(Box(min, max), std::vector<uint32_t>(1,0));
+      NodeR3 node0(Box(min, max), 0);
       std::list<bb::NodeR3> nodesR3(1,node0);
       bb::LowerBoundR3 lower_bound_R3(gmmA, gmmB, q);
       bb::UpperBoundIndepR3 upper_bound_R3(gmmA, gmmB, q);
