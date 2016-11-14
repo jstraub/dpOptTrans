@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.linalg import inv
 from js.data.plyParse import PlyParse
-import os.path, re
+import os.path, re, json
 import subprocess as subp
 from js.geometry.rotations import Quaternion
 from js.utils.plot.colors import colorScheme
@@ -45,16 +45,15 @@ cfgBuddhaRnd = {"name":"buddhaRnd", "lambdaS3": [50,60,70,80],
 cfgBuddhaRnd = {"name":"buddhaRnd", "lambdaS3": [60,70,80], "lambdaR3": 0.002, 
     "maxLvlR3":15, "maxLvlS3":5}
 # lambdaR3 10 was good; lambdaS3 ,65,80
-
 cfgWood= {"name":"wood", "lambdaS3": [65], "lambdaR3": 10., 
     "maxLvlR3":8, "maxLvlS3":14}
 
 #accurate
 cfgApartment= {"name":"apartment", "lambdaS3": [45,65,80], "lambdaR3": 1., 
-    "maxLvlR3":14, "maxLvlS3":14, "icpCutoff": 0.1}
+    "maxLvlR3":14, "maxLvlS3":14, "icpCutoff": 0.1, "tryMfAmbig":True}
 #fast?
 cfgApartment= {"name":"apartment", "lambdaS3": [65], "lambdaR3": 2., 
-    "maxLvlR3":14, "maxLvlS3":14, "icpCutoff": 0.1}
+    "maxLvlR3":14, "maxLvlS3":14, "icpCutoff": 0.1, "tryMfAmbig":True}
 
 #cfgDesk1 = {"name":"desk1", "lambdaS3": [60,70,80], "lambdaR3": 0.1, 
 cfgDesk1 = {"name":"desk1", "lambdaS3": [45,65,85], "lambdaR3": 0.15, 
@@ -64,12 +63,12 @@ cfgDesk1 = {"name":"desk1", "lambdaS3": [65], "lambdaR3": 0.2,
 
 #fast?
 cfgStairs = {"name":"stairs", "lambdaS3": [45], "lambdaR3": 15.,
-    "maxLvlR3":14, "maxLvlS3":14 } #14
+    "maxLvlR3":14, "maxLvlS3":14, "tryMfAmbig":True } #14
 # accurate?
 cfgStairs = {"name":"stairs", "lambdaS3": [45,65,80], "lambdaR3": 15.,
-    "maxLvlR3":14, "maxLvlS3":14 } #14
+    "maxLvlR3":14, "maxLvlS3":14, "tryMfAmbig":True } #14
 cfgStairs = {"name":"stairs", "lambdaS3": [45,65], "lambdaR3": 15.,
-    "maxLvlR3":14, "maxLvlS3":14 } #14
+    "maxLvlR3":14, "maxLvlS3":14, "tryMfAmbig":True } #14
 
 # accurate?
 cfgD458fromDesk= {"name":"D458fromDesk", "lambdaS3": [45,65,85], "lambdaR3": 0.15, 
@@ -95,23 +94,23 @@ cfg = cfgBuddhaRnd
 cfg = cfgDesk1
 cfg = cfgApartment
 
+if not "tryMfAmbig" in cfg:
+  cfg["tryMfAmbig"] = False
+
 loadCached = False
-stopToShow = True 
+stopToShow = False
 stopEveryI = 1
 showTransformed =  True 
 showUntransformed =False
 
-applyBB = True
+applyBB    = False
+applyICP   = False
 applyBBEGI = False
-applyFFT = False
-applyMM = False
-runGoICP = False
-runGogma = False
-applyICP = True
+applyFFT   = False
+applyMM    = False
+runGoICP   = True
+runGogma   = False
 
-tryMfAmbig = False
-if cfg["name"] == "stairs" or cfg["name"] == "apartment":
-  tryMfAmbig = True
 
 simpleTranslation = False
 simpleRotation = False
@@ -122,6 +121,8 @@ useAAtessellation = not useS3tessellation and not useTpStessellation
 outputBoundsAt0 = True
 loadGlobalsolutionforICP = True
 useSurfaceNormalsInICP = True
+
+print json.dumps(cfg)
 
 qOffset = Quaternion()
 
@@ -321,6 +322,8 @@ prefix = "{}_{}".format(cfg["name"],int(np.floor(time.time()*1e3)))
 if len(gt) > 0:
   fRes = open(prefix+"resultsVsGrountruth.csv","w")
   fRes.write("algo idFrom idTo dAngDeg dTrans dTimeSec\n")
+  fRes.write(json.dumps(cfg)+"\n")
+  fRes.flush()
 
 W_T_B = np.eye(4)
 for i in range(1,len(scans)):
@@ -367,7 +370,7 @@ for i in range(1,len(scans)):
           AAmode=useAAtessellation,
           simpleTranslation=simpleTranslation,
           simpleRotation=simpleRotation,
-          tryMfAmbig=tryMfAmbig)
+          tryMfAmbig=cfg["tryMfAmbig"])
     transformationPath = transformationPathBB
 
     if i-1 < len(gt):
