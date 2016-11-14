@@ -66,7 +66,7 @@ def DisplayPcs(scanApath, scanBpath, q,t, plotCosies, stopToDisplay,
 cfgNYU = {"name":"nyu", "lambdaS3": [45.], "lambdaR3": 0.5}
 cfgNYU = {"name":"nyu", "lambdaS3": [45., 65, 80], "lambdaR3": 0.5}
 cfgNYU = {"name":"nyu", "lambdaS3": [45., 65, 80], "lambdaR3": 0.1}
-cfgNYU = {"name":"nyu", "lambdaS3": [45., 65, 80], "lambdaR3": 0.1,
+cfgNYU = {"name":"nyu", "lambdaS3": [45., 65, 80], "lambdaR3": 0.2,
     "maxLvlR3":15, "maxLvlS3":15}
 
 cfg = cfgNYU
@@ -116,7 +116,7 @@ paramEvalLambdaR3 = [0.5]
 
 tryMfAmbig = False
 cfg["maxLvlS3"] = 11
-cfg["maxLvlR3"] = 11
+#cfg["maxLvlR3"] = 11
 
 runMM = False
 runMMICP = False
@@ -143,13 +143,12 @@ runMapICP =False
 #runMap    =True
 #runMapICP =True
 
-runFFT    =True
-runGoICP =True
+#runFFT    =True
+#runGoICP =True
 #runGogma  =True
 #runMap    =True
-#runBB =True
+runBB =True
 #runBBICP =True
-
 
 showOnLargeDeviation =True
 err_a_thr = 2.

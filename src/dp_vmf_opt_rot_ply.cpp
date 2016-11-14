@@ -234,7 +234,7 @@ bool ComputeGMMfromPC(pcl::PointCloud<pcl::PointXYZRGBNormal>&
   const double maxEvFactor = 1e-2;
   for(uint32_t k=0; k<K; ++k)
 //    if (pis(k) > 0.) {
-    if (counts(k) > 5) {
+    if (counts(k) > 100) {
       Matrix3d cov = Ss[k]/float(ws(k));
       Eigen::SelfAdjointEigenSolver<Matrix3d> eig(cov);
       Eigen::Vector3d e = eig.eigenvalues();
@@ -258,6 +258,7 @@ bool ComputeGMMfromPC(pcl::PointCloud<pcl::PointXYZRGBNormal>&
             cov, pis(k)));
 //        Ss[k]/float(ws(k)), pis(k)));
     }
+  std::cout << "# GMM components after filter: " << gmm.size() << std::endl;
   return true;
 }
 
@@ -607,6 +608,7 @@ int main(int argc, char** argv) {
   // Load point clouds.
   pcl::PointCloud<pcl::PointXYZRGBNormal> pcA, pcB;
   pcl::PLYReader reader;
+  std::cout << reader.read(pathA, pcA) << std::endl;
   std::cout << "loading pc from " << pathA << std::endl;
   if (reader.read(pathA, pcA)) 
     std::cout << "error reading " << pathA << std::endl;
@@ -619,6 +621,12 @@ int main(int argc, char** argv) {
   else
     std::cout << "loaded pc from " << pathB << ": " << pcB.width << "x"
       << pcB.height << std::endl;
+
+  for (size_t i=0; i<pcA.size(); ++i) {
+    Eigen::Map<Vector3f> n(&(pcA.at(i).normal_x));
+    if (n.norm() > 1.01 || n.norm() < 0.99)
+      std::cout << "normal not on sphere " << n.norm() << std::endl;
+  }
 
   ShufflePc(pcA);
   ShufflePc(pcB);
@@ -947,8 +955,10 @@ int main(int argc, char** argv) {
       std::cout << "min t: " << min.transpose() 
         << " max t: " << max.transpose() << std::endl;
 
-      std::list<bb::NodeR3> nodesR3 =
-        bb::GenerateNotesThatTessellateR3(min, max, (max-min).norm());
+//      std::list<bb::NodeR3> nodesR3 =
+//        bb::GenerateNotesThatTessellateR3(min, max, (max-min).norm());
+      NodeR3 node0(Box(min, max), std::vector<uint32_t>(1,0));
+      std::list<bb::NodeR3> nodesR3(1,node0);
       bb::LowerBoundR3 lower_bound_R3(gmmA, gmmB, q);
       bb::UpperBoundIndepR3 upper_bound_R3(gmmA, gmmB, q);
       bb::UpperBoundConvexR3 upper_bound_convex_R3(gmmA, gmmB, q);

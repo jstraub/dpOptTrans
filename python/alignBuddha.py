@@ -7,6 +7,24 @@ from js.geometry.rotations import Quaternion
 from js.utils.plot.colors import colorScheme
 from helpers import *
 
+def logDeviations(fRes,pathGtA,pathGtB,q,t,dt,algo):
+  # loaded transformation is randomX_T_X, x\in\{A,B\}
+  q_gtA,t_gtA,_ = LoadTransformation(pathGtA)
+  q_gtB,t_gtB,_ = LoadTransformation(pathGtB)
+  dq_gt = q_gtA.dot(q_gtB.inverse())
+  dt_gt = t_gtA - dq_gt.rotate(t_gtB)
+  dAngDeg = q.angleTo(dq_gt)*180./np.pi
+  dTrans = np.sqrt(((t-dt_gt)**2).sum())
+  print 'q_gtA', q_gtA
+  print 'q_gtB', q_gtB
+  print 'dq_gt', dq_gt
+  print 'q', q
+  print "Angle to GT: {} deg".format(dAngDeg)
+  print "Translation deviation to GT: {} m".format(dTrans)
+  fRes.write("{} {} {} {} {} {}\n".format(algo,i-1,i,dAngDeg,dTrans,dt))
+  fRes.flush()
+  print "wrote results to " + fRes.name
+
 cfgEnschede = {"name":"enschede", "lambdaS3": [60, 70, 80], "lambdaR3":0.3}
 cfgBunnyZipper = {"name":"bun_zipper", "lambdaS3": [60], "lambdaR3":
     0.001, "maxLvlR3":15, "maxLvlS3":5 }
@@ -21,6 +39,19 @@ cfgBuddhaRnd = {"name":"buddhaRnd", "lambdaS3": [50,60,70,80],
   "lambdaR3": 0.002}
 cfgBuddhaRnd = {"name":"buddhaRnd", "lambdaS3": [60,70,80], "lambdaR3": 0.002, 
     "maxLvlR3":15, "maxLvlS3":5}
+# lambdaR3 10 was good; lambdaS3 ,65,80
+cfgStairs = {"name":"stairs", "lambdaS3": [45,65,80], "lambdaR3": 7.,
+    "maxLvlR3":14, "maxLvlS3":14 } #14
+cfgWood= {"name":"wood", "lambdaS3": [65], "lambdaR3": 10., 
+    "maxLvlR3":8, "maxLvlS3":14}
+cfgApartment= {"name":"apartment", "lambdaS3": [45,65,80], "lambdaR3": 1., 
+    "maxLvlR3":10, "maxLvlS3":14, "icpCutoff": 0.1}
+#cfgDesk1 = {"name":"desk1", "lambdaS3": [60,70,80], "lambdaR3": 0.1, 
+cfgDesk1 = {"name":"desk1", "lambdaS3": [45,65,85], "lambdaR3": 0.15, 
+    "maxLvlR3":14, "maxLvlS3":14, "icpCutoff": 0.1}
+
+cfgD458fromDesk= {"name":"D458fromDesk", "lambdaS3": [45,65,85], "lambdaR3": 0.15, 
+    "maxLvlR3":14, "maxLvlS3":14, "icpCutoff": 0.1}
 
 cfg = cfgEnschede
 cfg = cfgLymph
@@ -28,20 +59,27 @@ cfg = cfgBuddhaRnd
 cfg = cfgBuddha
 cfg = cfgBunny
 cfg = cfgBunnyZipper
+cfg = cfgDesk1
 cfg = cfgBunnyAB
+cfg = cfgWood
+
+cfg = cfgApartment
+cfg = cfgStairs
+cfg = cfgD458fromDesk
 
 loadCached = False
 stopToShow = False
+stopEveryI = 4
 showTransformed =  True 
 showUntransformed =False
 
-applyBB = False
+applyBB = True
 applyBBEGI = False
 applyFFT = False
 applyMM = False
 runGoICP = False
-runGogma = True
-applyICP = False
+runGogma = False
+applyICP = True
 
 simpleTranslation = False
 simpleRotation = False
@@ -53,6 +91,8 @@ useAAtessellation = not useS3tessellation and not useTpStessellation
 outputBoundsAt0 = True
 loadGlobalsolutionforICP = True
 useSurfaceNormalsInICP = True
+
+qOffset = Quaternion()
 
 if cfg["name"] == "lymph":
   pattern = "frame_[0-9]+.ply$"
@@ -122,6 +162,106 @@ if cfg["name"] == "enschede":
     '../data/enschede_rnd/0021771_2_inv_depth_map_gray_angle_50_translation_10.ply',
     '../data/enschede_rnd/0021772_2_inv_depth_map_gray_angle_50_translation_10.ply']
   gt=[]
+if cfg["name"] == "stairs":
+  pattern = "HokuyoPcNormals_[0-9]+.ply$"
+  scans = []
+  for root, dirs, files in os.walk("../data/stairs/"):
+    for f in files:
+      if re.search(pattern, f):
+        scans.append(os.path.join(root, f))
+  scans = sorted(scans, key=lambda f: 
+    int(re.sub(".ply","",
+      re.sub("HokuyoPcNormals_","",os.path.split(f)[1]))))
+#  scans = [
+#      os.path.abspath('../data/stairs/HokuyoPcNormals_1.ply'),
+#      os.path.abspath('../data/stairs/HokuyoPcNormals_2.ply')]
+  gt=[]
+  pattern = "pose_[0-9]+.csv$"
+  for root, dirs, files in os.walk("../data/stairs/"):
+    for f in files:
+      if re.search(pattern, f):
+        gt.append(os.path.join(root, f))
+  gt = sorted(gt, key=lambda f: 
+    int(re.sub(".csv","",
+      re.sub("pose_","",os.path.split(f)[1]))))
+#  scans = scans[:3]
+#  gt = gt[:3]
+  print scans
+  print gt 
+if cfg["name"] == "apartment":
+  pattern = "HokuyoPcNormals_[0-9]+.ply$"
+  scans = []
+  for root, dirs, files in os.walk("../data/apartment/"):
+    for f in files:
+      if re.search(pattern, f):
+        scans.append(os.path.join(root, f))
+  scans = sorted(scans, key=lambda f: 
+    int(re.sub(".ply","",
+      re.sub("HokuyoPcNormals_","",os.path.split(f)[1]))))
+  gt=[]
+  pattern = "pose_[0-9]+.csv$"
+  for root, dirs, files in os.walk("../data/apartment/"):
+    for f in files:
+      if re.search(pattern, f):
+        gt.append(os.path.join(root, f))
+  gt = sorted(gt, key=lambda f: 
+    int(re.sub(".csv","",
+      re.sub("pose_","",os.path.split(f)[1]))))
+  print scans
+  print gt
+if cfg["name"] == "wood":
+  pattern = "HokuyoPcNormals_[0-9]+.ply$"
+  scans = []
+  for root, dirs, files in os.walk("../data/wood_summer/"):
+    for f in files:
+      if re.search(pattern, f):
+        scans.append(os.path.join(root, f))
+  scans = sorted(scans, key=lambda f: 
+    int(re.sub(".ply","",
+      re.sub("HokuyoPcNormals_","",os.path.split(f)[1]))))
+  gt=[]
+  pattern = "pose_[0-9]+.csv$"
+  for root, dirs, files in os.walk("../data/wood_summer/"):
+    for f in files:
+      if re.search(pattern, f):
+        gt.append(os.path.join(root, f))
+  gt = sorted(gt, key=lambda f: 
+    int(re.sub(".csv","",
+      re.sub("pose_","",os.path.split(f)[1]))))
+  print scans
+  print gt
+if cfg["name"] == "desk1":
+  pattern = "frame_[0-9]+.ply$"
+  scans = []
+  for root, dirs, files in os.walk("/data/vision/fisher/expres1/jstraub/optRotTransCVPR2017_KFs/desk1/"):
+    for f in files:
+      if re.search(pattern, f):
+        scans.append(os.path.join(root, f))
+  scans = sorted(scans, key=lambda f: 
+    int(re.sub(".ply","",
+      re.sub("frame_","",os.path.split(f)[1]))))
+#  scans = scans[:4]
+  print scans
+#  scans = [
+#      os.path.abspath('../data/stairs/HokuyoPcNormals_1.ply'),
+#      os.path.abspath('../data/stairs/HokuyoPcNormals_2.ply')]
+  gt=[]
+if cfg["name"] == "D458fromDesk":
+  pattern = "frame_[0-9]+.ply$"
+  scans = []
+  for root, dirs, files in os.walk("/data/vision/fisher/expres1/jstraub/optRotTransCVPR2017_KFs/32-D458_fromDesk/"):
+    for f in files:
+      if re.search(pattern, f):
+        scans.append(os.path.join(root, f))
+  scans = sorted(scans, key=lambda f: 
+    int(re.sub(".ply","",
+      re.sub("frame_","",os.path.split(f)[1]))))
+#  scans = scans[:4]
+  print scans
+#  scans = [
+#      os.path.abspath('../data/stairs/HokuyoPcNormals_1.ply'),
+#      os.path.abspath('../data/stairs/HokuyoPcNormals_2.ply')]
+  gt=[]
 
 print scans
 colors = colorScheme("label")
@@ -136,9 +276,18 @@ if showUntransformed:
     ply = PlyParse();
     ply.parse(scanPath)
     pc = ply.getPc()
-    mlab.points3d(pc[:,0], pc[:,1], pc[:,2], mode="point",
+    n = ply.n
+    #    mlab.points3d(pc[:,0], pc[:,1], pc[:,2], mode="point",
+#        color=colors[i%len(colors)])
+    mlab.points3d(n[:,0], n[:,1], n[:,2], mode="point",
         color=colors[i%len(colors)])
   mlab.show(stop=True)
+
+prefix = "{}_{}".format(cfg["name"],int(np.floor(time.time()*1e3)))
+
+if len(gt) > 0:
+  fRes = open(prefix+"resultsVsGrountruth.csv","w")
+  fRes.write("algo idFrom idTo dAngDeg dTrans dTimeSec\n")
 
 W_T_B = np.eye(4)
 for i in range(1,len(scans)):
@@ -183,6 +332,9 @@ for i in range(1,len(scans)):
           tryMfAmbig=tryMfAmbig)
     transformationPath = transformationPathBB
 
+    if i-1 < len(gt):
+      logDeviations(fRes, gt[i-1], gt[i], q,t,dt,"BB")
+
   if applyBBEGI:
     if loadCached and os.path.isfile(transformationPathBBEGI):
       print "found transformation file and using it "+transformationPathBBEGI
@@ -196,12 +348,15 @@ for i in range(1,len(scans)):
     if loadCached and os.path.isfile(transformationPathFFT):
       print "found transformation file and using it " +transformationPathFFT
     else:
-      q,t,_ = RunFFT(scanApath, scanBpath, transformationPathFFT)
+      q,t,dt,_ = RunFFT(scanApath, scanBpath, transformationPathFFT)
       with open(transformationPathFFT,'w') as f: 
         f.write("qw qx qy qz tx ty tz\n")
         f.write("{} {} {} {} {} {} {}\n".format(
           q.q[0],q.q[1],q.q[2],q.q[3],t[0],t[1],t[2]))
     transformationPath = transformationPathFFT
+
+    if i-1 < len(gt):
+      logDeviations(fRes, gt[i-1], gt[i], q,t,dt,"FFT")
 
   if applyMM:
     if loadCached and os.path.isfile(transformationPathMM):
@@ -214,9 +369,16 @@ for i in range(1,len(scans)):
     if loadCached and os.path.isfile(transformationPathICP):
       print "found transformation file and using it "+transformationPathICP
     else:
-      q,t,dt,_ = RunICP(scanApath, scanBpath, transformationPathICP,
-          useSurfaceNormalsInICP, transformationPath)
+      if "icpCutoff" in cfg:
+        q,t,dt,_ = RunICP(scanApath, scanBpath, transformationPathICP,
+            useSurfaceNormalsInICP, transformationPath,
+            cutoff=cfg["icpCutoff"])
+      else:
+        q,t,dt,_ = RunICP(scanApath, scanBpath, transformationPathICP,
+            useSurfaceNormalsInICP, transformationPath)
     transformationPath = transformationPathICP
+    if i-1 < len(gt):
+      logDeviations(fRes, gt[i-1], gt[i], q,t,dt, "ICP")
 
 #  q,t = LoadTransformation(transformationPath)
   R = q.toRot().R
@@ -225,33 +387,19 @@ for i in range(1,len(scans)):
   A_T_B[:3,:3] = R.T
   A_T_B[:3,3] = -R.T.dot(t)
   W_T_B = W_T_B.dot(A_T_B)
-  if i-1 < len(gt):
-    # loaded transformation is randomX_T_X, x\in\{A,B\}
-    q_gtA,t_gtA = LoadTransformation(gt[i-1])
-    q_gtB,t_gtB = LoadTransformation(gt[i])
-    dq_gt = q_gtB.dot(qOffset.dot(q_gtA.inverse()))
-#    q_gt = q_gt.dot(qOffset)
-    print 'q_offset', qOffset
-    print 'q_gtA', q_gtA
-    print 'q_gtB', q_gtB
-    print 'dq_gt', dq_gt
-    print 'q', q
-    print "Angle to GT: {} deg".format(q.angleTo(dq_gt)*180./np.pi)
-    print "Translation deviation to GT: {} m".format(np.sqrt(((t-t_gtA)**2).sum()))
 
-  plyB = PlyParse();
-  plyB.parse(scanBpath)
-  pcB = plyB.getPc()
-
-  R = W_T_B[:3,:3]
-  t = W_T_B[:3,3]
-  pcB = (1.001*R.dot(pcB.T)).T + t
-  
   if showTransformed:
+    plyB = PlyParse();
+    plyB.parse(scanBpath)
+    pcB = plyB.getPc()
+    R = W_T_B[:3,:3]
+    t = W_T_B[:3,3]
+    pcB = (1.001*R.dot(pcB.T)).T + t
     mlab.points3d(pcB[:,0], pcB[:,1], pcB[:,2], mode="point",
           color=colors[i%len(colors)])
-    if stopToShow and i%4 == 0:
+    if stopToShow and i%stopEveryI == 0:
       mlab.show(stop=True)
 print "Done!"
+fRes.close()
 if showTransformed or showUntransformed:
   mlab.show(stop=True)

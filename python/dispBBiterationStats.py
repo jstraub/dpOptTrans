@@ -190,4 +190,4 @@ ax2.yaxis.set_label_coords(labelx, 0.5)
 plt.xlim([0, Y-1])
 plt.setp(ax2.get_xticklabels(), visible=False)
 
-#plt.show()
+plt.show()

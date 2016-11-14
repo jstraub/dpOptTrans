@@ -23,6 +23,7 @@ int main(int argc, char** argv) {
     ("in_a,a", po::value<std::string>(), "path to first input file")
     ("in_b,b", po::value<std::string>(), "path to second input file")
     ("out,o", po::value<std::string>(), "path to output file")
+    ("cutoff,c", po::value<float>(), "cutoff for data association in ICP")
     ("transformation,t", po::value<std::string>(), "path to a transformation file with qw qx qy qz tx ty tz in the second line.")
 //    ("transformation,t", po::value<std::string>(), "transformation guess")
 //    ("rotation,q", po::value<std::string>(), "rotation guess in the form of a quaternion")
@@ -43,11 +44,13 @@ int main(int argc, char** argv) {
   std::string pathB = "";
   std::string pathOut = "";
   std::string pathTransformation  = "";
+  float cutoff = 0.3;
   //  std::string mode = "";
   //  if(vm.count("mode")) mode = vm["mode"].as<std::string>();
   if(vm.count("out")) pathOut = vm["out"].as<std::string>();
   if(vm.count("in_a")) pathA = vm["in_a"].as<std::string>();
   if(vm.count("in_b")) pathB = vm["in_b"].as<std::string>();
+  if(vm.count("cutoff")) cutoff = vm["cutoff"].as<float>();
   if(vm.count("transformation")) pathTransformation = vm["transformation"].as<std::string>();
 
   // Load point clouds.
@@ -99,7 +102,7 @@ int main(int argc, char** argv) {
     std::cout << "Using only points in ICP" << std::endl;
   }
   icp->setMaximumIterations(100);
-  icp->setMaxCorrespondenceDistance (0.3);
+  icp->setMaxCorrespondenceDistance (cutoff);
   icp->setTransformationEpsilon (1e-8);
   icp->setEuclideanFitnessEpsilon(0.01);
   icp->setInputSource(pcA_ptr);

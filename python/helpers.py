@@ -42,7 +42,10 @@ def RunFFT(scanApath, scanBpath, transformationPathFFT, q_gt=None,
   if not err == 0:
     print "ERROR in run FFT"
     return Quaternion(), np.zeros(3), dt, False
-  qs,ts = LoadTransformation(transformationPathFFT)
+  qs,ts,raw = LoadTransformation(transformationPathFFT)
+  if not isinstance(qs, (list, tuple)):
+    qs = [qs]
+    ts = [ts]
   id_best = 0
   if not (q_gt is None and t_gt is None):
     dist = np.zeros(len(qs))
@@ -50,6 +53,10 @@ def RunFFT(scanApath, scanBpath, transformationPathFFT, q_gt=None,
       dist[i] = q_gt.angleTo(qs[i])
     print dist
     id_best = np.argmin(dist)
+  if len(qs)==1:
+    if np.all(ts[0] == 0):
+      print "translation 0 => FFT failed"
+      return qs[0], ts[0], dt, False
   if returnBoth:
     return qs[id_best], ts[id_best], qs[0], ts[0], dt, True
   else:
@@ -119,7 +126,8 @@ def RunBB(cfg, scanApath, scanBpath, transformationPathBB,\
       args.append('--tryMfAmbig')
     print " ".join(args)
     t0 = time.time()
-    err = run(" ".join(args), timeout_sec)
+#    err = run(" ".join(args), timeout_sec)
+    err = subp.call(" ".join(args), shell=True)
     dt += time.time() - t0
     if err > 0:
       print "ERROR in RunBB"
@@ -150,6 +158,7 @@ def RunBB(cfg, scanApath, scanBpath, transformationPathBB,\
       q.q[0],q.q[1],q.q[2],q.q[3],t[0],t[1],t[2],lbS3,lbR3,KvmfA,\
       KvmfB, KgmmA, KgmmB))
   return q,t, Ks[idMax,:], dt,True
+
 def RunMM(scanApath, scanBpath, transformationPathMM):
   args = ['../pod-build/bin/moment_matched_T3', 
       '-a {}'.format(scanApath), 
@@ -164,14 +173,16 @@ def RunMM(scanApath, scanBpath, transformationPathMM):
   if err > 0:
     print "ERROR in run MM"
     return Quaternion(), np.zeros(3), dt, False
-  q,t = LoadTransformation(transformationPathMM)
+  q,t,_ = LoadTransformation(transformationPathMM)
   return q,t, dt,True
 
 def RunICP(scanApath, scanBpath, transformationPathICP,
-    useNormals=True, transformationPathGlobal=None):
+    useNormals=True, transformationPathGlobal=None,
+    cutoff=0.3):
   args = ['../pod-build/bin/icp_T3', 
       '-a {}'.format(scanApath), 
       '-b {}'.format(scanBpath), 
+      '-c {}'.format(cutoff), 
       '-o {}'.format(re.sub(".csv","",transformationPathICP))
       ]
   if not transformationPathGlobal is None:
@@ -186,7 +197,7 @@ def RunICP(scanApath, scanBpath, transformationPathICP,
   if err > 0:
     print "ERROR in run ICP"
     return Quaternion(), np.zeros(3), dt,False
-  q,t = LoadTransformation(transformationPathICP)
+  q,t,_ = LoadTransformation(transformationPathICP)
   return q,t,dt,True
 
 def RunGoICP(scanApath, scanBpath, transformationPathGoICP,
@@ -304,7 +315,7 @@ def LoadTransformation(transformationPath):
     print "from path: ", transformationPath
     print 'q', q
     print 't', t
-  return q,t
+  return q,t,qt
 
 def LoadTransformationAndBounds(transformationPath):
   with open(transformationPath) as f:
