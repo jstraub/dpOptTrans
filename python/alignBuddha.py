@@ -8,11 +8,11 @@ from js.utils.plot.colors import colorScheme
 from helpers import *
 
 def logDeviations(fRes,pathGtA,pathGtB,q_ba,t_ba,dt,algo):
-  # loaded transformation is randomX_T_X, x\in\{A,B\}
+  # loaded transformation is T_wc
   q_gtA,t_gtA,_ = LoadTransformation(pathGtA)
   q_gtB,t_gtB,_ = LoadTransformation(pathGtB)
-  dq_gt = q_gtA.dot(q_gtB.inverse())
-  dt_gt = t_gtA - dq_gt.rotate(t_gtB)
+  dq_gt = q_gtB.inverse().dot(q_gtA)
+  dt_gt = q_gtB.inverse().rotate(t_gtA - t_gtB)
   dAngDeg = q_ba.angleTo(dq_gt)*180./np.pi
   dTrans = np.sqrt(((t_ba-dt_gt)**2).sum())
   print 'q_gtA', q_gtA
@@ -30,25 +30,36 @@ def logDeviations(fRes,pathGtA,pathGtB,q_ba,t_ba,dt,algo):
 cfgEnschede = {"name":"enschede", "lambdaS3": [60, 70, 80], "lambdaR3":0.3}
 cfgBunnyZipper = {"name":"bun_zipper", "lambdaS3": [60], "lambdaR3":
     0.001, "maxLvlR3":15, "maxLvlS3":5 }
+
 #cfgBunnyAB = {"name":"bunnyAB", "lambdaS3": [45, 60, 70, 80], "lambdaR3": 0.003}
 cfgBunnyAB = {"name":"bunnyAB", "lambdaS3":
     [60,70,80], "lambdaR3": 0.001, "maxLvlR3":15, "maxLvlS3":15}
+
 cfgBunny = {"name":"bunny", "lambdaS3": [60, 70, 80], "lambdaR3": 0.001,
     "maxLvlR3":15, "maxLvlS3":5}
 cfgLymph = {"name":"lymph", "lambdaS3": [80], "lambdaR3": 1.}
 cfgBuddha = {"name":"buddha", "lambdaS3": [60,70,80], "lambdaR3": 0.0008}
 cfgBuddhaRnd = {"name":"buddhaRnd", "lambdaS3": [50,60,70,80],
   "lambdaR3": 0.002}
+
 cfgBuddhaRnd = {"name":"buddhaRnd", "lambdaS3": [60,70,80], "lambdaR3": 0.002, 
     "maxLvlR3":15, "maxLvlS3":5}
 # lambdaR3 10 was good; lambdaS3 ,65,80
+
 cfgWood= {"name":"wood", "lambdaS3": [65], "lambdaR3": 10., 
     "maxLvlR3":8, "maxLvlS3":14}
+
+#accurate
 cfgApartment= {"name":"apartment", "lambdaS3": [45,65,80], "lambdaR3": 1., 
-    "maxLvlR3":10, "maxLvlS3":14, "icpCutoff": 0.1}
+    "maxLvlR3":14, "maxLvlS3":14, "icpCutoff": 0.1}
+#fast?
+cfgApartment= {"name":"apartment", "lambdaS3": [65], "lambdaR3": 2., 
+    "maxLvlR3":14, "maxLvlS3":14, "icpCutoff": 0.1}
 
 #cfgDesk1 = {"name":"desk1", "lambdaS3": [60,70,80], "lambdaR3": 0.1, 
 cfgDesk1 = {"name":"desk1", "lambdaS3": [45,65,85], "lambdaR3": 0.15, 
+    "maxLvlR3":14, "maxLvlS3":14, "icpCutoff": 0.1}
+cfgDesk1 = {"name":"desk1", "lambdaS3": [65], "lambdaR3": 0.2, 
     "maxLvlR3":14, "maxLvlS3":14, "icpCutoff": 0.1}
 
 #fast?
@@ -76,29 +87,30 @@ cfg = cfgBunnyZipper
 cfg = cfgBunnyAB
 cfg = cfgWood
 
-cfg = cfgApartment
 cfg = cfgStairs
-cfg = cfgDesk1
+cfg = cfgD458fromDesk
+cfg = cfgApartment
 
 cfg = cfgBuddhaRnd
+cfg = cfgDesk1
 cfg = cfgApartment
 
 loadCached = False
-stopToShow = True
+stopToShow = True 
 stopEveryI = 1
 showTransformed =  True 
 showUntransformed =False
 
-applyBB = False
+applyBB = True
 applyBBEGI = False
 applyFFT = False
 applyMM = False
 runGoICP = False
-runGogma = True
-applyICP = False
+runGogma = False
+applyICP = True
 
 tryMfAmbig = False
-if cfg["name"] == "stairs":
+if cfg["name"] == "stairs" or cfg["name"] == "apartment":
   tryMfAmbig = True
 
 simpleTranslation = False
@@ -226,6 +238,8 @@ if cfg["name"] == "apartment":
   gt = sorted(gt, key=lambda f: 
     int(re.sub(".csv","",
       re.sub("pose_","",os.path.split(f)[1]))))
+  gt = gt[16:]
+  scans = scans[16:]
   print scans
   print gt
 if cfg["name"] == "wood":

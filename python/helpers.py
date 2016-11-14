@@ -239,8 +239,9 @@ def RunGogma(scanApath, scanBpath, transformationPathGogma, timeout_sec = 3600):
   print "error ", err
   if err == 0:
     #  err = subp.call(" ".join(args), shell=True)
-    q,t = LoadTransformationGogma(re.sub(".csv",".txt",transformationPathGogma))
-    return q,t,dt,True
+    q_ba,t_ba = LoadTransformationGogma(re.sub(".csv",
+      ".txt",transformationPathGogma))
+    return q_ba,t_ba,dt,True
   else:
     return Quaternion(),np.array([0,0,0]),dt,False
 
@@ -458,9 +459,9 @@ def LoadTransformationGogma(transformationPathGogma):
     R_ab = np.reshape(x[3:],(3,3))
     print "R_ab",R_ab
     print "t_ab",t_ab
-    q_ab = Quaternion()
-    q_ab.fromRot3(R_ab.T)
-    return q_ab, -R_ab.T.dot(t_ab)
+    q_ba = Quaternion()
+    q_ba.fromRot3(R_ab.T)
+    return q_ba, -R_ab.T.dot(t_ab)
 
 
 

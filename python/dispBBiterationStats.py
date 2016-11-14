@@ -9,6 +9,7 @@ mpl.rc('lines',linewidth=4.)
 figSize = (14, 5.5)
 figSize = (9, 12)
 figSize = [(15.4, 10),  (15.4, 10), (15.4, 10), (12.6, 10)]
+figSize = [(10.4, 10),  (10.4, 10), (10.4, 10), (10.4, 10)]
 
 c1 = colorScheme("labelMap")["turquoise"]
 c2 = colorScheme("labelMap")["orange"]
@@ -190,4 +191,4 @@ ax2.yaxis.set_label_coords(labelx, 0.5)
 plt.xlim([0, Y-1])
 plt.setp(ax2.get_xticklabels(), visible=False)
 
-plt.show()
+#plt.show()
