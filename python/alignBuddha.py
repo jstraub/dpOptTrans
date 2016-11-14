@@ -7,18 +7,18 @@ from js.geometry.rotations import Quaternion
 from js.utils.plot.colors import colorScheme
 from helpers import *
 
-def logDeviations(fRes,pathGtA,pathGtB,q,t,dt,algo):
+def logDeviations(fRes,pathGtA,pathGtB,q_ba,t_ba,dt,algo):
   # loaded transformation is randomX_T_X, x\in\{A,B\}
   q_gtA,t_gtA,_ = LoadTransformation(pathGtA)
   q_gtB,t_gtB,_ = LoadTransformation(pathGtB)
   dq_gt = q_gtA.dot(q_gtB.inverse())
   dt_gt = t_gtA - dq_gt.rotate(t_gtB)
-  dAngDeg = q.angleTo(dq_gt)*180./np.pi
-  dTrans = np.sqrt(((t-dt_gt)**2).sum())
+  dAngDeg = q_ba.angleTo(dq_gt)*180./np.pi
+  dTrans = np.sqrt(((t_ba-dt_gt)**2).sum())
   print 'q_gtA', q_gtA
   print 'q_gtB', q_gtB
   print 'dq_gt', dq_gt
-  print 'q', q
+  print 'q_ba', q_ba
   print "Angle to GT: {} deg".format(dAngDeg)
   print "Translation deviation to GT: {} m".format(dTrans)
   fRes.write("{} {} {} {} {} {}\n".format(algo,i-1,i,dAngDeg,dTrans,dt))
@@ -71,7 +71,7 @@ cfg = cfgApartment
 
 loadCached = False
 stopToShow = True
-stopEveryI = 4
+stopEveryI = 1
 showTransformed =  True 
 showUntransformed =False
 
@@ -317,16 +317,21 @@ for i in range(1,len(scans)):
           color=colors[0])
 
   if runGogma:
-    q,t,dt,success = RunGogma(scanApath, scanBpath, transformationPathGogma)
+    q_ba,t_ba,dt,success = RunGogma(scanApath, scanBpath, transformationPathGogma)
+    if i-1 < len(gt):
+      logDeviations(fRes, gt[i-1], gt[i], q_ba,t_ba,dt,"GOGMA")
 
   if runGoICP:
-    q,t,dt,success = RunGoICP(scanApath, scanBpath, transformationPathGoICP)
+    q_ba,t_ba,dt,success = RunGoICP(scanApath, scanBpath, transformationPathGoICP)
+
+    if i-1 < len(gt):
+      logDeviations(fRes, gt[i-1], gt[i], q_ba,t_ba,dt,"GoICP")
 
   if applyBB:
     if loadCached and os.path.isfile(transformationPathBB):
       print "found transformation file and using it "+transformationPathBB
     else:
-      q,t,Ks,dt,_ = RunBB(cfg, scanApath, scanBpath,
+      q_ba,t_ba,Ks,dt,_ = RunBB(cfg, scanApath, scanBpath,
           transformationPathBB, TpSmode=useTpStessellation,
           outputBoundsAt0=outputBoundsAt0,
           AAmode=useAAtessellation,
@@ -336,13 +341,13 @@ for i in range(1,len(scans)):
     transformationPath = transformationPathBB
 
     if i-1 < len(gt):
-      logDeviations(fRes, gt[i-1], gt[i], q,t,dt,"BB")
+      logDeviations(fRes, gt[i-1], gt[i], q_ba,t_ba,dt,"BB")
 
   if applyBBEGI:
     if loadCached and os.path.isfile(transformationPathBBEGI):
       print "found transformation file and using it "+transformationPathBBEGI
     else:
-      q,t,dt,_ = RunBB(cfg, scanApath, scanBpath,
+      q_ba,t_ba,dt,_ = RunBB(cfg, scanApath, scanBpath,
           transformationPathBBEGI, EGImode=True, TpSmode=
           useTpStessellation)
     transformationPath = transformationPathBBEGI
@@ -351,21 +356,21 @@ for i in range(1,len(scans)):
     if loadCached and os.path.isfile(transformationPathFFT):
       print "found transformation file and using it " +transformationPathFFT
     else:
-      q,t,dt,_ = RunFFT(scanApath, scanBpath, transformationPathFFT)
+      q_ba,t_ba,dt,_ = RunFFT(scanApath, scanBpath, transformationPathFFT)
       with open(transformationPathFFT,'w') as f: 
         f.write("qw qx qy qz tx ty tz\n")
         f.write("{} {} {} {} {} {} {}\n".format(
-          q.q[0],q.q[1],q.q[2],q.q[3],t[0],t[1],t[2]))
+          q_ba.q[0],q_ba.q[1],q_ba.q[2],q_ba.q[3],t_ba[0],t_ba[1],t_ba[2]))
     transformationPath = transformationPathFFT
 
     if i-1 < len(gt):
-      logDeviations(fRes, gt[i-1], gt[i], q,t,dt,"FFT")
+      logDeviations(fRes, gt[i-1], gt[i], q_ba,t_ba,dt,"FFT")
 
   if applyMM:
     if loadCached and os.path.isfile(transformationPathMM):
       print "found transformation file and using it " +transformationPathMM
     else:
-      q,t,dt,_ = RunMM(scanApath, scanBpath, transformationPathMM)
+      q_ba,t_ba,dt,_ = RunMM(scanApath, scanBpath, transformationPathMM)
     transformationPath = transformationPathMM
 
   if applyICP:
@@ -373,31 +378,31 @@ for i in range(1,len(scans)):
       print "found transformation file and using it "+transformationPathICP
     else:
       if "icpCutoff" in cfg:
-        q,t,dt,_ = RunICP(scanApath, scanBpath, transformationPathICP,
+        q_ba,t_ba,dt,_ = RunICP(scanApath, scanBpath, transformationPathICP,
             useSurfaceNormalsInICP, transformationPath,
             cutoff=cfg["icpCutoff"])
       else:
-        q,t,dt,_ = RunICP(scanApath, scanBpath, transformationPathICP,
+        q_ba,t_ba,dt,_ = RunICP(scanApath, scanBpath, transformationPathICP,
             useSurfaceNormalsInICP, transformationPath)
     transformationPath = transformationPathICP
     if i-1 < len(gt):
-      logDeviations(fRes, gt[i-1], gt[i], q,t,dt, "ICP")
+      logDeviations(fRes, gt[i-1], gt[i], q_ba,t_ba,dt, "ICP")
 
-#  q,t = LoadTransformation(transformationPath)
-  R = q.toRot().R
-  print "R", R
+#  q_ba,t_ba = LoadTransformation(transformationPath)
+  R_ba = q_ba.toRot().R
+  print "R_ba", R_ba
   A_T_B = np.eye(4)
-  A_T_B[:3,:3] = R.T
-  A_T_B[:3,3] = -R.T.dot(t)
+  A_T_B[:3,:3] = R_ba.T
+  A_T_B[:3,3] = -R_ba.T.dot(t_ba)
   W_T_B = W_T_B.dot(A_T_B)
 
   if showTransformed:
     plyB = PlyParse();
     plyB.parse(scanBpath)
     pcB = plyB.getPc()
-    R = W_T_B[:3,:3]
-    t = W_T_B[:3,3]
-    pcB = (1.001*R.dot(pcB.T)).T + t
+    R_wb = W_T_B[:3,:3]
+    t_wb = W_T_B[:3,3]
+    pcB = (1.001*R_wb.dot(pcB.T)).T + t_wb
     mlab.points3d(pcB[:,0], pcB[:,1], pcB[:,2], mode="point",
           color=colors[i%len(colors)])
     if stopToShow and i%stopEveryI == 0:

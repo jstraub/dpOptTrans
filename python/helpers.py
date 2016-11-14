@@ -452,6 +452,8 @@ def LoadTransformationGogma(transformationPathGogma):
   with open(transformationPathGogma) as f:
     x = np.loadtxt(f)
     print x
+    if x.size > 12: 
+      x = x[0,:]
     t_ab = x[:3]
     R_ab = np.reshape(x[3:],(3,3))
     print "R_ab",R_ab
