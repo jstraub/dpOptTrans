@@ -40,7 +40,7 @@ cfgBuddhaRnd = {"name":"buddhaRnd", "lambdaS3": [50,60,70,80],
 cfgBuddhaRnd = {"name":"buddhaRnd", "lambdaS3": [60,70,80], "lambdaR3": 0.002, 
     "maxLvlR3":15, "maxLvlS3":5}
 # lambdaR3 10 was good; lambdaS3 ,65,80
-cfgStairs = {"name":"stairs", "lambdaS3": [45,65,80], "lambdaR3": 7.,
+cfgStairs = {"name":"stairs", "lambdaS3": [45,65,80], "lambdaR3": 15.,
     "maxLvlR3":14, "maxLvlS3":14 } #14
 cfgWood= {"name":"wood", "lambdaS3": [65], "lambdaR3": 10., 
     "maxLvlR3":8, "maxLvlS3":14}
@@ -64,8 +64,8 @@ cfg = cfgBunnyAB
 cfg = cfgWood
 
 cfg = cfgApartment
-cfg = cfgStairs
 cfg = cfgD458fromDesk
+cfg = cfgStairs
 
 loadCached = False
 stopToShow = False
@@ -81,9 +81,10 @@ runGoICP = False
 runGogma = False
 applyICP = True
 
+tryMfAmbig = True
+
 simpleTranslation = False
 simpleRotation = False
-tryMfAmbig = True
 useS3tessellation = True
 useTpStessellation = not useS3tessellation and False
 useAAtessellation = not useS3tessellation and not useTpStessellation
