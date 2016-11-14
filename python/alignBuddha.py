@@ -18,7 +18,9 @@ def logDeviations(fRes,pathGtA,pathGtB,q_ba,t_ba,dt,algo):
   print 'q_gtA', q_gtA
   print 'q_gtB', q_gtB
   print 'dq_gt', dq_gt
+  print 'dt_gt', dt_gt
   print 'q_ba', q_ba
+  print 't_ba', t_ba
   print "Angle to GT: {} deg".format(dAngDeg)
   print "Translation deviation to GT: {} m".format(dTrans)
   fRes.write("{} {} {} {} {} {}\n".format(algo,i-1,i,dAngDeg,dTrans,dt))
@@ -40,17 +42,30 @@ cfgBuddhaRnd = {"name":"buddhaRnd", "lambdaS3": [50,60,70,80],
 cfgBuddhaRnd = {"name":"buddhaRnd", "lambdaS3": [60,70,80], "lambdaR3": 0.002, 
     "maxLvlR3":15, "maxLvlS3":5}
 # lambdaR3 10 was good; lambdaS3 ,65,80
-cfgStairs = {"name":"stairs", "lambdaS3": [45,65,80], "lambdaR3": 15.,
-    "maxLvlR3":14, "maxLvlS3":14 } #14
 cfgWood= {"name":"wood", "lambdaS3": [65], "lambdaR3": 10., 
     "maxLvlR3":8, "maxLvlS3":14}
 cfgApartment= {"name":"apartment", "lambdaS3": [45,65,80], "lambdaR3": 1., 
     "maxLvlR3":10, "maxLvlS3":14, "icpCutoff": 0.1}
+
 #cfgDesk1 = {"name":"desk1", "lambdaS3": [60,70,80], "lambdaR3": 0.1, 
 cfgDesk1 = {"name":"desk1", "lambdaS3": [45,65,85], "lambdaR3": 0.15, 
     "maxLvlR3":14, "maxLvlS3":14, "icpCutoff": 0.1}
 
+#fast?
+cfgStairs = {"name":"stairs", "lambdaS3": [45], "lambdaR3": 15.,
+    "maxLvlR3":14, "maxLvlS3":14 } #14
+# accurate?
+cfgStairs = {"name":"stairs", "lambdaS3": [45,65,80], "lambdaR3": 15.,
+    "maxLvlR3":14, "maxLvlS3":14 } #14
+cfgStairs = {"name":"stairs", "lambdaS3": [45,65], "lambdaR3": 15.,
+    "maxLvlR3":14, "maxLvlS3":14 } #14
+
+# accurate?
 cfgD458fromDesk= {"name":"D458fromDesk", "lambdaS3": [45,65,85], "lambdaR3": 0.15, 
+    "maxLvlR3":14, "maxLvlS3":14, "icpCutoff": 0.1}
+
+#fast? fails to align randys desk
+cfgD458fromDesk= {"name":"D458fromDesk", "lambdaS3": [45,65,85], "lambdaR3": 0.5, 
     "maxLvlR3":14, "maxLvlS3":14, "icpCutoff": 0.1}
 
 cfg = cfgEnschede
@@ -62,7 +77,6 @@ cfg = cfgBunnyAB
 cfg = cfgWood
 
 cfg = cfgApartment
-cfg = cfgD458fromDesk
 cfg = cfgStairs
 cfg = cfgDesk1
 
@@ -83,7 +97,9 @@ runGoICP = False
 runGogma = True
 applyICP = False
 
-tryMfAmbig = True
+tryMfAmbig = False
+if cfg["name"] == "stairs":
+  tryMfAmbig = True
 
 simpleTranslation = False
 simpleRotation = False
