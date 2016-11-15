@@ -7,6 +7,31 @@ from js.geometry.rotations import Quaternion
 from js.utils.plot.colors import colorScheme
 from helpers import *
 
+def AlphaBlend(rgbs, color, alpha, toGrey=False):
+  if toGrey:
+    grey = np.mean(rgbs,axis=1)
+    rgbs[:,0] = grey
+    rgbs[:,1] = grey
+    rgbs[:,2] = grey
+  rgbs *= alpha
+  rgbs += (1.-alpha)* np.resize(color,rgbs.shape)
+  return rgbs
+
+def PlotColoredPc(pc, rgb):
+  #http://stackoverflow.com/questions/18537172/specify-absolute-colour-for-3d-points-in-mayavi
+  rgba = np.concatenate((rgb.astype(np.uint8),np.ones((rgb.shape[0],1),dtype=np.uint8)*255),axis=1)
+  rgba[:,[1, 2]] = rgba[:,[2, 1]]
+  scalars = np.arange(rgb.shape[0])
+  pts=mlab.points3d(pc[:,0], pc[:,1], pc[:,2], scalars, mode="point")
+  pts.glyph.color_mode = 'color_by_scalar' # Color by scalar
+  # Set look-up table and redraw
+  pts.module_manager.scalar_lut_manager.lut.table = rgba
+  mlab.draw()
+
+def PlotShadedColoredPc(pc, rgb, color, alpha):
+  rgb = AlphaBlend(rgb, color, alpha, toGrey=True)
+  PlotColoredPc(pc, rgb)
+
 def logDeviations(fRes,pathGtA,pathGtB,q_ba,t_ba,dt,algo):
   # loaded transformation is T_wc
   q_gtA,t_gtA,_ = LoadTransformation(pathGtA)
@@ -46,37 +71,54 @@ cfgBuddhaRnd = {"name":"buddhaRnd", "lambdaS3": [60,70,80], "lambdaR3": 0.002,
     "maxLvlR3":15, "maxLvlS3":5}
 # lambdaR3 10 was good; lambdaS3 ,65,80
 cfgWood= {"name":"wood", "lambdaS3": [65], "lambdaR3": 10., 
-    "maxLvlR3":8, "maxLvlS3":14}
+    "maxLvlR3":8, "maxLvlS3":13}
 
+#fast but not accurate
+cfgApartment= {"name":"apartment", "lambdaS3": [65], "lambdaR3": 2., 
+    "maxLvlR3":10, "maxLvlS3":11, "icpCutoff": 0.1, "tryMfAmbig":True}
+cfgApartment= {"name":"apartment", "lambdaS3": [45,65,80], "lambdaR3": 1., 
+    "maxLvlR3":10, "maxLvlS3":11, "icpCutoff": 0.1, "tryMfAmbig":False}
 #accurate
 cfgApartment= {"name":"apartment", "lambdaS3": [45,65,80], "lambdaR3": 1., 
-    "maxLvlR3":14, "maxLvlS3":14, "icpCutoff": 0.1, "tryMfAmbig":True}
-#fast?
-cfgApartment= {"name":"apartment", "lambdaS3": [65], "lambdaR3": 2., 
-    "maxLvlR3":14, "maxLvlS3":14, "icpCutoff": 0.1, "tryMfAmbig":True}
+    "maxLvlR3":13, "maxLvlS3":13, "icpCutoff": 0.1, "tryMfAmbig":True}
+cfgApartment= {"name":"apartment", "lambdaS3": [45,65,80], "lambdaR3": 1., 
+    "maxLvlR3":13, "maxLvlS3":13, "icpCutoff": 0.1, "tryMfAmbig":False}
+# try:
+cfgApartment= {"name":"apartment", "lambdaS3": [45,65,80], "lambdaR3": 1., 
+    "maxLvlR3":10, "maxLvlS3":11, "icpCutoff": 0.1, "tryMfAmbig":False}
+cfgApartment= {"name":"apartment", "lambdaS3": [45,65,80], "lambdaR3": 1., 
+    "maxLvlR3":10, "maxLvlS3":11, "icpCutoff": 0.1, "tryMfAmbig":True}
+
+cfgDesk0 = {"name":"desk0", "lambdaS3": [65], "lambdaR3": 0.10, 
+    "maxLvlR3":10, "maxLvlS3":12, "icpCutoff": 0.05}
 
 #cfgDesk1 = {"name":"desk1", "lambdaS3": [60,70,80], "lambdaR3": 0.1, 
 cfgDesk1 = {"name":"desk1", "lambdaS3": [45,65,85], "lambdaR3": 0.15, 
-    "maxLvlR3":14, "maxLvlS3":14, "icpCutoff": 0.1}
+    "maxLvlR3":10, "maxLvlS3":12, "icpCutoff": 0.1}
 cfgDesk1 = {"name":"desk1", "lambdaS3": [65], "lambdaR3": 0.2, 
-    "maxLvlR3":14, "maxLvlS3":14, "icpCutoff": 0.1}
+    "maxLvlR3":10, "maxLvlS3":12, "icpCutoff": 0.1}
 
 #fast?
 cfgStairs = {"name":"stairs", "lambdaS3": [45], "lambdaR3": 15.,
-    "maxLvlR3":14, "maxLvlS3":14, "tryMfAmbig":True } #14
+    "maxLvlR3":10, "maxLvlS3":12, "tryMfAmbig":True } #14
 # accurate?
 cfgStairs = {"name":"stairs", "lambdaS3": [45,65,80], "lambdaR3": 15.,
-    "maxLvlR3":14, "maxLvlS3":14, "tryMfAmbig":True } #14
+    "maxLvlR3":10, "maxLvlS3":12, "tryMfAmbig":True } #14
 cfgStairs = {"name":"stairs", "lambdaS3": [45,65], "lambdaR3": 15.,
-    "maxLvlR3":14, "maxLvlS3":14, "tryMfAmbig":True } #14
-
-# accurate?
-cfgD458fromDesk= {"name":"D458fromDesk", "lambdaS3": [45,65,85], "lambdaR3": 0.15, 
-    "maxLvlR3":14, "maxLvlS3":14, "icpCutoff": 0.1}
+    "maxLvlR3":10, "maxLvlS3":12, "tryMfAmbig":True } #14
 
 #fast? fails to align randys desk
 cfgD458fromDesk= {"name":"D458fromDesk", "lambdaS3": [45,65,85], "lambdaR3": 0.5, 
-    "maxLvlR3":14, "maxLvlS3":14, "icpCutoff": 0.1}
+    "maxLvlR3":10, "maxLvlS3":12, "icpCutoff": 0.1}
+# accurate?
+cfgD458fromDesk= {"name":"D458fromDesk", "lambdaS3": [45,65,85], "lambdaR3": 0.15, 
+    "maxLvlR3":10, "maxLvlS3":12, "icpCutoff": 0.1}
+
+cfgSingleRoom0 = {"name":"singleRoom0", "lambdaS3": [45,65,85], "lambdaR3": 0.15, 
+    "maxLvlR3":10, "maxLvlS3":12, "icpCutoff": 0.1}
+#cfgSingleRoom0 = {"name":"singleRoom0", "lambdaS3": [45,65,85],
+cfgSingleRoom0 = {"name":"singleRoom0", "lambdaS3": [45],
+    "lambdaR3": 0.3, "maxLvlR3":12, "maxLvlS3":13, "icpCutoff": 0.1 }
 
 cfg = cfgEnschede
 cfg = cfgLymph
@@ -87,30 +129,35 @@ cfg = cfgBunnyAB
 cfg = cfgWood
 
 cfg = cfgStairs
-cfg = cfgD458fromDesk
 cfg = cfgApartment
 
 cfg = cfgBuddhaRnd
+cfg = cfgD458fromDesk
+cfg = cfgSingleRoom0
 cfg = cfgDesk1
 cfg = cfgApartment
+cfg = cfgDesk0
+
 
 if not "tryMfAmbig" in cfg:
   cfg["tryMfAmbig"] = False
 
-loadCached = False
-stopToShow = False
-stopEveryI = 1
-showTransformed =  True 
-showUntransformed =False
-
-applyBB    = False
-applyICP   = False
+runGoICP   = False
+applyBB    = not runGoICP
+applyICP   = applyBB
 applyBBEGI = False
 applyFFT   = False
 applyMM    = False
-runGoICP   = True
 runGogma   = False
 
+loadCached = False
+stopToShow = True
+stopEveryI = 4
+showTransformed =  True 
+showUntransformed =False
+
+if runGoICP:
+  stopToShow = False
 
 simpleTranslation = False
 simpleRotation = False
@@ -239,8 +286,8 @@ if cfg["name"] == "apartment":
   gt = sorted(gt, key=lambda f: 
     int(re.sub(".csv","",
       re.sub("pose_","",os.path.split(f)[1]))))
-  gt = gt[16:]
-  scans = scans[16:]
+#  gt = gt[16:]
+#  scans = scans[16:]
   print scans
   print gt
 if cfg["name"] == "wood":
@@ -267,18 +314,40 @@ if cfg["name"] == "wood":
 if cfg["name"] == "desk1":
   pattern = "frame_[0-9]+.ply$"
   scans = []
-  for root, dirs, files in os.walk("/data/vision/fisher/expres1/jstraub/optRotTransCVPR2017_KFs/desk1/"):
+  for root, dirs, files in os.walk("/data/vision/fisher/expres1/jstraub/optRotTransCVPR2017_KFs/desk1Wrgb/"):
     for f in files:
       if re.search(pattern, f):
         scans.append(os.path.join(root, f))
   scans = sorted(scans, key=lambda f: 
     int(re.sub(".ply","",
       re.sub("frame_","",os.path.split(f)[1]))))
-#  scans = scans[:4]
   print scans
-#  scans = [
-#      os.path.abspath('../data/stairs/HokuyoPcNormals_1.ply'),
-#      os.path.abspath('../data/stairs/HokuyoPcNormals_2.ply')]
+  gt=[]
+if cfg["name"] == "desk0":
+  pattern = "frame_[0-9]+.ply$"
+  scans = []
+  for root, dirs, files in os.walk("/data/vision/fisher/expres1/jstraub/optRotTransCVPR2017_KFs/desk0Wrgb/"):
+    for f in files:
+      if re.search(pattern, f):
+        scans.append(os.path.join(root, f))
+  scans = sorted(scans, key=lambda f: 
+    int(re.sub(".ply","",
+      re.sub("frame_","",os.path.split(f)[1]))))
+  scans = scans[8::2]
+  print scans
+  gt=[]
+if cfg["name"] == "singleRoom0":
+  pattern = "frame_[0-9]+.ply$"
+  scans = []
+  for root, dirs, files in os.walk("/data/vision/fisher/expres1/jstraub/optRotTransCVPR2017_KFs/singleRoom0Wrgb/"):
+    for f in files:
+      if re.search(pattern, f):
+        scans.append(os.path.join(root, f))
+  scans = sorted(scans, key=lambda f: 
+    int(re.sub(".ply","",
+      re.sub("frame_","",os.path.split(f)[1]))))
+  scans = scans[6:]
+  print scans
   gt=[]
 if cfg["name"] == "D458fromDesk":
   pattern = "frame_[0-9]+.ply$"
@@ -303,6 +372,15 @@ colors = colorScheme("label")
 if showUntransformed or showTransformed:
   import mayavi.mlab as mlab
 
+#figm = mlab.figure(bgcolor=(1,1,1))
+#ply = PlyParse();
+#ply.parse(scans[0])
+#pc = ply.getPc()
+#rgb = ply.rgb
+#PlotShadedColoredPc(pc, rgb, np.array([255,0,0]),0.6)
+#mlab.show(stop=True)
+
+
 if showUntransformed:
   figm = mlab.figure(bgcolor=(1,1,1))
   for i in range(len(scans)):
@@ -315,6 +393,7 @@ if showUntransformed:
 #        color=colors[i%len(colors)])
     mlab.points3d(n[:,0], n[:,1], n[:,2], mode="point",
         color=colors[i%len(colors)])
+
   mlab.show(stop=True)
 
 prefix = "{}_{}".format(cfg["name"],int(np.floor(time.time()*1e3)))
@@ -325,6 +404,7 @@ if len(gt) > 0:
   fRes.write(json.dumps(cfg)+"\n")
   fRes.flush()
 
+alpha = 0.8 # 0.7
 W_T_B = np.eye(4)
 for i in range(1,len(scans)):
   scanApath = scans[i-1]
@@ -346,7 +426,11 @@ for i in range(1,len(scans)):
     pcA = plyA.getPc()
     if showTransformed:
       figm = mlab.figure(bgcolor=(1,1,1))
-      mlab.points3d(pcA[:,0], pcA[:,1], pcA[:,2], mode="point",
+      if plyA.rgb.sum() > 0:
+        print colors[0]
+        PlotShadedColoredPc(pcA, plyA.rgb, 255*np.array(colors[0]),alpha)
+      else:
+        mlab.points3d(pcA[:,0], pcA[:,1], pcA[:,2], mode="point",
           color=colors[0])
 
   if runGogma:
@@ -355,7 +439,8 @@ for i in range(1,len(scans)):
       logDeviations(fRes, gt[i-1], gt[i], q_ba,t_ba,dt,"GOGMA")
 
   if runGoICP:
-    q_ba,t_ba,dt,success = RunGoICP(scanApath, scanBpath, transformationPathGoICP)
+    q_ba,t_ba,dt,success = RunGoICP(scanApath, scanBpath,
+        transformationPathGoICP, 100)
 
     if i-1 < len(gt):
       logDeviations(fRes, gt[i-1], gt[i], q_ba,t_ba,dt,"GoICP")
@@ -436,7 +521,10 @@ for i in range(1,len(scans)):
     R_wb = W_T_B[:3,:3]
     t_wb = W_T_B[:3,3]
     pcB = (1.001*R_wb.dot(pcB.T)).T + t_wb
-    mlab.points3d(pcB[:,0], pcB[:,1], pcB[:,2], mode="point",
+    if  plyB.rgb.sum() > 0:
+      PlotShadedColoredPc(pcB, plyB.rgb, 255*np.array(colors[i%len(colors)]),alpha)
+    else:
+      mlab.points3d(pcB[:,0], pcB[:,1], pcB[:,2], mode="point",
           color=colors[i%len(colors)])
     if stopToShow and i%stopEveryI == 0:
       mlab.show(stop=True)

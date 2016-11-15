@@ -581,8 +581,8 @@ int main(int argc, char** argv) {
   bool simpleTrans = false;
   bool simpleRot = false;
   bool tryMfAmbig= false;
-  uint32_t maxLvlS3 = 15;
-  uint32_t maxLvlR3 = 15;
+  uint32_t maxLvlS3 = 13;
+  uint32_t maxLvlR3 = 13;
   string pathA = "";
   string pathB = "";
   std::string pathOut = "";
@@ -907,10 +907,12 @@ int main(int argc, char** argv) {
       << qs.size()-Nq << " permutations of rotation matrices to try" << std::endl;
   }
 
-  std::vector<Eigen::Vector3d> ts;
+  std::vector<Eigen::Vector3d> ts(qs.size(),Eigen::Vector3d::Zero());
   Eigen::VectorXd lbsR3 = -1.*Eigen::VectorXd::Ones(qs.size());
   Eigen::VectorXd ubsR3 = -1.*Eigen::VectorXd::Ones(qs.size());
   Eigen::VectorXd lbs(qs.size());
+  // dont nest parfors (BB is already internally parallelized
+//#pragma omp parallel for 
   for (uint32_t k=0; k<qs.size(); ++k) {
     Eigen::Quaterniond q = qs[k]; 
     if (simpleTrans) {
@@ -924,7 +926,7 @@ int main(int argc, char** argv) {
 //      std::cout << q._transformVector(meanB) - meanA << std::endl;
 //      std::cout << q._transformVector(meanA) - meanB << std::endl;
       
-      ts.push_back(t);
+      ts[k] = t;
       lbsR3(k) = 0.;
       lbs(k) = lbsS3(k);
     } else {
@@ -955,10 +957,10 @@ int main(int argc, char** argv) {
       std::cout << "min t: " << min.transpose() 
         << " max t: " << max.transpose() << std::endl;
 
-//      std::list<bb::NodeR3> nodesR3 =
-//        bb::GenerateNotesThatTessellateR3(min, max, (max-min).norm());
-      NodeR3 node0(Box(min, max), 0);
-      std::list<bb::NodeR3> nodesR3(1,node0);
+//      NodeR3 node0(Box(min, max), 0);
+//      std::list<bb::NodeR3> nodesR3(1,node0);
+      std::list<bb::NodeR3> nodesR3 =
+        bb::GenerateNotesThatTessellateR3(min, max, (max-min).norm());
       bb::LowerBoundR3 lower_bound_R3(gmmA, gmmB, q);
       bb::UpperBoundIndepR3 upper_bound_R3(gmmA, gmmB, q);
       bb::UpperBoundConvexR3 upper_bound_convex_R3(gmmA, gmmB, q);
@@ -971,8 +973,13 @@ int main(int argc, char** argv) {
       std::cout << "# initial nodes: " << nodesR3.size() << std::endl;
       double eps = 1e-10;
       uint32_t max_it = 5000;
-      double lb = lbsR3.maxCoeff();
-      double ub = ubsR3.maxCoeff();
+      double lb = 0.;
+      double ub = 0.;
+#pragma omp critical
+      {
+        lb = lbsR3.maxCoeff();
+        ub = ubsR3.maxCoeff();
+      }
       bb::BranchAndBound<bb::NodeR3> bbR3(lower_bound_R3, upper_bound_convex_R3);
       std::cout << " BB on R3 eps=" << eps << " max_it=" << max_it << std::endl;
       bb::NodeR3 nodeR3_star = bbR3.Compute(nodesR3, eps, maxLvlR3, max_it,
@@ -981,7 +988,7 @@ int main(int argc, char** argv) {
       //    bb::CountBranchesInTree<bb::NodeR3>(nodesR3);
       std::cout << "with LB " << nodeR3_star.GetLB() << " optimum translation: " 
         << t.transpose() << std::endl;
-      ts.push_back(t);
+      ts[k] = t;
       lbsR3(k) = nodeR3_star.GetLB();
       ubsR3(k) = nodeR3_star.GetUB();
 //      lbs(k) = lbsS3(k) * lbsR3(k);
