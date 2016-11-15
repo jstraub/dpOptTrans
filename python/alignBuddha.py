@@ -73,24 +73,9 @@ cfgBuddhaRnd = {"name":"buddhaRnd", "lambdaS3": [60,70,80], "lambdaR3": 0.002,
 cfgWood= {"name":"wood", "lambdaS3": [65], "lambdaR3": 10., 
     "maxLvlR3":8, "maxLvlS3":13}
 
-#fast but not accurate
-cfgApartment= {"name":"apartment", "lambdaS3": [65], "lambdaR3": 2., 
-    "maxLvlR3":10, "maxLvlS3":11, "icpCutoff": 0.1, "tryMfAmbig":True}
-cfgApartment= {"name":"apartment", "lambdaS3": [45,65,80], "lambdaR3": 1., 
-    "maxLvlR3":10, "maxLvlS3":11, "icpCutoff": 0.1, "tryMfAmbig":False}
-#accurate
-cfgApartment= {"name":"apartment", "lambdaS3": [45,65,80], "lambdaR3": 1., 
-    "maxLvlR3":13, "maxLvlS3":13, "icpCutoff": 0.1, "tryMfAmbig":True}
-cfgApartment= {"name":"apartment", "lambdaS3": [45,65,80], "lambdaR3": 1., 
-    "maxLvlR3":13, "maxLvlS3":13, "icpCutoff": 0.1, "tryMfAmbig":False}
-# try:
-cfgApartment= {"name":"apartment", "lambdaS3": [45,65,80], "lambdaR3": 1., 
-    "maxLvlR3":10, "maxLvlS3":11, "icpCutoff": 0.1, "tryMfAmbig":False}
-cfgApartment= {"name":"apartment", "lambdaS3": [45,65,80], "lambdaR3": 1., 
-    "maxLvlR3":10, "maxLvlS3":11, "icpCutoff": 0.1, "tryMfAmbig":True}
 
-cfgDesk0 = {"name":"desk0", "lambdaS3": [65], "lambdaR3": 0.10, 
-    "maxLvlR3":10, "maxLvlS3":12, "icpCutoff": 0.05}
+cfgDesk0 = {"name":"desk0", "lambdaS3": [65], "lambdaR3": 0.15, 
+    "maxLvlR3":10, "maxLvlS3":12, "icpCutoff": 0.1}
 
 #cfgDesk1 = {"name":"desk1", "lambdaS3": [60,70,80], "lambdaR3": 0.1, 
 cfgDesk1 = {"name":"desk1", "lambdaS3": [45,65,85], "lambdaR3": 0.15, 
@@ -120,6 +105,26 @@ cfgSingleRoom0 = {"name":"singleRoom0", "lambdaS3": [45,65,85], "lambdaR3": 0.15
 cfgSingleRoom0 = {"name":"singleRoom0", "lambdaS3": [45],
     "lambdaR3": 0.3, "maxLvlR3":12, "maxLvlS3":13, "icpCutoff": 0.1 }
 
+#fast but not accurate
+cfgApartment= {"name":"apartment", "lambdaS3": [65], "lambdaR3": 2., 
+    "maxLvlR3":10, "maxLvlS3":11, "icpCutoff": 0.1, "tryMfAmbig":True}
+cfgApartment= {"name":"apartment", "lambdaS3": [45,65,80], "lambdaR3": 1., 
+    "maxLvlR3":10, "maxLvlS3":11, "icpCutoff": 0.1, "tryMfAmbig":False}
+#accurate
+cfgApartment= {"name":"apartment", "lambdaS3": [45,65,80], "lambdaR3": 1., 
+    "maxLvlR3":13, "maxLvlS3":13, "icpCutoff": 0.1, "tryMfAmbig":True}
+cfgApartment= {"name":"apartment", "lambdaS3": [45,65,80], "lambdaR3": 1., 
+    "maxLvlR3":13, "maxLvlS3":13, "icpCutoff": 0.1, "tryMfAmbig":False}
+# try:
+cfgApartment= {"name":"apartment", "lambdaS3": [45,65,80], "lambdaR3": 1.3, 
+    "maxLvlR3":10, "maxLvlS3":11, "icpCutoff": 0.1, "tryMfAmbig":True}
+
+cfgApartment= {"name":"apartment", "lambdaS3": [45,65,80], "lambdaR3": 1.3, 
+    "maxLvlR3":10, "maxLvlS3":11, "icpCutoff": 0.1, "tryMfAmbig":False}
+
+cfgApartment= {"name":"apartment", "lambdaS3": [65], "lambdaR3": 1.3, 
+    "maxLvlR3":10, "maxLvlS3":11, "icpCutoff": 0.1, "tryMfAmbig":True}
+
 cfg = cfgEnschede
 cfg = cfgLymph
 cfg = cfgBuddha
@@ -135,28 +140,28 @@ cfg = cfgBuddhaRnd
 cfg = cfgD458fromDesk
 cfg = cfgSingleRoom0
 cfg = cfgDesk1
-cfg = cfgApartment
 cfg = cfgDesk0
+cfg = cfgApartment
 
 
 if not "tryMfAmbig" in cfg:
   cfg["tryMfAmbig"] = False
 
+applyFFT   = False
 runGoICP   = False
-applyBB    = not runGoICP
+applyBB    = not runGoICP and not applyFFT
 applyICP   = applyBB
 applyBBEGI = False
-applyFFT   = False
 applyMM    = False
 runGogma   = False
 
 loadCached = False
-stopToShow = True
-stopEveryI = 4
+stopToShow = False
+stopEveryI = 1
 showTransformed =  True 
 showUntransformed =False
 
-if runGoICP:
+if runGoICP or applyFFT:
   stopToShow = False
 
 simpleTranslation = False
@@ -333,7 +338,7 @@ if cfg["name"] == "desk0":
   scans = sorted(scans, key=lambda f: 
     int(re.sub(".ply","",
       re.sub("frame_","",os.path.split(f)[1]))))
-  scans = scans[8::2]
+  scans = scans[13::2]
   print scans
   gt=[]
 if cfg["name"] == "singleRoom0":
