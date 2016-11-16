@@ -212,11 +212,14 @@ def RunGoICP(scanApath, scanBpath, transformationPathGoICP,
       re.sub(".csv",".txt",transformationPathGoICP)
       ]
   print " ".join(args)
+  t0 = time.time()
   err = run(" ".join(args), timeout_sec)
+  dt = time.time() - t0
   print "error ", err
+  print "dt: ", dt, "[s]"
 #  err = subp.call(" ".join(args), shell=True)
   if err == 0:
-    q,t,dt = LoadTransformationGoICP(re.sub(".csv",".txt",transformationPathGoICP))
+    q,t,_ = LoadTransformationGoICP(re.sub(".csv",".txt",transformationPathGoICP))
     t*= scale
     return q,t,dt,True
   else:
@@ -284,19 +287,19 @@ def PreparePcForGoICP(scanApath, scanBpath):
 #  print "min/maxes after scaling", [np.max(pcA), np.max(pcB), np.min(pcA), np.min(pcB)]
 
   with open(re.sub(".ply",".txt",scanApath),'w') as f:
-    print pcA.shape
-    np.random.shuffle(pcA)
-    if pcA.shape[0] > 30000:
-      pcA = pcA[:30000,:]
-      print pcA.shape
-    print pcA.shape
+#    print pcA.shape
+#    np.random.shuffle(pcA)
+#    if pcA.shape[0] > 30000:
+#      pcA = pcA[:30000,:]
+#      print pcA.shape
+#    print pcA.shape
     f.write("{}\n".format(pcA.shape[0]))
     np.savetxt(f, pcA)
   with open(re.sub(".ply",".txt",scanBpath),'w') as f:
-    np.random.shuffle(pcB)
-    print pcB.shape
-    if pcB.shape[0] > 30000:
-      pcB = pcB[:30000,:]
+#    np.random.shuffle(pcB)
+#    print pcB.shape
+#    if pcB.shape[0] > 30000:
+#      pcB = pcB[:30000,:]
     f.write("{}\n".format(pcB.shape[0]))
     np.savetxt(f, pcB)
 
