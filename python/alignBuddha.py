@@ -80,18 +80,17 @@ cfgD458fromDesk= {"name":"D458fromDesk", "lambdaS3": [45,65,85], "lambdaR3": 0.5
 
 cfg = cfgEnschede
 cfg = cfgLymph
-cfg = cfgBuddha
 cfg = cfgBunny
 cfg = cfgBunnyZipper
 cfg = cfgBunnyAB
 cfg = cfgWood
+cfg = cfgBuddha
 
 cfg = cfgStairs
 cfg = cfgD458fromDesk
-cfg = cfgApartment
 
-cfg = cfgBuddhaRnd
 cfg = cfgDesk1
+cfg = cfgBuddhaRnd
 cfg = cfgApartment
 
 if not "tryMfAmbig" in cfg:
@@ -108,9 +107,8 @@ applyICP   = False
 applyBBEGI = False
 applyFFT   = False
 applyMM    = False
-runGoICP   = True
-runGogma   = False
-
+runGoICP   = False
+runGogma   = True
 
 simpleTranslation = False
 simpleRotation = False
@@ -125,6 +123,7 @@ useSurfaceNormalsInICP = True
 print json.dumps(cfg)
 
 qOffset = Quaternion()
+pathGOGMAcfg = "/home/jstraub/workspace/research/3rdparty/gogma/build/config.txt"
 
 if cfg["name"] == "lymph":
   pattern = "frame_[0-9]+.ply$"
@@ -167,6 +166,7 @@ if cfg["name"] == "buddhaRnd":
 #      scans2.append(scan)
 #  scans = scans2
 #  scans = scans[:5]
+  pathGOGMAcfg = "/home/jstraub/workspace/research/3rdparty/gogma/build/configHappyBuddha.txt"
 if cfg["name"] == "bunny":
   pattern = "bun[0-9]+_angle_90_translation_0.3.ply$"
   scans = []
@@ -239,10 +239,11 @@ if cfg["name"] == "apartment":
   gt = sorted(gt, key=lambda f: 
     int(re.sub(".csv","",
       re.sub("pose_","",os.path.split(f)[1]))))
-  gt = gt[16:]
-  scans = scans[16:]
+#  gt = gt[16:]
+#  scans = scans[16:]
   print scans
   print gt
+  pathGOGMAcfg = "/home/jstraub/workspace/research/3rdparty/gogma/build/configApartment.txt"
 if cfg["name"] == "wood":
   pattern = "HokuyoPcNormals_[0-9]+.ply$"
   scans = []
@@ -350,8 +351,10 @@ for i in range(1,len(scans)):
           color=colors[0])
 
   if runGogma:
-    q_ba,t_ba,dt,success = RunGogma(scanApath, scanBpath, transformationPathGogma)
+    q_ba,t_ba,q_baGlobal,t_baGlobal,dt,success = RunGogma(scanApath, scanBpath,
+        transformationPathGogma, pathGOGMAcfg)
     if i-1 < len(gt):
+      logDeviations(fRes, gt[i-1], gt[i], q_baGlobal,t_baGlobal,dt,"GOGMAonly")
       logDeviations(fRes, gt[i-1], gt[i], q_ba,t_ba,dt,"GOGMA")
 
   if runGoICP:
