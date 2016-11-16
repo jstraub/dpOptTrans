@@ -1,0 +1,85 @@
+# Globally-Optimal Gaussian Mixture Alignment (GOGMA): config
+# Configuration file for Globally-Optimal Gaussian Mixture Alignment
+# 
+# Campbell, D., and Petersson, L., "GOGMA: Globally-Optimal Gaussian
+# Mixture Alignment", IEEE Conference on Computer Visision and
+# Pattern Recognition (CVPR), Las Vegas, USA, IEEE, Jun. 2016
+# 
+# For the full license, see license.txt in the root directory
+# 
+# Author: Dylan Campbell
+# Date: 20160212
+# Revision: 1.1
+
+########################################################################################
+## Branch-and-Bound Parameters
+########################################################################################
+# Tolerance for epsilon-optimality. Corresponds to the largest permissable gap between the lower bound and the discovered optimal value
+epsilon=0.1
+
+# Translation Bounds
+translation_minimum=-0.5
+translation_maximum=+0.5
+
+# Initialisation type. Batch initialisation runs local GMA for every subcube in the first subdivision
+# Standard: 0, Batch: 1
+initialisation_type=1
+
+########################################################################################
+## SVGM Parameters
+########################################################################################
+# To specify different values for SVGM_X and SVGM_Y, use vector notation (X,Y)
+
+# Scale parameter for SVM
+#sigma=(1.5,1.5)
+sigma=(0.02,0.02)
+
+# Nu parameter for SVM
+# Lower bound on fraction of support vectors
+# Upper bound on the misclassification rate
+# Set min_num_components > 0 to set nu automatically
+nu=(0.001,0.001)
+
+# Randomly select n = min(num_points, max_num_points) points from point-set
+# Set max_num_points=0 to use all points
+max_num_points=(0,0)
+
+
+# Minimum number of GMM components
+# Sets nu = min_num_components / max_num_points
+# Set min_num_components=0 to use nu above
+min_num_components=(30,30)
+
+# Parameter by which to inflate sigma building the SVGM
+# Set to 1.0 if no inflation is desired
+sigma_factor=(0.5,0.5)
+
+########################################################################################
+## Refinement SVGM Parameters
+########################################################################################
+# Select whether to run refinement
+# On: 1, Off: 0
+do_refinement=1
+
+# Scale parameter for SVM
+#sigma_refinement=(0.3,0.3)
+sigma_refinement=(0.005,0.005)
+
+# Nu parameter for SVM
+# Lower bound on fraction of support vectors
+# Upper bound on the misclassification rate
+# Set min_num_components > 0 to set nu automatically
+nu_refinement=(0.001,0.001)
+
+# Randomly select n = min(num_points, max_num_points) points from point-set
+# Set max_num_points=0 to use all points
+max_num_points_refinement=(0,0)
+
+# Minimum number of GMM components
+# Sets nu = min_num_components / max_num_points
+# Set min_num_components=0 to use nu above
+min_num_components_refinement=(500,500)
+
+# Parameter by which to inflate sigma building the SVGM
+# Set to 1.0 if no inflation is desired
+sigma_factor_refinement=(0.5,0.5)
