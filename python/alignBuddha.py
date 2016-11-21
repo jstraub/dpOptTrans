@@ -128,11 +128,11 @@ cfgApartment= {"name":"apartment", "lambdaS3": [65], "lambdaR3": 1.3,
 
 cfg = cfgEnschede
 cfg = cfgLymph
-cfg = cfgBuddha
 cfg = cfgBunny
 cfg = cfgBunnyZipper
 cfg = cfgBunnyAB
 cfg = cfgWood
+cfg = cfgBuddha
 
 cfg = cfgApartment
 
@@ -178,6 +178,7 @@ useSurfaceNormalsInICP = True
 print json.dumps(cfg)
 
 qOffset = Quaternion()
+pathGOGMAcfg = "/home/jstraub/workspace/research/3rdparty/gogma/build/config.txt"
 
 if cfg["name"] == "lymph":
   pattern = "frame_[0-9]+.ply$"
@@ -220,6 +221,7 @@ if cfg["name"] == "buddhaRnd":
 #      scans2.append(scan)
 #  scans = scans2
 #  scans = scans[:5]
+  pathGOGMAcfg = "/home/jstraub/workspace/research/3rdparty/gogma/build/configHappyBuddha.txt"
 if cfg["name"] == "bunny":
   pattern = "bun[0-9]+_angle_90_translation_0.3.ply$"
   scans = []
@@ -300,6 +302,7 @@ if cfg["name"] == "apartment":
   scans = scans[:33]
   print scans
   print gt
+  pathGOGMAcfg = "/home/jstraub/workspace/research/3rdparty/gogma/build/configApartment.txt"
 if cfg["name"] == "wood":
   pattern = "HokuyoPcNormals_[0-9]+.ply$"
   scans = []
@@ -444,8 +447,10 @@ for i in range(1,len(scans)):
           color=colors[0])
 
   if runGogma:
-    q_ba,t_ba,dt,success = RunGogma(scanApath, scanBpath, transformationPathGogma)
+    q_ba,t_ba,q_baGlobal,t_baGlobal,dt,success = RunGogma(scanApath, scanBpath,
+        transformationPathGogma, pathGOGMAcfg)
     if i-1 < len(gt):
+      logDeviations(fRes, gt[i-1], gt[i], q_baGlobal,t_baGlobal,dt,"GOGMAonly")
       logDeviations(fRes, gt[i-1], gt[i], q_ba,t_ba,dt,"GOGMA")
 
   if runGoICP:

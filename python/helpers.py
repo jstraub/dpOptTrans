@@ -225,12 +225,14 @@ def RunGoICP(scanApath, scanBpath, transformationPathGoICP,
   else:
     return Quaternion(),np.array([0,0,0]),dt,False
 
-def RunGogma(scanApath, scanBpath, transformationPathGogma, timeout_sec = 3600):
+def RunGogma(scanApath, scanBpath, transformationPathGogma, 
+    pathGOGMAcfg = '/home/jstraub/workspace/research/3rdparty/gogma/build/config.txt',
+    timeout_sec = 3600):
   PreparePcForGogma(scanApath, scanBpath)
   args = ['/home/jstraub/workspace/research/3rdparty/gogma/build/gogma', 
       os.path.abspath(re.sub(".ply",".txt",scanApath)),
       os.path.abspath(re.sub(".ply",".txt",scanBpath)),
-      '/home/jstraub/workspace/research/3rdparty/gogma/build/config.txt',
+      pathGOGMAcfg,
       os.path.abspath(re.sub(".csv",".txt",transformationPathGogma)),
       "2>&1"
       ]
@@ -242,11 +244,11 @@ def RunGogma(scanApath, scanBpath, transformationPathGogma, timeout_sec = 3600):
   print "error ", err
   if err == 0:
     #  err = subp.call(" ".join(args), shell=True)
-    q_ba,t_ba = LoadTransformationGogma(re.sub(".csv",
+    q_ba,t_ba,q_baGlobal,t_baGlobal = LoadTransformationGogma(re.sub(".csv",
       ".txt",transformationPathGogma))
-    return q_ba,t_ba,dt,True
+    return q_ba,t_ba,q_baGlobal,t_baGlobal,dt,True
   else:
-    return Quaternion(),np.array([0,0,0]),dt,False
+    return Quaternion(),np.array([0,0,0]),Quaternion(),np.array([0,0,0]),dt,False
 
 def PreparePcForGogma(scanApath, scanBpath):
   print "preparing for Gogma"
@@ -458,13 +460,26 @@ def LoadTransformationGogma(transformationPathGogma):
     print x
     if x.size > 12: 
       x = x[0,:]
+    t_abGlobal = x[:3]
+    R_abGlobal = np.reshape(x[3:],(3,3))
+    print "R_ab",R_abGlobal
+    print "t_ab",t_abGlobal
+    q_baGlobal = Quaternion()
+    q_baGlobal.fromRot3(R_abGlobal.T)
+  transformationPathGogmaRefined = os.path.splitext(transformationPathGogma)[0]+"_refinement.txt"
+  print transformationPathGogmaRefined
+  with open(transformationPathGogmaRefined) as f:
+    x = np.loadtxt(f)
+    print x
+    if x.size > 12: 
+      x = x[0,:]
     t_ab = x[:3]
     R_ab = np.reshape(x[3:],(3,3))
     print "R_ab",R_ab
     print "t_ab",t_ab
     q_ba = Quaternion()
     q_ba.fromRot3(R_ab.T)
-    return q_ba, -R_ab.T.dot(t_ab)
+  return q_ba, -R_ab.T.dot(t_ab), q_baGlobal, -R_abGlobal.T.dot(t_abGlobal), 
 
 
 
