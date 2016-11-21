@@ -89,8 +89,8 @@ cfgStairs = {"name":"stairs", "lambdaS3": [45], "lambdaR3": 15.,
 # accurate?
 cfgStairs = {"name":"stairs", "lambdaS3": [45,65,80], "lambdaR3": 15.,
     "maxLvlR3":10, "maxLvlS3":12, "tryMfAmbig":True } #14
-cfgStairs = {"name":"stairs", "lambdaS3": [45,65], "lambdaR3": 15.,
-    "maxLvlR3":10, "maxLvlS3":12, "tryMfAmbig":True } #14
+cfgStairs = {"name":"stairs", "lambdaS3": [45,65,80], "lambdaR3": 3.3,
+    "maxLvlR3":10, "maxLvlS3":11, "tryMfAmbig":True } #14
 
 #fast? fails to align randys desk
 cfgD458fromDesk= {"name":"D458fromDesk", "lambdaS3": [45,65,85], "lambdaR3": 0.5, 
@@ -116,12 +116,13 @@ cfgApartment= {"name":"apartment", "lambdaS3": [45,65,80], "lambdaR3": 1.,
 cfgApartment= {"name":"apartment", "lambdaS3": [45,65,80], "lambdaR3": 1., 
     "maxLvlR3":13, "maxLvlS3":13, "icpCutoff": 0.1, "tryMfAmbig":False}
 # try:
-cfgApartment= {"name":"apartment", "lambdaS3": [45,65,80], "lambdaR3": 1.3, 
-    "maxLvlR3":10, "maxLvlS3":11, "icpCutoff": 0.1, "tryMfAmbig":True}
-
+# Scale
 cfgApartment= {"name":"apartment", "lambdaS3": [45,65,80], "lambdaR3": 1.3, 
     "maxLvlR3":10, "maxLvlS3":11, "icpCutoff": 0.1, "tryMfAmbig":False}
-
+# MW Scale
+cfgApartment= {"name":"apartment", "lambdaS3": [45,65,80], "lambdaR3": 1.3, 
+    "maxLvlR3":10, "maxLvlS3":11, "icpCutoff": 0.1, "tryMfAmbig":True}
+# MW
 cfgApartment= {"name":"apartment", "lambdaS3": [65], "lambdaR3": 1.3, 
     "maxLvlR3":10, "maxLvlS3":11, "icpCutoff": 0.1, "tryMfAmbig":True}
 
@@ -133,7 +134,6 @@ cfg = cfgBunnyZipper
 cfg = cfgBunnyAB
 cfg = cfgWood
 
-cfg = cfgStairs
 cfg = cfgApartment
 
 cfg = cfgBuddhaRnd
@@ -142,6 +142,7 @@ cfg = cfgSingleRoom0
 cfg = cfgDesk1
 cfg = cfgDesk0
 cfg = cfgApartment
+cfg = cfgStairs
 
 
 if not "tryMfAmbig" in cfg:
@@ -293,6 +294,10 @@ if cfg["name"] == "apartment":
       re.sub("pose_","",os.path.split(f)[1]))))
 #  gt = gt[16:]
 #  scans = scans[16:]
+#  gt = gt[35:39]
+#  scans = scans[35:39]
+  gt = gt[:33]
+  scans = scans[:33]
   print scans
   print gt
 if cfg["name"] == "wood":

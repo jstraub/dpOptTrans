@@ -879,6 +879,8 @@ int main(int argc, char** argv) {
 
   if (tryMfAmbig) {
     size_t Nq = qs.size();
+    Eigen::VectorXd lbsS3ambig = Eigen::VectorXd(Nq*24);
+    lbsS3ambig.topRows(Nq) = lbsS3;
     for (size_t i=0; i<Nq; ++i) {
       Eigen::Matrix3d R0 = qs[i].toRotationMatrix();
       Eigen::Matrix<double,3,6> M;
@@ -891,18 +893,21 @@ int main(int argc, char** argv) {
       perm.push_back({1,2,0});
       perm.push_back({2,1,0});
       perm.push_back({2,0,1});
+      size_t j=Nq;
       for (const auto& c : comb.Get()) {
         for (const auto& p : perm) {
           Eigen::Matrix3d R;
           R << M.col(c[p[0]]), M.col(c[p[1]]), M.col(c[p[2]]);
-          std::cout << c[p[0]] << " " << c[p[1]] << " " << c[p[2]] << " " 
-            << R.determinant() << std::endl;
           if (R.determinant() > 0) {
             qs.emplace_back(R);
+            std::cout << c[p[0]] << " " << c[p[1]] << " " << c[p[2]] << " " 
+              << R.determinant() << std::endl;
+            lbsS3ambig(j++) = lbsS3(i);
           }
         }
       }
     }
+    lbsS3 = lbsS3ambig;
     std::cout << "added " 
       << qs.size()-Nq << " permutations of rotation matrices to try" << std::endl;
   }
@@ -1006,7 +1011,6 @@ int main(int argc, char** argv) {
   }
   std::cout << "Have LbS3: " << lbsS3.transpose() << std::endl;
   std::cout << "Have LbR3: " << lbsR3.transpose() << std::endl;
-  std::cout << "Have LBs (LbS3 * LbR3): " << lbs.transpose() << std::endl;
   uint32_t id_max = 0;
   double lb_max = lbs.maxCoeff(&id_max);
   double lbS3 = lbsS3(id_max);

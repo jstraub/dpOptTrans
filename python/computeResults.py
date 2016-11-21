@@ -40,7 +40,8 @@ for path in paths:
   for key,val in means.iteritems():
     print key, val/val[3], val[3]
     print key, 100.*stats[key]/val[3]
-    for x in val[:3]/val[3]:
+    for x in val[:2]/val[3]:
       print "{: >6.2f}".format(x)
     for x in 100.*stats[key]/val[3]:
       print "{: >6.2f}".format(x)
+    print "{: >6.2f}".format(val[2]/val[3])

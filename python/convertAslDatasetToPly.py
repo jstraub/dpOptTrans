@@ -16,6 +16,8 @@ for root, dirs, files in os.walk(folder):
 paths = sorted(paths, key=lambda f: 
         int(re.sub(".csv","",re.sub("Hokuyo_","",os.path.split(f)[1]))))
 
+paths = paths[36:38]
+
 for path in paths:
   print path
   with open(path) as f:
@@ -38,8 +40,8 @@ for path in paths:
 
   args = ['../cudaPcl/pod-build/bin/pclNormals', 
       '-i {}'.format(os.path.abspath(ply)), 
-      '-o ' + os.path.abspath(re.sub("Hokuyo","HokuyoPcNormals",ply)),
-      '-s 0.4'
+      '-o ' + os.path.abspath(re.sub("Hokuyo","HokuyoPcNormals_0_2",ply)),
+      '-s 0.2'
       ]
   print " ".join(args)
   err = subp.call(" ".join(args), shell=True)
