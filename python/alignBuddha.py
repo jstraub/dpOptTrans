@@ -128,9 +128,6 @@ cfgApartment= {"name":"apartment", "lambdaS3": [65], "lambdaR3": 1.3,
 
 cfg = cfgEnschede
 cfg = cfgLymph
-cfg = cfgBunny
-cfg = cfgBunnyZipper
-cfg = cfgBunnyAB
 cfg = cfgWood
 cfg = cfgBuddha
 
@@ -143,7 +140,9 @@ cfg = cfgDesk1
 cfg = cfgDesk0
 cfg = cfgApartment
 cfg = cfgStairs
-
+cfg = cfgBunnyAB
+cfg = cfgBunny
+cfg = cfgBunnyZipper
 
 if not "tryMfAmbig" in cfg:
   cfg["tryMfAmbig"] = False
@@ -160,7 +159,7 @@ loadCached = False
 stopToShow = False
 stopEveryI = 1
 showTransformed =  True 
-showUntransformed =False
+showUntransformed =True
 
 if runGoICP or applyFFT:
   stopToShow = False
@@ -402,10 +401,13 @@ if showUntransformed:
     ply.parse(scanPath)
     pc = ply.getPc()
     n = ply.n
-    #    mlab.points3d(pc[:,0], pc[:,1], pc[:,2], mode="point",
-#        color=colors[i%len(colors)])
-    mlab.points3d(n[:,0], n[:,1], n[:,2], mode="point",
+    mlab.points3d(pc[:,0], pc[:,1], pc[:,2], mode="point",
         color=colors[i%len(colors)])
+    mlab.quiver3d(pc[:,0], pc[:,1], pc[:,2],n[:,0], n[:,1], n[:,2],
+        color=colors[(2+i)%len(colors)],mask_points=20,
+        line_width=1., scale_factor=0.01)
+#    mlab.points3d(n[:,0]+i*2.3, n[:,1], n[:,2], mode="point",
+#        color=colors[(2+i)%len(colors)])
 
   mlab.show(stop=True)
 
