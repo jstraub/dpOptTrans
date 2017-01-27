@@ -154,7 +154,6 @@ showOnLargeDeviation =True
 err_a_thr = 2.
 err_t_thr = 0.3
 
-
 version = "1.4" # large scale eval of all algos and RunBB
 version = "1.5" # eval of BB vor different parameters
 version = "1.51" # eval of more different BB parameters as well as the best of approach
