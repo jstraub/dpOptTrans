@@ -3,6 +3,8 @@ import os, re, time
 import matplotlib.pyplot as plt
 
 pattern = "apartment_[0-9]+resultsVsGrountruth.csv$"
+pattern = "gazebo_winter_[0-9]+resultsVsGrountruth.csv$"
+pattern = "gazebo_summer_[0-9]+resultsVsGrountruth.csv$"
 paths = []
 for algo in ["GoICP", "BB", "GOGMA", "FFT"]:
   for root, dirs, files in os.walk("./results/"+algo+"/"):

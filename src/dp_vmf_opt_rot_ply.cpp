@@ -624,8 +624,19 @@ int main(int argc, char** argv) {
 
   for (size_t i=0; i<pcA.size(); ++i) {
     Eigen::Map<Vector3f> n(&(pcA.at(i).normal_x));
-    if (n.norm() > 1.01 || n.norm() < 0.99)
-      std::cout << "normal not on sphere " << n.norm() << std::endl;
+    if (n.norm() > 0.001) {
+      n /= n.norm();
+    } else {
+      std::cout << "normal not normalizeable " << n.norm() << std::endl;
+    }
+  }
+  for (size_t i=0; i<pcB.size(); ++i) {
+    Eigen::Map<Vector3f> n(&(pcB.at(i).normal_x));
+    if (n.norm() > 0.001) {
+      n /= n.norm();
+    } else {
+      std::cout << "normal not normalizeable " << n.norm() << std::endl;
+    }
   }
 
   ShufflePc(pcA);

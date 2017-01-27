@@ -126,6 +126,17 @@ cfgApartment= {"name":"apartment", "lambdaS3": [45,65,80], "lambdaR3": 1.3,
 cfgApartment= {"name":"apartment", "lambdaS3": [65], "lambdaR3": 1.3, 
     "maxLvlR3":10, "maxLvlS3":11, "icpCutoff": 0.1, "tryMfAmbig":True}
 
+cfgUwa = {"name":"uwa", "lambdaS3": [65], "lambdaR3": 1000., 
+    "maxLvlR3":10, "maxLvlS3":11, "icpCutoff": 0.1, "tryMfAmbig":True}
+
+# Scale
+cfgGazeboSummer = {"name":"gazebo_summer", "lambdaS3": [45,65,80], "lambdaR3": 7., 
+    "maxLvlR3":10, "maxLvlS3":11, "icpCutoff": 0.1, "tryMfAmbig":False}
+cfgGazeboWinter = {"name":"gazebo_winter", "lambdaS3": [45,65,80], "lambdaR3": 2.0, 
+    "maxLvlR3":10, "maxLvlS3":11, "icpCutoff": 0.1, "tryMfAmbig":False}
+cfgMountain = {"name":"mountain_plain", "lambdaS3": [45,65,80], "lambdaR3": 2.0, 
+    "maxLvlR3":10, "maxLvlS3":11, "icpCutoff": 0.1, "tryMfAmbig":False}
+
 cfg = cfgEnschede
 cfg = cfgLymph
 cfg = cfgWood
@@ -143,23 +154,27 @@ cfg = cfgStairs
 cfg = cfgBunnyAB
 cfg = cfgBunny
 cfg = cfgBunnyZipper
+cfg = cfgUwa
+cfg = cfgMountain
+cfg = cfgGazeboWinter
+cfg = cfgGazeboSummer
 
 if not "tryMfAmbig" in cfg:
   cfg["tryMfAmbig"] = False
 
 applyFFT   = False
 runGoICP   = False
-applyBB    = not runGoICP and not applyFFT
+runGogma   = True
+applyBB    = not runGoICP and not applyFFT and not runGogma
 applyICP   = applyBB
 applyBBEGI = False
 applyMM    = False
-runGogma   = False
 
 loadCached = False
 stopToShow = False
 stopEveryI = 1
 showTransformed =  True 
-showUntransformed =True
+showUntransformed =False
 
 if runGoICP or applyFFT:
   stopToShow = False
@@ -221,6 +236,13 @@ if cfg["name"] == "buddhaRnd":
 #  scans = scans2
 #  scans = scans[:5]
   pathGOGMAcfg = "/home/jstraub/workspace/research/3rdparty/gogma/build/configHappyBuddha.txt"
+if cfg["name"] == "uwa":
+  gt = []
+  scans = ['../data/uwa/scenes/rs2.ply', '../data/uwa/scenes/rs2.ply']
+  scans = ['../data/uwa/models/T-rex_high_ascii.ply', '../data/uwa/models/T-rex_high_ascii.ply']
+  scans = ['../data/uwa/scenes/rs2.ply', '../data/uwa/models/T-rex_high_ascii.ply']
+  scans = ['../data/uwa/scenes/rs9.ply', '../data/uwa/models/cheff.ply']
+  print scans
 if cfg["name"] == "bunny":
   pattern = "bun[0-9]+_angle_90_translation_0.3.ply$"
   scans = []
@@ -299,6 +321,96 @@ if cfg["name"] == "apartment":
 #  scans = scans[35:39]
   gt = gt[:33]
   scans = scans[:33]
+  print scans
+  print gt
+  pathGOGMAcfg = "/home/jstraub/workspace/research/3rdparty/gogma/build/configApartment.txt"
+if cfg["name"] == "gazebo_summer":
+  pattern = "HokuyoPcNormals_0_2_[0-9]+.ply$"
+  scans = []
+  for root, dirs, files in os.walk("../data/gazebo_summer/"):
+    for f in files:
+      if re.search(pattern, f):
+        scans.append(os.path.join(root, f))
+  scans = sorted(scans, key=lambda f: 
+    int(re.sub(".ply","",
+      re.sub("HokuyoPcNormals_0_2_","",os.path.split(f)[1]))))
+  gt=[]
+  pattern = "pose_[0-9]+.csv$"
+  for root, dirs, files in os.walk("../data/gazebo_summer/"):
+    for f in files:
+      if re.search(pattern, f):
+        gt.append(os.path.join(root, f))
+  gt = sorted(gt, key=lambda f: 
+    int(re.sub(".csv","",
+      re.sub("pose_","",os.path.split(f)[1]))))
+#  gt = gt[16:20]
+#  scans = scans[16:20]
+#  gt = gt[:4]
+#  scans = scans[:4]
+#  gt = gt[35:39]
+#  scans = scans[35:39]
+#  gt = gt[:33]
+#  scans = scans[:33]
+  print scans
+  print gt
+  pathGOGMAcfg = "/home/jstraub/workspace/research/dpOptTrans/python/configGazebo.txt"
+if cfg["name"] == "gazebo_winter":
+  pattern = "HokuyoPcNormals_0_2_[0-9]+.ply$"
+  scans = []
+  for root, dirs, files in os.walk("../data/gazebo_winter/"):
+    for f in files:
+      if re.search(pattern, f):
+        scans.append(os.path.join(root, f))
+  scans = sorted(scans, key=lambda f: 
+    int(re.sub(".ply","",
+      re.sub("HokuyoPcNormals_0_2_","",os.path.split(f)[1]))))
+  gt=[]
+  pattern = "pose_[0-9]+.csv$"
+  for root, dirs, files in os.walk("../data/gazebo_winter/"):
+    for f in files:
+      if re.search(pattern, f):
+        gt.append(os.path.join(root, f))
+  gt = sorted(gt, key=lambda f: 
+    int(re.sub(".csv","",
+      re.sub("pose_","",os.path.split(f)[1]))))
+#  gt = gt[16:19]
+#  scans = scans[16:19]
+#  gt = gt[:4]
+#  scans = scans[:4]
+#  gt = gt[35:39]
+#  scans = scans[35:39]
+#  gt = gt[:33]
+#  scans = scans[:33]
+  print scans
+  print gt
+  pathGOGMAcfg = "/home/jstraub/workspace/research/dpOptTrans/python/configGazebo.txt"
+if cfg["name"] == "mountain_plain":
+  pattern = "HokuyoPcNormals_0_2_[0-9]+.ply$"
+  scans = []
+  for root, dirs, files in os.walk("../data/mountain_plain/"):
+    for f in files:
+      if re.search(pattern, f):
+        scans.append(os.path.join(root, f))
+  scans = sorted(scans, key=lambda f: 
+    int(re.sub(".ply","",
+      re.sub("HokuyoPcNormals_0_2_","",os.path.split(f)[1]))))
+  gt=[]
+  pattern = "pose_[0-9]+.csv$"
+  for root, dirs, files in os.walk("../data/mountain_plain/"):
+    for f in files:
+      if re.search(pattern, f):
+        gt.append(os.path.join(root, f))
+  gt = sorted(gt, key=lambda f: 
+    int(re.sub(".csv","",
+      re.sub("pose_","",os.path.split(f)[1]))))
+#  gt = gt[16:20]
+#  scans = scans[16:20]
+  gt = gt[:3]
+  scans = scans[:3]
+#  gt = gt[35:39]
+#  scans = scans[35:39]
+#  gt = gt[:33]
+#  scans = scans[:33]
   print scans
   print gt
   pathGOGMAcfg = "/home/jstraub/workspace/research/3rdparty/gogma/build/configApartment.txt"
@@ -406,6 +518,8 @@ if showUntransformed:
     mlab.quiver3d(pc[:,0], pc[:,1], pc[:,2],n[:,0], n[:,1], n[:,2],
         color=colors[(2+i)%len(colors)],mask_points=20,
         line_width=1., scale_factor=0.01)
+    print pc.max()
+    print pc.min()
 #    mlab.points3d(n[:,0]+i*2.3, n[:,1], n[:,2], mode="point",
 #        color=colors[(2+i)%len(colors)])
 

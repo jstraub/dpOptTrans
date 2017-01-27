@@ -1,6 +1,8 @@
 import numpy as np
 import os, re, time
 
+pattern = "gazebo_winter_[0-9]+resultsVsGrountruth.csv$"
+pattern = "gazebo_summer_[0-9]+resultsVsGrountruth.csv$"
 pattern = "apartment_[0-9]+resultsVsGrountruth.csv$"
 paths = []
 for algo in ["GoICP", "BB", "GOGMA", "FFT"]:

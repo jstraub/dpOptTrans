@@ -3,7 +3,8 @@ from scipy.linalg import solve
 from js.geometry.quaternion import Quaternion
 
 
-for path in [ "../data/stairs/", "../data/apartment/", "../data/wood_summer/" ]:
+for path in [ "../data/gazebo_winter/", "../data/mountain_plain/", "../data/gazebo_summer/" ]:
+#for path in [ "../data/stairs/", "../data/apartment/", "../data/wood_summer/" ]:
   with open(path+"pose_scanner_leica.csv") as f:
     f.readline()
     x = np.loadtxt(f,delimiter=",")

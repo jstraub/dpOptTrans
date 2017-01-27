@@ -6,6 +6,9 @@ import subprocess as subp
 folder = "../data/stairs/"
 folder = "../data/wood_summer/"
 folder = "../data/apartment/"
+folder = "../data/gazebo_summer/"
+folder = "../data/mountain_plain/"
+folder = "../data/gazebo_winter/"
 name = "Hokuyo_[0-9]+.csv"
 paths = []
 for root, dirs, files in os.walk(folder):
@@ -16,7 +19,7 @@ for root, dirs, files in os.walk(folder):
 paths = sorted(paths, key=lambda f: 
         int(re.sub(".csv","",re.sub("Hokuyo_","",os.path.split(f)[1]))))
 
-paths = paths[36:38]
+#paths = paths[36:38]
 
 for path in paths:
   print path
