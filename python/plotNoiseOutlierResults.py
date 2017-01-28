@@ -33,6 +33,7 @@ for root, dirs, files in os.walk(cmdArgs.input):
   break # don recurse into subfolders
 
 version = "4.2"
+scale = 0.01
 
 errors = {"err_a":{}, "err_t":{}, "dt":{}, "Ks":{}, "overlap":[], "dangle":[],
     "noise":[], "outlier":[],
@@ -45,7 +46,7 @@ for result in results:
   if r['version'] == version:
 #    print result
     errors["overlap"].append(r['GT']['overlap'])
-    errors["noise"].append(r['GT']['noiseStd']/0.01)
+    errors["noise"].append(r['GT']['noiseStd']/scale)
     errors["outlier"].append(r['GT']['outlier'])
 #    dang = 2.*np.arccos(r['GT']['q'][0]) *180/np.pi
 #    errors["dangle"].append(dang)
@@ -259,135 +260,35 @@ for i,o in enumerate(outliers):
 print noises
 print outliers
 
-for algType in ["BB"]:
-  print algType, len(errors["err_a"][algType])
-  errA = np.zeros((len(noises),len(outliers)))
-  errAN = np.zeros((len(noises),len(outliers)))
-  errT = np.zeros((len(noises),len(outliers)))
-  for i,n in enumerate(errors["noise"]):
-    o = errors["outlier"][i]
-    err = errors["err_a"][algType][i]
-    if not np.isnan(err):
-      errA[noiseQuant[n], outlierQuant[o]] += err
-      errAN[noiseQuant[n], outlierQuant[o]] += 1
-  errA /= errAN
-
-  plt.figure()
-  for i,o in enumerate(outliers):
-    plt.plot(noises/0.1, errA[:,i], label="{}".format(o))
-  plt.legend(loc="best")
-
-  errA = errA[::-1,:]
-  plt.figure()
-  plt.imshow(errA, interpolation="nearest", extent=[noises.min(), noises.max(), outliers.min(), outliers.max()])
-  plt.colorbar()
-plt.show()
-
-for yMetric in ["noise", "outlier"]:
-  fig = plt.figure(figsize = figSize, dpi = 80, facecolor="w",
-      edgecolor="k")
-  axs = []
-  print yMetric
-  for i,algType in enumerate(algTypes):
-    for j,errType in enumerate(errTypes):
-      if j == 0:
-        axs.append(plt.subplot(len(errTypes),len(algTypes), i+len(algTypes)*j+1))
-      else:
-        axs.append(plt.subplot(len(errTypes),len(algTypes),
-            i+len(algTypes)*j+1, sharex=axs[-1] ))
-      plt.ylim([0, errTypeMax[errType]])
-      axs[-1].yaxis.grid(True, linestyle='-', which='major',
-          color='lightgrey', alpha=0.5, linewidth=2)
-      axs[-1].set_axisbelow(True) # hide grey lines behind plot
-      errs = errors[errType][algType]
-      errs = np.array(errs)
-      errs = errs[np.logical_not(np.isnan(errs))]
-      ids = np.where(errs < errTypeMax[errType])
-  #      PlotErrDensity(np.array(errors[yMetric])[ids], errs[ids],
-  #          yMetricResolution[yMetric], errTypeMax[errType],
-  #          errTypeResolution[errType], axs[-1], j==len(errTypes)-1)
-      print errType
-      TableErr(np.array(errors[yMetric])[ids], errs[ids],
-          yMetricResolution[yMetric])
-      PlotErrBoxPlot(np.array(errors[yMetric])[ids], errs[ids],
-          yMetricResolution[yMetric], axs[-1], j==len(errTypes)-1)
-#      PlotScatter(np.array(errors[yMetric])[ids], errs[ids],
-#          yMetricResolution[yMetric], axs[-1], j==len(errTypes)-1)
-      if j == 0 and yMetric=="overlap":
-        if algType in algDesc:
-          plt.title(algDesc[algType])
-        else:
-          plt.title(algType)
-      if j == len(errTypes)-1:
-        plt.xlabel(yMetricLabel[yMetric])
-      if i == 0:
-        plt.ylabel(errDesc[errType])
-      if i>0:
-        plt.setp(axs[-1].get_yticklabels(), visible=False)
-      if i==0 and j==1:
-        axs[-1].set_yticks(axs[-1].get_yticks()[:-1])
-  plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=0.1)
-  plt.savefig("deviation_"+yMetric+"_N_{}_".format(counter)+"_".join(algTypes)+"_results.png", figure=fig)
-  plt.show()
-
-import sys
-sys.exit(0)
-
 for errType in errTypes:
-  print errType
-  fig = plt.figure()
-  # overlap
-  plt.subplot(3,2,1)
-  for algType, errs in errors[errType].iteritems():
-    ids = np.where(np.array(errs) < errTypeMax[errType])
-    plt.plot(np.array(errors["overlap"])[ids], np.array(errs)[ids], '.', label=algType)
-    print "  ", algType, errs
-  plt.legend()
-  plt.xlabel("overlap [%]")
-  plt.ylabel(errDesc[errType])
-  plt.ylim([0, errTypeMax[errType]])
-  plt.subplot(3,2,2)
-  for algType, errs in errors[errType].iteritems():
-    ids = np.where(np.array(errs) < errTypeMax[errType])
-    PlotErrHist(np.array(errors["overlap"])[ids], np.array(errs)[ids],
-        5.)
-  plt.legend()
-  plt.xlabel("overlap [%]")
-  plt.ylabel(errDesc[errType])
-  plt.ylim([0, errTypeMax[errType]])
-  # dangle
-  plt.subplot(3,2,3)
-  for algType, errs in errors[errType].iteritems():
-    ids = np.where(np.array(errs) < errTypeMax[errType])
-    plt.plot(np.array(errors["dangle"])[ids], np.array(errs)[ids], '.', label=algType)
-  plt.legend()
-  plt.xlabel("delta angle [deg]")
-  plt.ylabel(errDesc[errType])
-  plt.ylim([0, errTypeMax[errType]])
-  plt.subplot(3,2,4)
-  for algType, errs in errors[errType].iteritems():
-    ids = np.where(np.array(errs) < errTypeMax[errType])
-    PlotErrHist(np.array(errors["dangle"])[ids], np.array(errs)[ids], 10.)
-  plt.legend()
-  plt.xlabel("delta angle [deg]")
-  plt.ylabel(errDesc[errType])
-  plt.ylim([0, errTypeMax[errType]])
-  # dtranslation
-  plt.subplot(3,2,5)
-  for algType, errs in errors[errType].iteritems():
-    ids = np.where(np.array(errs) < errTypeMax[errType])
-    plt.plot(np.array(errors["dtranslation"])[ids], np.array(errs)[ids], '.', label=algType)
-  plt.legend()
-  plt.xlabel("delta translation [m]")
-  plt.ylabel(errDesc[errType])
-  plt.ylim([0, errTypeMax[errType]])
-  plt.subplot(3,2,6)
-  for algType, errs in errors[errType].iteritems():
-    ids = np.where(np.array(errs) < errTypeMax[errType])
-    PlotErrHist(np.array(errors["dtranslation"])[ids],
-        np.array(errs)[ids], 0.5)
-  plt.legend()
-  plt.xlabel("delta translation [m]")
-  plt.ylabel(errDesc[errType])
-  plt.ylim([0, errTypeMax[errType]])
+  for algType in algTypes:
+    print algType, len(errors[errType][algType])
+    errA = np.zeros((len(noises),len(outliers)))
+    errAN = np.zeros((len(noises),len(outliers)))
+    errT = np.zeros((len(noises),len(outliers)))
+    for i,n in enumerate(errors["noise"]):
+      o = errors["outlier"][i]
+      err = errors[errType][algType][i]
+      if not np.isnan(err):
+        errA[noiseQuant[n], outlierQuant[o]] += err
+        errAN[noiseQuant[n], outlierQuant[o]] += 1
+    errA /= errAN
+    if errType == "err_t":
+      errA /= scale
+#    plt.figure()
+#    for i,o in enumerate(outliers):
+#      plt.plot(noises/0.1, errA[:,i], label="{}".format(o))
+#    plt.legend(loc="best")
+#    plt.title("{} {}".format(algType, errType))
+
+    errA = errA[::-1,:]
+    fig = plt.figure(figsize = figSize, dpi = 80, facecolor="w", edgecolor="k")
+    plt.imshow(errA, interpolation="nearest", extent=[noises.min(), noises.max(), outliers.min(), outliers.max()])
+    plt.colorbar()
+    plt.tight_layout()
+    plt.title("{} {}".format(algType, errType))
+    plt.xlabel("std")
+    plt.ylabel("outlier ratio")
+    plt.savefig("errorNoiseOutlier_{}_{}_results.png".format(errType,algType), figure=fig)
 plt.show()
+
