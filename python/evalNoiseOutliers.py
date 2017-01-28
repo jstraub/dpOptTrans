@@ -115,6 +115,8 @@ cfg = {"name":"bunny", "lambdaS3": [60.], "lambdaR3": 0.001,
     "maxLvlR3":10, "maxLvlS3":11}
 
 version = "4.0" # initial
+version = "4.1" # trying if there are bugs
+version = "4.2" # one bug fixed where results for BB+ICP were not set
 
 hash = cmdArgs.prefix
 seedA = int(hash)%23752
@@ -157,6 +159,9 @@ if runBB:
     if np.isnan(t).all(): # only translation is messed up -> err_a
       err_a, _ = EvalError(q_gt, t_gt, q, t)
     runBBICP = False
+    # make sure to also add BB+ICP info to preserve alignment
+    results["BB+ICP"] = {"err_a":err_a, "err_t":err_t,
+        "q":q.q.tolist(), "t":t.tolist(), "dt":dt}
   else:
     err_a, err_t = EvalError(q_gt, t_gt, q, t)
   print "BB: {} deg {} m".format(err_a, err_t)
