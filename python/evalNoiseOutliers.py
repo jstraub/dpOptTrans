@@ -117,6 +117,7 @@ cfg = {"name":"bunny", "lambdaS3": [60.], "lambdaR3": 0.001,
 version = "4.0" # initial
 version = "4.1" # trying if there are bugs
 version = "4.2" # one bug fixed where results for BB+ICP were not set
+version = "4.3" # smaller, equally spaced eval
 
 hash = cmdArgs.prefix
 seedA = int(hash)%23752
@@ -168,8 +169,8 @@ if runBB:
   results["BB"] = {"err_a":err_a, "err_t":err_t, "q":q.q.tolist(),
       "t":t.tolist(), "Ks":Ks.tolist(), "dt":dt}
   
-if cmdArgs.display:
-  DisplayPcs(scanApath, scanBpath, q,t, True, True, False)
+#if cmdArgs.display:
+#  DisplayPcs(scanApath, scanBpath, q,t, True, True, False)
 
 if runBBICP:
   q,t,dt2,success = RunICP(scanApath, scanBpath, transformationPathBBICP,
