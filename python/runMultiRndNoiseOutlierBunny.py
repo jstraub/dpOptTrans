@@ -23,15 +23,15 @@ path = "../data/bunny/reconstruction/bun_zipper.ply"
 resultsPath = "/data/vision/fisher/expres1/jstraub/optRotTransCVPR2017_bunny/"
 
 print "using prefix " + cmdArgs.prefix
-scale = 0.005 # 1/10 of bunny bounding radius
+scale = 0.005 # 1/20 of bunny bounding radius
 
 for it in range(1000):
 #  for outliers in [0.0, 0.1, 0.2, 0.3]:
 #    for noiseStd in [0.0, 0.002, 0.004, 0.006, 0.008, 0.01, 0.012]:
-  for outliers in [0.15, 0.2, 0.3]:
-    for noiseStd in [0.]:
-#  for outliers in [0.0, 0.2, 0.4, 0.6]:
-#    for noiseStd in [0.0, 0.002, 0.004, 0.006, 0.008, 0.01, 0.012, 0.014, 0.016, 0.018, 0.02]:
+#  for outliers in [ 0.6, 0.7, 0.8, 0.9]:
+#    for noiseStd in [0.005]:
+  for outliers in [0.0, 0.3, 0.6]:
+    for noiseStd in [0.0, 0.002, 0.004, 0.006, 0.008, 0.01]:
   #for outliers in [0.6]:
   ##  for noiseStd in [0.0001, 0.01]:
   #  for noiseStd in [0.001, 0.01]:
@@ -39,7 +39,7 @@ for it in range(1000):
           "-i " + path,
           "-o " + resultsPath,
           "-p " + prefix,
-          "-d ",
+#          "-d ",
           "-r {}".format(outliers),
           "-s {}".format(scale),
           "-n {}".format(noiseStd)]

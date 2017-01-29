@@ -121,6 +121,7 @@ version = "4.1" # trying if there are bugs
 version = "4.2" # one bug fixed where results for BB+ICP were not set
 version = "4.3" # smaller, equally spaced eval
 version = "4.4" # after fixing outlier sampling to a sphere
+version = "4.5" # after fixing area weighting
 
 hash = cmdArgs.prefix
 seedA = int(hash)%23
