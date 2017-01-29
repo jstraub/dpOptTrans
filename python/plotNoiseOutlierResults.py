@@ -34,8 +34,9 @@ for root, dirs, files in os.walk(cmdArgs.input):
   break # don recurse into subfolders
 
 version = "4.3"
+version = "4.4"
 version = "4.2"
-scale = 0.01
+scale = 2*0.1 # roughly the diameter to bound the bunny
 
 errors = {"err_a":{}, "err_t":{}, "dt":{}, "Ks":{}, "overlap":[], "dangle":[],
     "noise":[], "outlier":[],
@@ -48,7 +49,7 @@ for result in results:
   if r['version'] == version:
 #    print result
     errors["overlap"].append(r['GT']['overlap'])
-    errors["noise"].append(r['GT']['noiseStd']/scale)
+    errors["noise"].append(r['GT']['noiseStd'])
     errors["outlier"].append(r['GT']['outlier'])
 #    dang = 2.*np.arccos(r['GT']['q'][0]) *180/np.pi
 #    errors["dangle"].append(dang)
@@ -98,130 +99,6 @@ if counter == 0:
   print "No results found for version "+version
   sys.exit(0)
 
-def PlotErrHist(x, y, delta):
-  if x.size < 1:
-    return
-  ids = np.floor((x)/delta).astype(np.int)
-  means = np.zeros(ids.max()+1)
-  stds = np.zeros(ids.max()+1)
-  data = []
-  for i in range(ids.min(), ids.max()+1):
-    if (ids==i).any():
-      means[i] = np.mean(y[ids==i])
-      stds[i] = np.std(y[ids==i])
-      data.append(y[ids==i])
-  plt.errorbar(np.arange(ids.max()+1)*delta,means,yerr=stds)
-
-def PlotErrBoxPlot(x, y, delta, ax, showXTicks):
-  if x.size < 1:
-    return
-  ids = np.floor((x)/delta).astype(np.int)
-  data = []
-  for i in range(ids.min(), ids.max()+1):
-    if (ids==i).any():
-      data.append(y[ids==i])
-  bp = plt.boxplot(data)
-#  plt.plot(x,y,'.', color=c1, alpha=0.3)
-  # set xticks
-  if showXTicks:
-    ticks = np.floor((np.arange(ids.min(), ids.max()+1)+0.5)*delta).astype(np.int)
-    if np.unique(ticks).size < ticks.size:
-      ticks = np.floor((np.arange(ids.min(), ids.max()+1)+0.5)*delta*10.)/10.
-    xtickNames = plt.setp(ax, xticklabels=ticks)
-    plt.setp(xtickNames, rotation=45)
-  else:
-    plt.setp(ax.get_xticklabels(), visible=False) 
-  for box in bp["boxes"]:
-    box.set(color=c1)
-    #box.set(facecolor=c1)
-  for whisker in bp["whiskers"]:
-    whisker.set(color=c1)
-  for cap in bp["caps"]:
-    cap.set(color=c1)
-  for median in bp["medians"]:
-    median.set(color=c2)
-  for flier in bp["fliers"]:
-    flier.set(color=c3, marker=".", alpha=0.15) #,s=6)
-
-def TableErr(x, y, delta):
-  if x.size < 1:
-    return
-  ids = np.floor((x)/delta).astype(np.int)
-  data = []
-  for i in range(ids.min(), ids.max()+1):
-    if (ids==i).any():
-      data.append(y[ids==i])
-  ticks = np.floor((np.arange(ids.min(), ids.max()+2))*delta).astype(np.int)
-  for i,d in enumerate(data):
-    dSort = np.sort(d)
-    median = dSort[dSort.size/2]
-    if dSort.size % 2 == 0:
-      median = 0.5*(dSort[dSort.size/2-1]+dSort[dSort.size/2])
-    perc75 = dSort[int(np.floor(dSort.size*0.75))]
-    perc90 = dSort[int(np.floor(dSort.size*0.9))]
-    print "[{} {}]\t #: {}\t 50%: {:.2f}\t 75%: {:.2f}\t 90%: {:.2f}".format(
-        ticks[i],ticks[i+1],dSort.size,median,perc75,perc90)
-
-def PlotScatter(x, y, delta, ax, showXTicks):
-  if x.size < 1:
-    return
-  plt.plot(x,y,'.', color=c1, alpha=0.3)
-  # set xticks
-  if not showXTicks:
-    plt.setp(ax.get_xticklabels(), visible=False) 
-
-def PlotErrDensity(x, y, deltax, ymax, deltay, ax, showXTicks):
-  if x.size < 1:
-    return
-  idsx = np.floor((x)/deltax*0.5).astype(np.int)
-#  idsy = np.floor((y)/deltay).astype(np.int)
-#  density = np.zeros((int(np.floor(ymax/deltay))+1,
-#    int(np.floor(x.max()/deltax*0.5))+1))
-#  print density.shape
-#  for i in range(idsx.min(), idsx.max()+1):
-#    if (idsx==i).any():
-#      for j in idsy[idsx==i]:
-#        density[j, i] += 1.
-#  density /= density.sum()
-#  print density
-#  plt.imshow(density, interpolation="nearest")
-
-  from matplotlib.colors import LogNorm
-
-  bins = ( int(np.floor(x.max()/deltax*0.5))+1), (int(np.floor(ymax/deltay))+1)
-  plt.hist2d(x,y, bins=bins, range=[[x.min(),x.max()],[0.,ymax]],
-      norm=LogNorm())
-  # set xticks
-#  if showXTicks:
-#    ticks = np.floor((np.arange(idsx.min(), idsx.max()+1)+0.5)*deltax).astype(np.int)
-#    if np.unique(ticks).size < ticks.size:
-#      ticks = np.floor((np.arange(idsx.min(), idsx.max()+1)+0.5)*deltax*10.)/10.
-#    xtickNames = plt.setp(ax, xticklabels=ticks)
-#    plt.setp(xtickNames, rotation=45)
-#  else:
-#    plt.setp(ax.get_xticklabels(), visible=False) 
-
-def WriteErrStats(x, y, delta):
-  if x.size < 1:
-    return
-  ids = np.floor((x)/delta).astype(np.int)
-  data = []
-  for i in range(ids.min(), ids.max()+1):
-    if (ids==i).any():
-      data.append(y[ids==i])
-  ticks = np.floor((np.arange(ids.min(), ids.max()+1)+0.5)*delta).astype(np.int)
-  if np.unique(ticks).size < ticks.size:
-    ticks = np.floor((np.arange(ids.min(), ids.max()+1)+0.5)*delta*10.)/10.
-  for i,d in enumerate(data):
-    mean = np.mean(d)
-    std = np.std(d)
-    dSorted = np.sort(d)
-    median = d[d.size/2]
-    ninetyP = d[int(np.floor(d.size*0.1))]
-    tenP = d[int(np.floor(d.size*0.9))]
-    print "{}: |.| {}\t{} +- {}\t median={}\t10% {}\t90% {}".format(ticks[i], d.size, mean, std,
-        median, ninetyP, tenP)
-
 errDesc = {"err_a":"$\Delta \\theta$ [deg]", 
     "err_t": "$\|\|\Delta t\|\|_2$ [m]", "dt":"dt [s]",
     "Ks1":"Ks", "Ks2":"Ks", "Ks3":"Ks", "Ks4":"Ks"}
@@ -241,9 +118,6 @@ algTypes = ["BB", "BB+ICP"]
 
 if not "DISPLAY" in os.environ:
   sys.exit(0)
-
-algDesc = {"BB_45.0_0.5":"BB45", "MM":"MoM"}
-errTypeResolution = {"err_a": 5., "err_t": 0.2, "dt": 3.}
 
 print algTypes
 print errTypes
@@ -283,8 +157,10 @@ for errType in errTypes:
     fig = plt.figure(figsize = figSize, dpi = 80, facecolor="w", edgecolor="k")
     for i,o in enumerate(outliers[::2]):
       plt.plot(noises/scale, errA[:,i], label="{}".format(o),color=colors[i%len(colors)])
-      plt.plot(noises/scale, errA[:,i]+errStd[:,i],alpha=0.3,color=colors[i%len(colors)])
-      plt.plot(noises/scale, errA[:,i]-errStd[:,i],alpha=0.3,color=colors[i%len(colors)])
+      plt.fill_between(noises/scale, np.minimum(errA[:,i]-errStd[:,i],np.zeros_like(errStd[:,i])),
+          errA[:,i]+errStd[:,i], alpha=0.3, color=colors[i%len(colors)])
+#      plt.plot(noises/scale, errA[:,i]+errStd[:,i],alpha=0.3,color=colors[i%len(colors)])
+#      plt.plot(noises/scale, errA[:,i]-errStd[:,i],alpha=0.3,color=colors[i%len(colors)])
     plt.legend(loc="best")
 #    plt.title("{} {}".format(algType, errType))
 

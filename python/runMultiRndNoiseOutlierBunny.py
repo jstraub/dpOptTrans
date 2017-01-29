@@ -23,26 +23,26 @@ path = "../data/bunny/reconstruction/bun_zipper.ply"
 resultsPath = "/data/vision/fisher/expres1/jstraub/optRotTransCVPR2017_bunny/"
 
 print "using prefix " + cmdArgs.prefix
-scale = 0.03
+scale = 0.01 # 1/10 of bunny bounding radius
 
-noiseStd = 0.
-for outliers in [0.0, 0.2, 0.4, 0.6]:
-  for noiseStd in [0.0, 0.002, 0.004, 0.006, 0.008, 0.01]:
-#for outliers in [0.6]:
-##  for noiseStd in [0.0001, 0.01]:
-#  for noiseStd in [0.001, 0.01]:
-    args=["python", "./evalNoiseOutliers.py", 
-        "-i " + path,
-        "-o " + resultsPath,
-        "-p " + prefix,
-        "-d ",
-        "-r {}".format(outliers),
-        "-s {}".format(scale),
-        "-n {}".format(noiseStd)]
-    print " ".join(args)
-    err = subp.call(" ".join(args), shell=True)
-    if err == 1: # some problem with this scene?!
-      print "error processing of ", outliers, noiseStd
+for it in range(1000):
+  for outliers in [0.0, 0.2, 0.4, 0.6]:
+    for noiseStd in [0.0, 0.002, 0.004, 0.006, 0.008, 0.01, 0.012, 0.014, 0.016, 0.018, 0.02]:
+  #for outliers in [0.6]:
+  ##  for noiseStd in [0.0001, 0.01]:
+  #  for noiseStd in [0.001, 0.01]:
+      args=["python", "./evalNoiseOutliers.py", 
+          "-i " + path,
+          "-o " + resultsPath,
+          "-p " + prefix,
+  #        "-d ",
+          "-r {}".format(outliers),
+          "-s {}".format(scale),
+          "-n {}".format(noiseStd)]
+      print " ".join(args)
+      err = subp.call(" ".join(args), shell=True)
+      if err == 1: # some problem with this scene?!
+        print "error processing of ", outliers, noiseStd
 
 #noiseStd = 0.
 #for outliers in [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6]:

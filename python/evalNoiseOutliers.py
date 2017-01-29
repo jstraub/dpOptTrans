@@ -118,9 +118,10 @@ version = "4.0" # initial
 version = "4.1" # trying if there are bugs
 version = "4.2" # one bug fixed where results for BB+ICP were not set
 version = "4.3" # smaller, equally spaced eval
+version = "4.4" # after fixing outlier sampling to a sphere
 
 hash = cmdArgs.prefix
-seedA = int(hash)%23752
+seedA = int(hash)%23
 seedB = int(hash)%91
 
 scale = float(cmdArgs.scale)
@@ -130,7 +131,6 @@ resultsPath = cmdArgs.output + "/" + os.path.splitext(os.path.split(cmdArgs.inpu
 outputPrefix = "./noise_{}_outlier_{}_{}".format(noiseStd,outlier,hash)
 transformationPathBB = 'noise_{}_outlier_{}_{}_BB.csv'.format(noiseStd, outlier,hash)
 transformationPathBBICP ='noise_{}_outlier_{}_{}_BB_ICP.csv'.format(noiseStd, outlier,hash)
-
 
 q_gt = Quaternion(w=1., x=0., y=0., z=0.)
 t_gt = np.zeros(3)
