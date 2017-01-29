@@ -34,8 +34,8 @@ for root, dirs, files in os.walk(cmdArgs.input):
   break # don recurse into subfolders
 
 version = "4.3"
-version = "4.4"
 version = "4.2"
+version = "4.4"
 scale = 2*0.1 # roughly the diameter to bound the bunny
 
 errors = {"err_a":{}, "err_t":{}, "dt":{}, "Ks":{}, "overlap":[], "dangle":[],
@@ -136,16 +136,16 @@ for i,o in enumerate(outliers):
 print noises
 print outliers
 
-for errType in errTypes:
-  for algType in ["BB"]:
-    print algType, len(errors[errType][algType])
+for errType in errTypes+["num"]:
+  for algType in ["BB+ICP"]:
     errA = np.zeros((len(noises),len(outliers)))
     errSq = np.zeros((len(noises),len(outliers)))
     errAN = np.zeros((len(noises),len(outliers)))
     errT = np.zeros((len(noises),len(outliers)))
     for i,n in enumerate(errors["noise"]):
       o = errors["outlier"][i]
-      err = errors[errType][algType][i]
+      if not errType == "num":
+        err = errors[errType][algType][i]
       if errType == "err_t":
         err /= scale
       if not np.isnan(err):
@@ -155,10 +155,15 @@ for errType in errTypes:
     errA /= errAN
     errStd = np.sqrt((errSq - errA*errA*errAN)/(errAN-1))
     fig = plt.figure(figsize = figSize, dpi = 80, facecolor="w", edgecolor="k")
-    for i,o in enumerate(outliers[::2]):
-      plt.plot(noises/scale, errA[:,i], label="{}".format(o),color=colors[i%len(colors)])
-      plt.fill_between(noises/scale, np.minimum(errA[:,i]-errStd[:,i],np.zeros_like(errStd[:,i])),
-          errA[:,i]+errStd[:,i], alpha=0.3, color=colors[i%len(colors)])
+    for i,o in enumerate(outliers):
+      if errType == "num":
+        plt.plot(noises/scale, errAN[:,i], label="{}".format(o),color=colors[i%len(colors)])
+        print errAN[:,i]
+      else:
+        plt.plot(noises/scale, errA[:,i], label="{}".format(o),color=colors[i%len(colors)])
+        plt.fill_between(noises/scale, np.maximum(errA[:,i]-errStd[:,i],np.zeros_like(errStd[:,i])),
+            errA[:,i]+errStd[:,i], alpha=0.3, color=colors[i%len(colors)])
+        print errType, o, errA[:,i]
 #      plt.plot(noises/scale, errA[:,i]+errStd[:,i],alpha=0.3,color=colors[i%len(colors)])
 #      plt.plot(noises/scale, errA[:,i]-errStd[:,i],alpha=0.3,color=colors[i%len(colors)])
     plt.legend(loc="best")
@@ -181,7 +186,8 @@ for errType in errTypes:
 #    if algType == "BB" and errType == "err_t":
   #    plt.title("{} {}".format(algType, errType))
     plt.xlabel("noise std")
-    plt.ylabel(errDesc[errType])
+    if not errType == "num":
+      plt.ylabel(errDesc[errType])
 #    else:
 #      plt.xticks([])
 #      plt.yticks([])

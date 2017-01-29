@@ -36,9 +36,13 @@
 #include "dpOptTrans/pcHelpers.h"
 #include "dpMMlowVar/ddpmeansCUDA.hpp"
 #include "dpMMlowVar/dpmeans.hpp"
+#include "jsCore/timer.hpp"
 
 #include <boost/program_options.hpp>
 namespace po = boost::program_options;
+
+template <typename M>
+using eigen_vector = std::vector<M, Eigen::aligned_allocator<M>>;
 
 //struct CfgRtDDPvMF
 //{
@@ -163,6 +167,7 @@ bool ComputevMFMMfromPC(const pcl::PointCloud<pcl::PointXYZRGBNormal>&
             taus(k), pis(k)));
       vmfs.back().GetXSum() = xSum.col(k);
     }
+  std::cout << "# vMF components after filter: " << vmfs.size() << std::endl;
   return true;
 }
 
@@ -591,7 +596,7 @@ int main(int argc, char** argv) {
   if(vm.count("out")) pathOut = vm["out"].as<std::string>();
   if(vm.count("in_a")) pathA = vm["in_a"].as<string>();
   if(vm.count("in_b")) pathB = vm["in_b"].as<string>();
-  float scale = 1.;
+  float scale = 0.01;
   if(vm.count("scale")) scale = vm["scale"].as<float>();
   if(vm.count("maxLvlR3")) maxLvlR3 = vm["maxLvlR3"].as<int>();
   if(vm.count("maxLvlS3")) maxLvlS3 = vm["maxLvlS3"].as<int>();
@@ -606,44 +611,58 @@ int main(int argc, char** argv) {
     std::cout << "Using EGI mode - making pis of vMF MM uniform." << std::endl;
 
   // Load point clouds.
-  pcl::PointCloud<pcl::PointXYZRGBNormal> pcA, pcB;
+  pcl::PointCloud<pcl::PointXYZRGBNormal> pcAload, pcBload;
   pcl::PLYReader reader;
-  std::cout << reader.read(pathA, pcA) << std::endl;
+  std::cout << reader.read(pathA, pcAload) << std::endl;
   std::cout << "loading pc from " << pathA << std::endl;
-  if (reader.read(pathA, pcA)) 
+  if (reader.read(pathA, pcAload)) 
     std::cout << "error reading " << pathA << std::endl;
   else
-    std::cout << "loaded pc from " << pathA << ": " << pcA.width << "x"
-      << pcA.height << std::endl;
+    std::cout << "loaded pc from " << pathA << ": " << pcAload.width << "x"
+      << pcAload.height << std::endl;
   std::cout << "loading pc from " << pathB << std::endl;
-  if (reader.read(pathB, pcB)) 
+  if (reader.read(pathB, pcBload)) 
     std::cout << "error reading " << pathB << std::endl;
   else
-    std::cout << "loaded pc from " << pathB << ": " << pcB.width << "x"
-      << pcB.height << std::endl;
+    std::cout << "loaded pc from " << pathB << ": " << pcBload.width << "x"
+      << pcBload.height << std::endl;
 
-  for (size_t i=0; i<pcA.size(); ++i) {
-    Eigen::Map<Vector3f> n(&(pcA.at(i).normal_x));
+  pcl::PointCloud<pcl::PointXYZRGBNormal> pcA, pcB;
+
+  for (size_t i=0; i<pcAload.size(); ++i) {
+    Eigen::Map<Vector3f> n(&(pcAload.at(i).normal_x));
     if (n.norm() > 0.001) {
       n /= n.norm();
-    } else {
-      std::cout << "normal not normalizeable " << n.norm() << std::endl;
+      pcA.push_back(pcAload.at(i));
+//      pcA.push_back(pcAload.at(i));
+//      pcA.back().normal_x *= -1;
+//      pcA.back().normal_y *= -1;
+//      pcA.back().normal_z *= -1;
+//    } else {
+//      std::cout << "normal not normalizeable " << n.norm() << std::endl;
     }
   }
-  for (size_t i=0; i<pcB.size(); ++i) {
-    Eigen::Map<Vector3f> n(&(pcB.at(i).normal_x));
+  for (size_t i=0; i<pcBload.size(); ++i) {
+    Eigen::Map<Vector3f> n(&(pcBload.at(i).normal_x));
     if (n.norm() > 0.001) {
       n /= n.norm();
-    } else {
-      std::cout << "normal not normalizeable " << n.norm() << std::endl;
+      pcB.push_back(pcBload.at(i));
+//      pcB.push_back(pcBload.at(i));
+//      pcB.back().normal_x *= -1;
+//      pcB.back().normal_y *= -1;
+//      pcB.back().normal_z *= -1;
+//    } else {
+//      std::cout << "normal not normalizeable " << n.norm() << std::endl;
     }
   }
+  findCudaDevice(argc,(const char**)argv);
 
+  jsc::Timer t0;
   ShufflePc(pcA);
   ShufflePc(pcB);
 
-  ComputeAreaWeightsPc(pcA);
-  ComputeAreaWeightsPc(pcB);
+  ComputeAreaWeightsPcRadius(pcA,scale);
+  ComputeAreaWeightsPcRadius(pcB,scale);
 
   // Obtain the range for the translation.
   // TODO: this could be made more tight by getting min and max for the
@@ -652,19 +671,17 @@ int main(int argc, char** argv) {
   ComputePcBoundaries(pcA, minA0, maxA0);
   ComputePcBoundaries(pcB, minB0, maxB0);
 
-  findCudaDevice(argc,(const char**)argv);
-
   std::cout<<"rtDDPvMFmeans lambdaDeg="<<cfg.lambdaDeg_<<" beta="<<cfg.beta
     <<"nFramesSurvive="<<cfg.nFramesSurvive_<<std::endl;
   std::cout<<"output path: "<<cfg.pathOut<<std::endl;
 
   std::vector<bb::vMF<3>> vmfsA;
   ComputevMFMMfromPC(pcA, cfg, vmfsA);
-  if(true || vm.count("verbose")) for(uint32_t k=0; k<vmfsA.size(); ++k) vmfsA[k].Print(); 
+  if(vm.count("verbose")) for(uint32_t k=0; k<vmfsA.size(); ++k) vmfsA[k].Print(); 
 
   std::vector<bb::vMF<3>> vmfsB;
   ComputevMFMMfromPC(pcB, cfg, vmfsB);
-  if(true || vm.count("verbose")) for(uint32_t k=0; k<vmfsB.size(); ++k) vmfsB[k].Print(); 
+  if(vm.count("verbose")) for(uint32_t k=0; k<vmfsB.size(); ++k) vmfsB[k].Print(); 
 
   if (egi_mode) {
     for(uint32_t k=0; k<vmfsA.size(); ++k) 
@@ -686,6 +703,8 @@ int main(int argc, char** argv) {
     if(vm.count("verbose")) for(uint32_t k=0; k<gmmB.size(); ++k) gmmB[k].Print(); 
   }
 
+  float tCluster = t0.toctic("timing cluster");
+
   bb::vMFMM<3> vmfmmA(vmfsA);
   bb::vMFMM<3> vmfmmB(vmfsB);
   bb::LowerBoundS3 lower_bound_S3(vmfmmA, vmfmmB);
@@ -697,7 +716,7 @@ int main(int argc, char** argv) {
   double lb_star = 1e99;
   double eps = 1e-10;
   //  double eps = 8e-7;
-  uint32_t max_it = 5000;
+  uint32_t max_it = 100000;
   if (TpS_mode)  {
 
     std::cout << " Tessellate TpS3" << std::endl;
@@ -814,7 +833,8 @@ int main(int argc, char** argv) {
   Eigen::Vector3d t_star; 
 
   Eigen::VectorXd lbsS3;
-  std::vector<Eigen::Quaterniond> qs;
+  eigen_vector<Eigen::Quaterniond> qs;
+  eigen_vector<Eigen::Quaterniond> qsPrelim;
   if (simpleRot) {
     qs.push_back(q_star.inverse());
     qs[0].normalize();
@@ -833,9 +853,9 @@ int main(int argc, char** argv) {
       dpvMF.updateLabels(); 
       dpvMF.updateCenters(); 
     }
-    std::cout << dpvMF.centroids() << std::endl; 
+    std::cout << "K " << dpvMF.getK() << std::endl;
+//    std::cout << dpvMF.centroids() << std::endl; 
 
-    std::vector<Eigen::Quaterniond> qsPrelim;
     std::vector<double> lbsS3prelim;
     if (dpvMF.K() == 1) {
       qsPrelim.push_back(q_star);
@@ -884,11 +904,13 @@ int main(int argc, char** argv) {
     std::cout << "===filtered==== K: " << qs.size() << std::endl;
     for (uint32_t k=0; k<qs.size(); ++k) {
       // This q is the inverse of the rotation that brings B to A.
-      qs[k] = qs[k].inverse(); // A little ugly but this is because of the way we setup the problem...
+      std::cout << k << std::endl;
+      qs[k] = Eigen::Quaterniond(qs[k].inverse()); // A little ugly but this is because of the way we setup the problem...
     }
   }
 
   if (tryMfAmbig) {
+    std::cout << "trying MW ambiguities" << std::endl;
     size_t Nq = qs.size();
     Eigen::VectorXd lbsS3ambig = Eigen::VectorXd(Nq*24);
     lbsS3ambig.topRows(Nq) = lbsS3;
@@ -923,12 +945,13 @@ int main(int argc, char** argv) {
       << qs.size()-Nq << " permutations of rotation matrices to try" << std::endl;
   }
 
-  std::vector<Eigen::Vector3d> ts(qs.size(),Eigen::Vector3d::Zero());
+  eigen_vector<Eigen::Vector3d> ts(qs.size(), Eigen::Vector3d::Zero());
   Eigen::VectorXd lbsR3 = -1.*Eigen::VectorXd::Ones(qs.size());
   Eigen::VectorXd ubsR3 = -1.*Eigen::VectorXd::Ones(qs.size());
   Eigen::VectorXd lbs(qs.size());
   // dont nest parfors (BB is already internally parallelized
-//#pragma omp parallel for 
+  std::cout << "searching for translations in " 
+    << qs.size() << " rotations" << std::endl;
   for (uint32_t k=0; k<qs.size(); ++k) {
     Eigen::Quaterniond q = qs[k]; 
     if (simpleTrans) {
@@ -988,7 +1011,7 @@ int main(int argc, char** argv) {
 
       std::cout << "# initial nodes: " << nodesR3.size() << std::endl;
       double eps = 1e-10;
-      uint32_t max_it = 5000;
+      uint32_t max_it = 100000;
       double lb = 0.;
       double ub = 0.;
 #pragma omp critical
@@ -1020,6 +1043,8 @@ int main(int argc, char** argv) {
       DisplayPcs(pcA, pcB, gmmA, gmmB, vmfsA, vmfsB, qs[k], ts[k], cfg.lambda/10.);
     }
   }
+  float tBB = t0.toctic("timing BB");
+
   std::cout << "Have LbS3: " << lbsS3.transpose() << std::endl;
   std::cout << "Have LbR3: " << lbsR3.transpose() << std::endl;
   uint32_t id_max = 0;
@@ -1031,6 +1056,11 @@ int main(int argc, char** argv) {
   std::cout << "Updating overall optimum transformation to: " << std::endl;
   std::cout << "q: " << q_star.coeffs().transpose() 
     << " t: " << t_star.transpose() <<  std::endl;
+
+  std::cout << "time cluster " << tCluster << " " 
+    << 100.*tCluster/(tCluster+tBB) << " %" << std::endl;
+  std::cout << "time BB " << tBB << " " 
+    << 100.*tBB/(tCluster+tBB) << " %" << std::endl;
 
   if(pathOut.size() > 1) {
     std::ofstream out(pathOut + std::string(".csv"));

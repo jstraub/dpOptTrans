@@ -60,6 +60,8 @@ struct CfgRtDDPvMF
 
 void ShufflePc(pcl::PointCloud<pcl::PointXYZRGBNormal>& pc);
 void ComputeAreaWeightsPc(pcl::PointCloud<pcl::PointXYZRGBNormal>& pcIn);
+void ComputeAreaWeightsPcRadius(pcl::PointCloud<pcl::PointXYZRGBNormal>& pcIn,
+    float scale);
 
 void DisplayPcs(const pcl::PointCloud<pcl::PointXYZRGBNormal>& pcA, 
   const pcl::PointCloud<pcl::PointXYZRGBNormal>& pcB, 

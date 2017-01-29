@@ -111,7 +111,9 @@ useSurfaceNormalsInICP = True
 
 #cfg = {"name":"bunny", "lambdaS3": [60., 70., 80], "lambdaR3": 0.001,
 #    "maxLvlR3":10, "maxLvlS3":11}
-cfg = {"name":"bunny", "lambdaS3": [60.], "lambdaR3": 0.001,
+cfg = {"name":"bunny", "lambdaS3": [60.], "lambdaR3": 0.003,
+    "maxLvlR3":10, "maxLvlS3":11}
+cfg = {"name":"bunny", "lambdaS3": [40,50,60.], "lambdaR3": 0.003,
     "maxLvlR3":10, "maxLvlS3":11}
 
 version = "4.0" # initial
@@ -153,7 +155,7 @@ results = {"GT":{"q":q_gt.q.tolist(), "t":t_gt.tolist(),
 
 if runBB:
   q,t,Ks,dt,success = RunBB(cfg, scanApath, scanBpath,
-      transformationPathBB, simpleTranslation=False,
+      transformationPathBB, simpleTranslation=False, scale=scale,
       tryMfAmbig=False)
   if not success:
     err_a, err_t = np.nan, np.nan
@@ -184,7 +186,7 @@ if runBBICP:
       "q":q.q.tolist(), "t":t.tolist(), "dt":dt+dt2}
 
 if cmdArgs.display:
-  DisplayPcs(scanApath, scanBpath, q,t, True, True, False)
+  DisplayPcs(scanApath, scanBpath, q,t, True, True, True)
 
 import json, time
 stamp = "{}".format(int(np.floor(time.time()*1e3)))

@@ -93,6 +93,7 @@ def RunBB(cfg, scanApath, scanBpath, transformationPathBB,\
     simpleTranslation=False,
     simpleRotation=False,
     tryMfAmbig=False,
+    scale = None,
     timeout_sec = 3600
     ):
   lbsS3 = np.zeros(len(cfg["lambdaS3"]))
@@ -124,6 +125,8 @@ def RunBB(cfg, scanApath, scanBpath, transformationPathBB,\
       args.append('--simpleRot')
     if tryMfAmbig:
       args.append('--tryMfAmbig')
+    if not scale is None:
+      args.append('--scale {}'.format(scale))
     print " ".join(args)
     t0 = time.time()
 #    err = run(" ".join(args), timeout_sec)

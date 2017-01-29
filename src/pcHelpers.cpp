@@ -179,6 +179,34 @@ void ComputeAreaWeightsPc(pcl::PointCloud<pcl::PointXYZRGBNormal>& pcIn) {
   }
 }
 
+void ComputeAreaWeightsPcRadius(pcl::PointCloud<pcl::PointXYZRGBNormal>& pcIn, 
+    float scale) {
+  pcl::PointCloud<pcl::PointXYZ>::Ptr pcXYZ(new
+      pcl::PointCloud<pcl::PointXYZ>(pcIn.size(),1));
+  pcXYZ->getMatrixXfMap(3,4,0) = pcIn.getMatrixXfMap(3, 12, 0);
+
+  pcl::search::KdTree<pcl::PointXYZ> kd; 
+  kd.setInputCloud(pcXYZ);
+
+  std::vector<int> k_ids(9);
+  std::vector<float> k_sqr_dists(9);
+  for (uint32_t i=0; i<pcIn.size(); ++i) {
+    int k_found = kd.radiusSearch(pcXYZ->at(i), scale, k_ids, k_sqr_dists);
+    if (k_found > 0) {
+      std::sort(k_sqr_dists.begin(), k_sqr_dists.begin()+k_found);
+      float median_sqr_dist = k_sqr_dists[k_found/2];
+      if (k_found%2 == 0)
+        median_sqr_dist = (k_sqr_dists[k_found/2-1]+k_sqr_dists[k_found/2])*0.5;
+      float scale_2d = median_sqr_dist*M_PI; // in m^2
+      // Abuse curvature entry for the scale.
+      pcIn.at(i).curvature = scale_2d;
+    } else{
+      pcIn.at(i).curvature = scale*0.01;
+    }
+  }
+}
+
+
 void ShufflePc(pcl::PointCloud<pcl::PointXYZRGBNormal>& pc) {
   // https://en.wikipedia.org/wiki/Fisher%E2%80%93Yates_shuffle
   std::mt19937 gen;
