@@ -142,59 +142,45 @@ print outliers
 
 for errType in errTypes+["num"]:
   for algType in ["BB+ICP"]:
-    errA = np.zeros((len(noises),len(outliers)))
-    errSq = np.zeros((len(noises),len(outliers)))
-    errAN = np.zeros((len(noises),len(outliers)))
-    errT = np.zeros((len(noises),len(outliers)))
-    print len(errors["noise"]), len(errors["err_a"][algType])
-#    fig = plt.figure(figsize = figSize, dpi = 80, facecolor="w", edgecolor="k")
-#    plt.plot(errors["noise"],errors[errType][algType],'.')
-#    plt.show()
-    for i,n in enumerate(errors["noise"]):
-      o = errors["outlier"][i]
-      if not errType == "num":
-        err = errors[errType][algType][i]
-      if errType == "err_t":
-        err /= scale
-      if not np.isnan(err):
-        if n in noiseQuant.keys():
-          errA[noiseQuant[n], outlierQuant[o]] += err
-          errSq[noiseQuant[n], outlierQuant[o]] += err*err
-          errAN[noiseQuant[n], outlierQuant[o]] += 1
-    errA /= errAN
-    errStd = np.sqrt((errSq - errA*errA*errAN)/(errAN-1))
-    fig = plt.figure(figsize = figSize, dpi = 80, facecolor="w", edgecolor="k")
+    err25 = np.zeros((len(noises),len(outliers)))
+    err50 = np.zeros((len(noises),len(outliers)))
+    err75 = np.zeros((len(noises),len(outliers)))
+    err90 = np.zeros((len(noises),len(outliers)))
+    errMean = np.zeros((len(noises),len(outliers)))
+    errStd = np.zeros((len(noises),len(outliers)))
     for i,o in enumerate(outliers):
-      if errType == "num":
-        plt.plot(noises/scale, errAN[:,i], label="{}".format(o),color=colors[i%len(colors)])
-        print errAN[:,i]
-      else:
-        plt.plot(noises/scale, errA[:,i], label="{}".format(o),color=colors[i%len(colors)])
-        plt.fill_between(noises/scale, np.maximum(errA[:,i]-errStd[:,i],np.zeros_like(errStd[:,i])),
-            errA[:,i]+errStd[:,i], alpha=0.3, color=colors[i%len(colors)])
-        print errType, o, errA[:,i]
-#      plt.plot(noises/scale, errA[:,i]+errStd[:,i],alpha=0.3,color=colors[i%len(colors)])
-#      plt.plot(noises/scale, errA[:,i]-errStd[:,i],alpha=0.3,color=colors[i%len(colors)])
-    plt.legend(loc="best")
-#    plt.title("{} {}".format(algType, errType))
+      for j,n in enumerate(noises):
+        if errType == "num":
+          for l,ni in enumerate(errors["noise"]):
+            oi = errors["outlier"][l]
+            if oi ==o and ni ==n :
+              errMean[j,i] += 1
+        else:
+          data = []
+          for l,ni in enumerate(errors["noise"]):
+            oi = errors["outlier"][l]
+            if oi ==o and ni ==n :
+              data.append(errors[errType][algType][l])
+          err50[j,i] = np.median(data) 
+          err25[j,i] = np.percentile(data,25) 
+          err75[j,i] = np.percentile(data,75) 
+          err90[j,i] = np.percentile(data,90) 
+          errMean[j,i] = np.mean(data) 
+          errStd[j,i] = np.std(data) 
+    fig = plt.figure(figsize = figSize, dpi = 80, facecolor="w", edgecolor="k")
+    for i,o in enumerate([outliers[0],outliers[2]]):
+      plt.plot(noises/scale, err50[:,i], '--', color=colors[i%len(colors)])
+#      plt.plot(noises/scale, err25[:,i], color=colors[i%len(colors)])
+#      plt.plot(noises/scale, err75[:,i], color=colors[i%len(colors)])
+#      plt.plot(noises/scale, err90[:,i], '-.', color=colors[i%len(colors)])
+#      plt.plot(noises/scale, err75[:,i], '-.', color=colors[i%len(colors)])
+      plt.plot(noises/scale, errMean[:,i], label="{:.0%} outliers".format(o),color=colors[i%len(colors)])
+      plt.fill_between(noises/scale, np.maximum(errMean[:,i]-errStd[:,i],np.zeros_like(errStd[:,i])),
+        errMean[:,i]+errStd[:,i], alpha=0.3, color=colors[i%len(colors)])
 
-#    errA = errA[::-1,:]
-#    fig = plt.figure(figsize = figSize, dpi = 80, facecolor="w", edgecolor="k")
-#    fig.add_subplot(111)
-#    cRange = [0,47.]
-#    if errType == "err_t":
-#      cRange = [0,2.8]
-#    ax1 = plt.imshow(errA, interpolation="nearest", 
-#        extent=[noises.min(), noises.max(), outliers.min(), outliers.max()],
-#        vmin=cRange[0], vmax=cRange[1])
-#
-#    if algType == "BB":
-#      cbaxes = fig.add_axes([0.8, 0.1, 0.03, 0.8]) 
-#      cb = plt.colorbar(ax1, cax = cbaxes)  
-#      cbar = plt.colorbar(ax1, shrink=0.65, pad = 0.05)
-#    if algType == "BB" and errType == "err_t":
-  #    plt.title("{} {}".format(algType, errType))
+    plt.legend(loc="best")
     plt.xlabel("noise std")
+    plt.xlim([0, noises.max()/scale])
     if not errType == "num":
       plt.ylabel(errDesc[errType])
 #    else:
