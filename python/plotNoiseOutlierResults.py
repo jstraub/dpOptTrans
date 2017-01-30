@@ -36,6 +36,7 @@ for root, dirs, files in os.walk(cmdArgs.input):
 version = "4.3"
 version = "4.2"
 version = "4.4"
+version = "4.5"
 scale = 2*0.1 # roughly the diameter to bound the bunny
 
 errors = {"err_a":{}, "err_t":{}, "dt":{}, "Ks":{}, "overlap":[], "dangle":[],
@@ -48,6 +49,7 @@ for result in results:
   r = json.load(open(result))
   if r['version'] == version:
 #    print result
+#    print r
     errors["overlap"].append(r['GT']['overlap'])
     errors["noise"].append(r['GT']['noiseStd'])
     errors["outlier"].append(r['GT']['outlier'])
@@ -100,13 +102,13 @@ if counter == 0:
   sys.exit(0)
 
 errDesc = {"err_a":"$\Delta \\theta$ [deg]", 
-    "err_t": "$\|\|\Delta t\|\|_2$ [m]", "dt":"dt [s]",
+    "err_t": "$\|\|\Delta t\|\|_2$", "dt":"dt [s]",
     "Ks1":"Ks", "Ks2":"Ks", "Ks3":"Ks", "Ks4":"Ks"}
 errTypeMax = {"err_a": 90., "err_t": 0.2, "dt": 120.,
     "Ks1":30, "Ks2":30, "Ks3":30, "Ks4":30}
 yMetricLabel={"overlap":"overlap [%]", "noise":"noise",
   "outlier":"outlier", "dangle":" $\Delta\\theta_{GT}$ [deg]",
-  "dtranslation":"$\|\|\Delta t_{GT}\|\|_2$ [m]"}
+  "dtranslation":"$\|\|\Delta t_{GT}\|\|_2$"}
 yMetricResolution={"overlap":9, "dangle":8, "dtranslation":0.4}
 yMetricResolution={"overlap":15, "dangle":12, "dtranslation":0.4, 
     "noise":1., "outlier":0.1}
@@ -125,7 +127,9 @@ print errTypes
 print len(errors["err_a"]["BB"])
 print len(errors["noise"])
 
-noises = np.sort(np.unique(errors["noise"]))
+stdThr = 0.005
+
+noises = np.sort(np.unique([noise for noise in errors["noise"] if noise < stdThr]))
 noiseQuant = {}
 for i,n in enumerate(noises):
   noiseQuant[n] = i
@@ -133,7 +137,7 @@ outliers = np.sort(np.unique(errors["outlier"]))
 outlierQuant = {}
 for i,o in enumerate(outliers):
   outlierQuant[o] = i
-print noises
+print "noises", noises
 print outliers
 
 for errType in errTypes+["num"]:
@@ -142,6 +146,10 @@ for errType in errTypes+["num"]:
     errSq = np.zeros((len(noises),len(outliers)))
     errAN = np.zeros((len(noises),len(outliers)))
     errT = np.zeros((len(noises),len(outliers)))
+    print len(errors["noise"]), len(errors["err_a"][algType])
+#    fig = plt.figure(figsize = figSize, dpi = 80, facecolor="w", edgecolor="k")
+#    plt.plot(errors["noise"],errors[errType][algType],'.')
+#    plt.show()
     for i,n in enumerate(errors["noise"]):
       o = errors["outlier"][i]
       if not errType == "num":
@@ -149,9 +157,10 @@ for errType in errTypes+["num"]:
       if errType == "err_t":
         err /= scale
       if not np.isnan(err):
-        errA[noiseQuant[n], outlierQuant[o]] += err
-        errSq[noiseQuant[n], outlierQuant[o]] += err*err
-        errAN[noiseQuant[n], outlierQuant[o]] += 1
+        if n in noiseQuant.keys():
+          errA[noiseQuant[n], outlierQuant[o]] += err
+          errSq[noiseQuant[n], outlierQuant[o]] += err*err
+          errAN[noiseQuant[n], outlierQuant[o]] += 1
     errA /= errAN
     errStd = np.sqrt((errSq - errA*errA*errAN)/(errAN-1))
     fig = plt.figure(figsize = figSize, dpi = 80, facecolor="w", edgecolor="k")

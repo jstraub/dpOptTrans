@@ -6,9 +6,9 @@ import subprocess as subp
 folder = "../data/stairs/"
 folder = "../data/wood_summer/"
 folder = "../data/apartment/"
-folder = "../data/gazebo_summer/"
 folder = "../data/mountain_plain/"
 folder = "../data/gazebo_winter/"
+folder = "../data/gazebo_summer/"
 name = "Hokuyo_[0-9]+.csv"
 paths = []
 for root, dirs, files in os.walk(folder):

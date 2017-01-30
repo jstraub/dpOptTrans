@@ -118,24 +118,30 @@ cfgApartment= {"name":"apartment", "lambdaS3": [45,65,80], "lambdaR3": 1.,
 # try:
 # Scale
 cfgApartment= {"name":"apartment", "lambdaS3": [45,65,80], "lambdaR3": 1.3, 
-    "maxLvlR3":10, "maxLvlS3":11, "icpCutoff": 0.1, "tryMfAmbig":False}
+    "maxLvlR3":10, "maxLvlS3":11, "icpCutoff": 0.1, "tryMfAmbig":False,
+    "scale":0.1 }
 # MW Scale
 cfgApartment= {"name":"apartment", "lambdaS3": [45,65,80], "lambdaR3": 1.3, 
-    "maxLvlR3":10, "maxLvlS3":11, "icpCutoff": 0.1, "tryMfAmbig":True}
+    "maxLvlR3":10, "maxLvlS3":11, "icpCutoff": 0.1, "tryMfAmbig":True,
+    "scale":0.1 }
 # MW
 cfgApartment= {"name":"apartment", "lambdaS3": [65], "lambdaR3": 1.3, 
-    "maxLvlR3":10, "maxLvlS3":11, "icpCutoff": 0.1, "tryMfAmbig":True}
+    "maxLvlR3":10, "maxLvlS3":11, "icpCutoff": 0.1, "tryMfAmbig":True,
+    "scale":0.1 }
 
 cfgUwa = {"name":"uwa", "lambdaS3": [65], "lambdaR3": 1000., 
     "maxLvlR3":10, "maxLvlS3":11, "icpCutoff": 0.1, "tryMfAmbig":True}
 
 # Scale
 cfgGazeboSummer = {"name":"gazebo_summer", "lambdaS3": [45,65,80], "lambdaR3": 7., 
-    "maxLvlR3":10, "maxLvlS3":11, "icpCutoff": 0.1, "tryMfAmbig":False}
+    "maxLvlR3":10, "maxLvlS3":11, "icpCutoff": 0.3, "tryMfAmbig":False,
+    "scale":0.3 }
 cfgGazeboWinter = {"name":"gazebo_winter", "lambdaS3": [45,65,80], "lambdaR3": 2.0, 
-    "maxLvlR3":10, "maxLvlS3":11, "icpCutoff": 0.1, "tryMfAmbig":False}
+    "maxLvlR3":10, "maxLvlS3":11, "icpCutoff": 0.1, "tryMfAmbig":False,
+    "scale":0.1 }
 cfgMountain = {"name":"mountain_plain", "lambdaS3": [45,65,80], "lambdaR3": 2.0, 
-    "maxLvlR3":10, "maxLvlS3":11, "icpCutoff": 0.1, "tryMfAmbig":False}
+    "maxLvlR3":10, "maxLvlS3":11, "icpCutoff": 0.1, "tryMfAmbig":False,
+    "scale":0.1 }
 
 cfg = cfgEnschede
 cfg = cfgLymph
@@ -164,15 +170,15 @@ if not "tryMfAmbig" in cfg:
 
 applyFFT   = False
 runGoICP   = False
-runGogma   = True
+runGogma   = False
 applyBB    = not runGoICP and not applyFFT and not runGogma
 applyICP   = applyBB
 applyBBEGI = False
 applyMM    = False
 
 loadCached = False
-stopToShow = False
-stopEveryI = 1
+stopToShow = True
+stopEveryI = 3
 showTransformed =  True 
 showUntransformed =False
 
@@ -586,6 +592,7 @@ for i in range(1,len(scans)):
           AAmode=useAAtessellation,
           simpleTranslation=simpleTranslation,
           simpleRotation=simpleRotation,
+          scale=cfg["scale"],
           tryMfAmbig=cfg["tryMfAmbig"])
     transformationPath = transformationPathBB
 
