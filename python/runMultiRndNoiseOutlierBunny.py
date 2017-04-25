@@ -26,13 +26,11 @@ print "using prefix " + cmdArgs.prefix
 scale = 0.005 # 1/20 of bunny bounding radius
 
 for it in range(1000):
-#  for outliers in [0.0, 0.3, 0.6]:
+  for outliers in [0.0, 0.3, 0.6]:
 #    for noiseStd in [0.0, 0.002, 0.004, 0.006, 0.008, 0.01]:
-  for outliers in [0.0]:
-    for noiseStd in [0.002]:
 #  for outliers in [0.0, 0.3, 0.6]:
 #    for noiseStd in [0.001, 0.003]:
-#    for noiseStd in [0.0, 0.001, 0.002, 0.003, 0.004]:
+    for noiseStd in [0.0, 0.001, 0.002, 0.003, 0.004]:
       args=["python", "./evalNoiseOutliers.py", 
           "-i " + path,
           "-o " + resultsPath,
