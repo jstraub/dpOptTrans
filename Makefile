@@ -71,8 +71,8 @@ checkout:
 	git clone https://github.com/jstraub/cudaPcl.git
 	git clone https://github.com/jstraub/dpMMlowVar.git
 	git clone https://github.com/jstraub/rtDDPvMF.git
-	git clone https://github.com:jstraub/bbTrans.git
-	git clone https://github.com:jstraub/manifold.git
+	git clone https://github.com/jstraub/bbTrans.git
+	git clone https://github.com/jstraub/manifold.git
 ##git clone git@github.com:jstraub/jsCore.git
 ##git clone git@github.com:jstraub/cudaPcl.git
 ##git clone git@github.com:jstraub/dpMMlowVar.git
